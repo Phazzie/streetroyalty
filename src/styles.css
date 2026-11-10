@@ -1,0 +1,247 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #f4efe4;
+  --color-cream: #fffaf2;
+  --color-ink: #1c1712;
+  --color-fg: #1c1712;
+  --color-lilac: #cbb6ee;
+  --color-mint: #a8d4c3;
+  --color-pipe: #ef6d22;
+  --color-surface: #fffaf2;
+  --color-muted: #5c5348;
+  --color-subtle: #8a7f72;
+  --color-line: #d9d0c2;
+  --color-accent: #ef6d22;
+  --color-accent-fg: #1c1712;
+  --font-display: "Syne", "Avenir Next", "Segoe UI", sans-serif;
+  --font-sans: "Fraunces", "Iowan Old Style", "Palatino Linotype", serif;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.85rem;
+  --radius-lg: 1.15rem;
+  --radius-xl: 1.6rem;
+}
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  html {
+    background: var(--color-ink);
+    color: var(--color-fg);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    line-height: 1.5;
+    text-wrap: pretty;
+    background: var(--color-ink);
+    color: var(--color-fg);
+    overflow-x: clip;
+  }
+
+  button,
+  input {
+    font-family: var(--font-display);
+  }
+
+  h1,
+  h2,
+  .font-display {
+    text-wrap: balance;
+  }
+}
+
+.safe-top {
+  padding-top: max(0.85rem, env(safe-area-inset-top));
+}
+
+.safe-bottom {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+.clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.mess-field {
+  background-color: var(--color-ink);
+  background-image: url("/wild/mess.jpg");
+  background-size: cover;
+  background-position: center;
+}
+
+.banner-head {
+  background-color: var(--color-lilac);
+  background-image:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-cream) 88%, transparent), color-mix(in srgb, var(--color-lilac) 72%, transparent)),
+    url("/wild/banner.jpg");
+  background-size: cover;
+  background-position: center;
+}
+
+.mash-bar {
+  background-color: var(--color-ink);
+  background-image:
+    linear-gradient(90deg, color-mix(in srgb, var(--color-ink) 78%, transparent), color-mix(in srgb, var(--color-ink) 62%, transparent)),
+    url("/wild/mash.jpg");
+  background-size: cover;
+}
+
+.phone-frame {
+  box-shadow: 0 0 0 3px var(--color-pipe);
+}
+
+.seam {
+  border: 3px solid var(--color-pipe);
+}
+
+.edge-r {
+  border-right: 3px solid var(--color-pipe);
+}
+
+.edge-l {
+  border-left: 3px solid var(--color-pipe);
+}
+
+.edge-t {
+  border-top: 3px solid var(--color-pipe);
+}
+
+.edge-b {
+  border-bottom: 3px solid var(--color-pipe);
+}
+
+.edge-gutter {
+  padding-left: 4.5rem;
+  padding-right: 4.5rem;
+}
+
+.edge-clip {
+  position: absolute;
+  z-index: 30;
+  width: 5.75rem;
+  height: 9rem;
+  object-fit: cover;
+  object-position: center 20%;
+  border: 3px solid var(--color-pipe);
+  background: var(--color-ink);
+  pointer-events: none;
+}
+
+.edge-still-left {
+  left: 0;
+  top: 5.5rem;
+}
+
+.edge-still-right {
+  right: 0;
+  top: 5.5rem;
+}
+
+.walker {
+  position: absolute;
+  z-index: 25;
+  width: 3.5rem;
+  height: 5.5rem;
+  object-fit: contain;
+  object-position: center bottom;
+  border: 2px solid var(--color-ink);
+  background: var(--color-cream);
+  pointer-events: none;
+}
+
+.walker-left {
+  left: 0;
+  animation: patrol 8s ease-in-out infinite alternate;
+}
+
+.walker-right {
+  right: 0;
+  animation: patrol 10s ease-in-out infinite alternate-reverse;
+}
+
+.walker-late {
+  animation-delay: -5s;
+}
+
+@keyframes patrol {
+  from {
+    top: 46%;
+  }
+  to {
+    top: calc(100% - 6rem);
+  }
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: ticker 22s linear infinite;
+}
+
+.stamp {
+  border: 3px solid var(--color-ink);
+  background: var(--color-cream);
+  padding: 0.45rem 0.45rem 0.55rem;
+  box-shadow: 7px 7px 0 var(--color-lilac);
+}
+
+.stamp-mint {
+  box-shadow: 7px 7px 0 var(--color-mint);
+}
+
+@keyframes ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes live-ring {
+  from {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  to {
+    transform: scale(1.16);
+    opacity: 0;
+  }
+}
+
+.mic-live::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid var(--color-ink);
+  animation: live-ring 1.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mic-live::after,
+  .marquee-track,
+  .walker-left,
+  .walker-right {
+    animation: none;
+  }
+}

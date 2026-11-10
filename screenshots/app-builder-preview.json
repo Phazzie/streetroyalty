@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Street Royalty Outfit Lab",
+      "hasCanvas": false,
+      "bodyTextLen": 154,
+      "bodyTextHash": "e6e960afe84bc8353298e7ed54891e6fd05f47b8144051f51d35be7f4b55eca0",
+      "bodyTextPrefix": "Street Royalty House model on the sides. Your face in the camera",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Street Royalty Outfit Lab",
+      "hasCanvas": false,
+      "bodyTextLen": 154,
+      "bodyTextHash": "e6e960afe84bc8353298e7ed54891e6fd05f47b8144051f51d35be7f4b55eca0",
+      "bodyTextPrefix": "Street Royalty House model on the sides. Your face in the camera",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}
