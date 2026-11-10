@@ -1,4 +1,4 @@
-import { CATEGORIES, type Category, type PieceDraft, type Reaction } from "@/lib/types";
+import { CATEGORIES, type Category, type PieceDraft, type Reaction } from "./types.ts";
 
 const LEX: { category: Category; words: string[] }[] = [
   {
@@ -28,7 +28,20 @@ const LEX: { category: Category; words: string[] }[] = [
   },
   {
     category: "Outer",
-    words: ["overcoat", "trench", "bomber", "parka", "blazer", "puffer", "jacket", "coat"],
+    words: [
+      "jean jacket",
+      "denim jacket",
+      "leather jacket",
+      "overcoat",
+      "cardigan",
+      "trench",
+      "bomber",
+      "parka",
+      "blazer",
+      "puffer",
+      "jacket",
+      "coat",
+    ],
   },
   {
     category: "Bottoms",
@@ -43,7 +56,8 @@ const LEX: { category: Category; words: string[] }[] = [
       "cargo",
       "slacks",
       "shorts",
-      "short",
+      "skirt",
+      "skirts",
       "jean",
       "slack",
     ],
@@ -51,10 +65,15 @@ const LEX: { category: Category; words: string[] }[] = [
   {
     category: "Tops",
     words: [
+      "tank top",
+      "crop top",
+      "tube top",
+      "polo shirt",
       "t-shirt",
       "tshirt",
       "hoodie",
       "sweater",
+      "jumper",
       "jersey",
       "blouse",
       "shirt",
@@ -111,6 +130,13 @@ function findHits(text: string): Hit[] {
     entry.words.map((word) => ({ word, category: entry.category })),
   ).sort((a, b) => b.word.length - a.word.length);
   const taken = new Array<boolean>(text.length).fill(false);
+  for (const phrase of SKIP_PHRASES) {
+    const re = new RegExp(`\\b${escapeRegExp(phrase)}\\b`, "gi");
+    for (const match of text.matchAll(re)) {
+      const index = match.index ?? 0;
+      for (let i = index; i < index + match[0].length; i += 1) taken[i] = true;
+    }
+  }
   const hits: Hit[] = [];
   for (const entry of entries) {
     const re = new RegExp(`\\b${escapeRegExp(entry.word)}\\b`, "gi");
@@ -125,6 +151,8 @@ function findHits(text: string): Hit[] {
   hits.sort((a, b) => a.index - b.index);
   return hits;
 }
+
+const SKIP_PHRASES = ["short sleeve", "short-sleeve", "boot cut", "boot-cut", "bootcut"];
 
 const SEPARATORS = [",", ";", " and ", " plus ", " tucked into ", " paired with "];
 
@@ -191,7 +219,22 @@ export function splitPieces(transcript: string): PieceDraft[] {
     if (!text.toLowerCase().includes(spoken.toLowerCase())) continue;
     pieces.push({ category: limited[i].category, spoken });
   }
-  return pieces;
+  return mergeSameCategory(pieces);
+}
+
+function mergeSameCategory(pieces: PieceDraft[]): PieceDraft[] {
+  const merged: PieceDraft[] = [];
+  for (const piece of pieces) {
+    const prev = merged[merged.length - 1];
+    if (prev && prev.category === piece.category) {
+      if (!prev.spoken.toLowerCase().includes(piece.spoken.toLowerCase())) {
+        prev.spoken = cleanEdge(`${prev.spoken} ${piece.spoken}`);
+      }
+      continue;
+    }
+    merged.push({ ...piece });
+  }
+  return merged;
 }
 
 function reactionIn(text: string): Reaction | undefined {

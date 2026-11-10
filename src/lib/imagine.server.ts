@@ -54,6 +54,22 @@ function bytesToDataUrl(bytes: Uint8Array, mime: string): string {
   return `data:${mime};base64,${btoa(binary)}`;
 }
 
+async function inlineClip(url: string): Promise<string | null> {
+  if (!url.startsWith("https://")) return null;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+    if (!res.ok) return null;
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    if (bytes.byteLength === 0 || bytes.byteLength > 2_500_000) return null;
+    const mime = res.headers.get("content-type")?.split(";")[0] || "video/mp4";
+    if (!mime.startsWith("video/")) return null;
+    return bytesToDataUrl(bytes, mime);
+  } catch (error) {
+    console.error("xai clip", error);
+    return null;
+  }
+}
+
 async function imageFromPayload(json: unknown): Promise<string | null> {
   const data = (json as { data?: { b64_json?: string; url?: string }[] } | null)?.data?.[0];
   if (!data) return null;
@@ -114,7 +130,7 @@ export async function runLook(input: {
   lookImage: string | null;
 }): Promise<ImageResult> {
   if (!input.spoken) return { ok: false, kind: "missed" };
-  const faces = input.characterImages.slice(0, 2);
+  const faces = input.characterImages.slice(0, 3);
   let images: { type: "image_url"; url: string }[] = [];
   let prompt = "";
   if (input.mode === "tweak") {
@@ -201,7 +217,10 @@ export async function runPoll(requestId: string): Promise<PollOk | Fail> {
       console.error("xai poll", res.status);
       return { ok: false, kind: "missed" };
     }
-    if (json.status === "done" && json.video?.url) return { ok: true, status: "done", url: json.video.url };
+    if (json.status === "done" && json.video?.url) {
+      const inline = await inlineClip(json.video.url);
+      return { ok: true, status: "done", url: inline ?? json.video.url };
+    }
     if (json.status === "failed" || json.status === "expired") return { ok: true, status: "failed" };
     return { ok: true, status: "pending" };
   } catch (error) {

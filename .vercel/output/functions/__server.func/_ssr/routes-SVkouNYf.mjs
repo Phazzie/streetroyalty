@@ -1,20 +1,20 @@
 import { i as __toESM } from "../_runtime.mjs";
-import { a as interpret, i as SLOTS, n as LOCK_LINE, r as REQUIRED_SLOTS, t as CATEGORIES } from "./tickets-DTwv3wmS.mjs";
+import { i as interpret, n as LOCK_LINE, r as REQUIRED_SLOTS, t as CATEGORIES } from "./tickets-B6Ik5l_m.mjs";
 import { n as require_react } from "../_libs/@radix-ui/react-compose-refs+[...].mjs";
 import { b as require_jsx_runtime } from "../_libs/@tanstack/react-router+[...].mjs";
 import { n as TSS_SERVER_FUNCTION, r as getServerFnById, t as createServerFn } from "./ssr.mjs";
-import { i as Mic, r as Square, t as X } from "../_libs/lucide-react.mjs";
+import { n as Square, r as Mic } from "../_libs/lucide-react.mjs";
 import { t as Slot } from "../_libs/radix-ui__react-slot.mjs";
 import { n as clsx, t as cva } from "../_libs/class-variance-authority+clsx.mjs";
 import { t as twMerge } from "../_libs/tailwind-merge.mjs";
 import { t as create } from "../_libs/zustand.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-BGB0foLQ.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-SVkouNYf.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function cn(...inputs) {
 	return twMerge(clsx(inputs));
 }
-var buttonVariants = cva("inline-flex items-center justify-center gap-2 font-medium transition-[opacity,transform] duration-150 ease-out disabled:pointer-events-none disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg active:scale-[0.98]", {
+var buttonVariants = cva("inline-flex shrink-0 items-center justify-center gap-2 font-medium transition-[opacity,transform] duration-150 ease-out disabled:pointer-events-none disabled:border-line disabled:bg-line disabled:text-muted disabled:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-fg active:scale-[0.98]", {
 	variants: {
 		variant: {
 			primary: "border-2 border-ink bg-accent font-extrabold text-accent-fg",
@@ -45,35 +45,40 @@ var copy = {
 	title: "Street Royalty",
 	lab: "Outfit Lab",
 	crown: "Crown never came off. Just dressing it.",
-	lockLead: "Three photos of you. Front, side, and three-quarter. He stays on the edges. This locks your face.",
-	lockCount: "Locked in turns on at 3.",
-	stay: "Stays on this phone until you build a look.",
+	lockLead: "Three photos lock your face: front, side, and three-quarter. Extra is optional.",
+	lockCount: "The button turns on when those three are in.",
+	stay: "Photos and looks stay on this phone.",
 	lockedIn: "Locked in.",
-	boardOpen: "Board's open. What are we building.",
-	sharp: "That one's sharp. Want to run it or tweak it.",
+	boardOpen: "Board's open. What are we building?",
+	sharp: "That one's sharp. Want to run it or tweak it?",
 	buildingThose: "Got it. Building those.",
 	buildingOne: "Got it. Building that.",
 	onBoard: "On the board.",
-	puttingOn: "Putting it on you.",
+	puttingOn: "Putting it on you. Give it a moment.",
 	runwayUp: "Runway's up.",
-	walking: "Walking.",
+	walking: "Walking. This usually takes a minute.",
 	saved: "Saved.",
 	already: "Already saved.",
 	stopped: "Stopped.",
-	emptyBoard: "Nothing on the board yet. Say a piece: shirt, trousers, coat, hat, shoes.",
+	emptyBoard: "Nothing on the board yet. Name a piece below: hoodie, coat, trousers, shoes.",
 	missed: "That one didn't land. Say it again or try different words.",
 	partial: "One of those didn't land. The rest are up.",
-	unclear: "Name the piece. Top, bottoms, shoes, or what.",
-	pick: "Tap what you're wearing. Then put it on you.",
+	unclear: "Name the piece. Hoodie, trousers, coat, hat, or shoes.",
+	pick: "Tap what you're wearing. An orange border means it's on.",
 	noLook: "Nothing to put on yet.",
 	micBlocked: "Mic's blocked. Type it.",
 	missedSpeech: "Didn't catch that. Say it again.",
 	cameraBlocked: "Camera's blocked. Use a photo.",
+	cameraWait: "Camera isn't ready yet. Try the shutter again.",
+	notPhoto: "That file isn't a photo. Choose an image.",
+	storageFull: "This phone is full. Drop a saved look and try again.",
 	stillBuilding: "Still building. Hit stop if you want it cut.",
-	hubJob: "Say the clothes. A top, bottoms, shoes, a hat. Open the board, tap what you're wearing, then put it on you.",
-	runwayHint: "Runway is the walk. Cheer, boo, or both is the crowd.",
-	splashLead: "House model on the sides. Your face in the camera.",
-	splashSteps: "Three photos of you. Say the pieces. Put it on you. Runway if you want the walk.",
+	hubJob: "Name the clothes: a hoodie, trousers, a coat, shoes. Open the board, tap what you're wearing, then put it on you.",
+	runwayHint: "Runway is the walk. The crowd cheers, boos, or does both.",
+	splashLead: "The house model holds the pictures. Your face wears the clothes.",
+	stepFace: "Three photos lock your face.",
+	stepPieces: "Name the pieces you want built.",
+	stepWalk: "Put them on you, then send it down the runway.",
 	openIt: "Open it",
 	pinned: "Saved looks stay on this device.",
 	installHow: "Chrome or Edge: Install app. Phone: Add to Home Screen.",
@@ -87,7 +92,18 @@ var copy = {
 	saveThis: "Save this",
 	runway: "Runway",
 	change: "Change something",
-	tryReaction: "Try another reaction",
+	changeHint: "Say what to change",
+	tryReaction: "Reshoot the walk",
+	wearing: "Wearing",
+	nothingOn: "Nothing on you yet.",
+	openBoard: "Open the board",
+	usePhotos: "Use these photos",
+	yourFace: "Your face",
+	optional: "Optional",
+	takePhoto: "Take photo",
+	keepIt: "Keep it on this phone",
+	typePiece: "Name a piece",
+	reshootNote: "This walk doesn't match the crowd you picked.",
 	usePhoto: "Use a photo",
 	face: "Face",
 	board: "Board",
@@ -111,71 +127,79 @@ var copy = {
 		front: "Front",
 		side: "Side",
 		threequarter: "3/4",
-		extra: "One more"
+		extra: "Extra"
 	}
 };
-var LILAC = "/wild/side-lilac.jpg";
-var MINT = "/wild/side-mint.jpg";
-var BOW = "/wild/bowtie.jpg";
-var STRIDE = "/wild/stride.jpg";
+var SCENES = [
+	{
+		src: "/wild/scene-beam.mp4",
+		poster: "/wild/scene-beam.jpg",
+		label: "House model on the beam, coffee in hand, unfazed"
+	},
+	{
+		src: "/wild/scene-moon.mp4",
+		poster: "/wild/scene-moon.jpg",
+		label: "House model on the moon, coffee in hand, unfazed"
+	},
+	{
+		src: "/wild/scene-boat.mp4",
+		poster: "/wild/scene-boat.jpg",
+		label: "House model in the boat, coffee in hand, unfazed"
+	},
+	{
+		src: "/wild/scene-flyer.mp4",
+		poster: "/wild/scene-flyer.jpg",
+		label: "House model at the flyer, hands in pockets, unfazed"
+	}
+];
+var STEPS = [
+	copy.stepFace,
+	copy.stepPieces,
+	copy.stepWalk
+];
+function Clip({ src, poster, label, className }) {
+	const ref = (0, import_react.useRef)(null);
+	(0, import_react.useEffect)(() => {
+		const video = ref.current;
+		if (!video) return;
+		const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+		video.muted = true;
+		if (reduce) {
+			video.pause();
+			return;
+		}
+		video.play().catch(() => void 0);
+	}, []);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("video", {
+		ref,
+		className,
+		src,
+		poster,
+		muted: true,
+		playsInline: true,
+		autoPlay: true,
+		loop: true,
+		preload: "metadata",
+		"aria-label": label
+	});
+}
 function Shell({ children }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		className: "mess-field flex min-h-dvh justify-center",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "phone-frame relative flex h-dvh w-full max-w-md flex-col overflow-hidden bg-cream text-fg",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "edge-gutter relative z-10 flex min-h-0 min-w-0 flex-1 flex-col",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Marquee, {}), children]
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Edges, {})]
+			className: "phone-frame relative flex h-dvh w-full max-w-lg flex-col overflow-hidden bg-cream text-fg",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Marquee, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "flex min-h-0 min-w-0 flex-1 flex-col",
+				children
+			})]
 		})
 	});
 }
-function Edges() {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "pointer-events-none absolute inset-0 z-30",
-		"aria-hidden": "true",
-		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-				src: LILAC,
-				alt: "",
-				className: "edge-still edge-still-left"
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-				src: MINT,
-				alt: "",
-				className: "edge-still edge-still-right"
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("video", {
-				className: "walker walker-left",
-				src: "/wild/walk-lilac.mp4",
-				muted: true,
-				playsInline: true,
-				autoPlay: true,
-				loop: true
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("video", {
-				className: "walker walker-right",
-				src: "/wild/walk-mint.mp4",
-				muted: true,
-				playsInline: true,
-				autoPlay: true,
-				loop: true
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("video", {
-				className: "walker walker-left walker-late",
-				src: "/wild/walk-bow.mp4",
-				muted: true,
-				playsInline: true,
-				autoPlay: true,
-				loop: true
-			})
-		]
-	});
-}
 function Marquee() {
-	const line = "Lilac set  ·  Mint set  ·  Gold rims  ·  Cafe table  ·  No reservation  ·  ";
+	const line = "On the beam  ·  On the moon  ·  In the boat  ·  At the flyer  ·  ";
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "mash-bar edge-b overflow-hidden text-cream",
+		className: "mash-bar edge-b safe-top shrink-0 overflow-hidden text-cream",
+		"aria-hidden": "true",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "marquee-track py-1.5 font-display text-xs font-bold tracking-widest uppercase",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
@@ -183,23 +207,22 @@ function Marquee() {
 				children: line
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 				className: "px-3",
-				"aria-hidden": "true",
 				children: line
 			})]
 		})
 	});
 }
-function Header({ action }) {
+function Header({ title, action }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
-		className: "banner-head safe-top flex flex-col gap-2 px-4 pb-3",
+		className: "flex shrink-0 flex-col gap-3 border-b border-line bg-cream px-4 pt-3 pb-3",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-			className: "font-display text-xs font-bold tracking-widest text-ink uppercase",
+			className: "font-display text-xs font-bold tracking-widest text-muted uppercase",
 			children: copy.lab
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-			className: "font-display text-2xl font-extrabold leading-none tracking-tight text-ink",
-			children: copy.title
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+			className: "font-display text-3xl font-extrabold leading-none tracking-tight text-ink",
+			children: title
 		})] }), action ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			className: "flex flex-wrap gap-1",
+			className: "flex flex-wrap gap-2",
 			children: action
 		}) : null]
 	});
@@ -208,7 +231,7 @@ function TextButton({ children, onClick }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 		type: "button",
 		onClick,
-		className: "h-11 rounded-full bg-cream px-3 text-sm font-bold text-ink transition-opacity duration-150 hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
+		className: "h-11 rounded-full border-2 border-ink bg-cream px-4 text-sm font-bold text-ink transition-opacity duration-150 hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ink",
 		children
 	});
 }
@@ -216,44 +239,34 @@ function Splash({ onEnter }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("main", {
 		className: "mess-field flex min-h-dvh items-center justify-center text-fg",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "phone-frame flex h-dvh w-full max-w-md flex-col overflow-hidden bg-cream",
+			className: "phone-frame safe-top flex h-dvh w-full max-w-lg flex-col overflow-hidden bg-cream",
 			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "grid shrink-0 grid-cols-3",
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-							src: LILAC,
-							alt: "House model in the lilac set, full body",
-							className: "aspect-3/4 w-full object-cover object-top"
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-							src: BOW,
-							alt: "House model in a lilac set with a huge patterned bowtie",
-							className: "edge-l edge-r aspect-3/4 w-full object-cover object-top"
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-							src: STRIDE,
-							alt: "House model mid-stride in the mint set",
-							className: "aspect-3/4 w-full object-cover object-top"
-						})
-					]
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "grid shrink-0 grid-cols-2",
+					children: SCENES.map((scene) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Clip, {
+						...scene,
+						className: "h-36 w-full object-cover object-top sm:h-44"
+					}, scene.src))
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-4",
+					className: "flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-5 *:shrink-0",
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "font-display text-3xl font-extrabold leading-none tracking-tight",
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+							className: "font-display text-4xl font-extrabold leading-none tracking-tight",
 							children: copy.title
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "italic",
+							className: "text-lg italic",
 							children: copy.splashLead
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: copy.splashSteps })
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ol", {
+							className: "flex list-decimal flex-col gap-2 pl-5",
+							children: STEPS.map((step) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: step }, step))
+						})
 					]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "safe-bottom border-t border-line px-5 pt-3",
+					className: "safe-bottom shrink-0 border-t border-line px-5 pt-3",
 					children: onEnter ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
 						className: "w-full",
 						size: "lg",
@@ -271,28 +284,45 @@ function Splash({ onEnter }) {
 function Status({ text }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 		"aria-live": "polite",
-		className: "min-h-6 px-4 text-center text-base text-muted",
+		className: "min-h-6 text-base text-muted",
 		children: text
 	});
 }
 function Input({ className, ...props }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
-		className: cn("h-12 w-full rounded-md border-2 border-ink bg-cream px-3 text-base text-fg outline-none placeholder:text-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pipe", className),
+		className: cn("h-12 w-full rounded-md border-2 border-ink bg-cream px-3 text-base text-fg outline-none placeholder:text-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ink", className),
 		...props
 	});
 }
 var DB_NAME = "street-royalty";
 var STORE = "kv";
+var opening = null;
 function openDb() {
-	return new Promise((resolve, reject) => {
+	if (opening) return opening;
+	opening = new Promise((resolve, reject) => {
 		const request = indexedDB.open(DB_NAME, 1);
 		request.onupgradeneeded = () => {
 			const db = request.result;
 			if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
 		};
-		request.onsuccess = () => resolve(request.result);
-		request.onerror = () => reject(request.error);
+		request.onsuccess = () => {
+			const db = request.result;
+			const drop = () => {
+				if (opening) opening = null;
+			};
+			db.onclose = drop;
+			db.onversionchange = () => {
+				db.close();
+				drop();
+			};
+			resolve(db);
+		};
+		request.onerror = () => {
+			opening = null;
+			reject(request.error);
+		};
 	});
+	return opening;
 }
 async function idbGet(key) {
 	const db = await openDb();
@@ -309,7 +339,66 @@ async function idbSet(key, value) {
 		tx.objectStore(STORE).put(value, key);
 		tx.oncomplete = () => resolve();
 		tx.onerror = () => reject(tx.error);
+		tx.onabort = () => reject(tx.error);
 	});
+}
+function drawDataUrl(dataUrl, maxEdge, quality) {
+	return new Promise((resolve, reject) => {
+		const image = new Image();
+		image.onload = () => {
+			const scale = Math.min(1, maxEdge / Math.max(image.width, image.height));
+			const width = Math.max(1, Math.round(image.width * scale));
+			const height = Math.max(1, Math.round(image.height * scale));
+			const canvas = document.createElement("canvas");
+			canvas.width = width;
+			canvas.height = height;
+			const ctx = canvas.getContext("2d");
+			if (!ctx) {
+				resolve(dataUrl);
+				return;
+			}
+			ctx.drawImage(image, 0, 0, width, height);
+			resolve(canvas.toDataURL("image/jpeg", quality));
+		};
+		image.onerror = () => reject(/* @__PURE__ */ new Error("photo"));
+		image.src = dataUrl;
+	});
+}
+async function compressDataUrl(dataUrl, maxEdge = 800, quality = .72) {
+	let edge = maxEdge;
+	let q = quality;
+	let result = await drawDataUrl(dataUrl, edge, q);
+	while (result.length > 12e5 && edge > 360) {
+		edge = Math.round(edge * .75);
+		q = Math.max(.5, q - .1);
+		result = await drawDataUrl(dataUrl, edge, q);
+	}
+	return result;
+}
+function readFileAsDataUrl(file) {
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onload = () => resolve(String(reader.result ?? ""));
+		reader.onerror = () => reject(reader.error);
+		reader.readAsDataURL(file);
+	});
+}
+function frameToDataUrl(video, maxEdge = 800, quality = .72, mirror = false) {
+	const width = video.videoWidth;
+	const height = video.videoHeight;
+	if (!width || !height) return null;
+	const scale = Math.min(1, maxEdge / Math.max(width, height));
+	const canvas = document.createElement("canvas");
+	canvas.width = Math.max(1, Math.round(width * scale));
+	canvas.height = Math.max(1, Math.round(height * scale));
+	const ctx = canvas.getContext("2d");
+	if (!ctx) return null;
+	if (mirror) {
+		ctx.translate(canvas.width, 0);
+		ctx.scale(-1, 1);
+	}
+	ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+	return canvas.toDataURL("image/jpeg", quality);
 }
 var createSsrRpc = (functionId) => {
 	const url = "/_serverFn/" + functionId;
@@ -449,7 +538,26 @@ function snapshot(state) {
 }
 function persist() {
 	const data = snapshot(useLab.getState());
-	persistQueue = persistQueue.then(() => idbSet("lab", data)).catch(() => void 0);
+	persistQueue = persistQueue.then(() => idbSet("lab", data)).catch((error) => {
+		if ((error instanceof DOMException ? error.name : "") === "QuotaExceededError") useLab.setState({ status: copy.storageFull });
+	});
+}
+function sameScreen(stage, next) {
+	return useLab.getState().view === stage ? next : useLab.getState().view;
+}
+function failLine(result) {
+	return result && !result.ok && result.kind === "unavailable" ? copy.cantBuild : copy.missed;
+}
+async function shrink(image) {
+	try {
+		return await compressDataUrl(image);
+	} catch {
+		return image;
+	}
+}
+function buildingLine(drafts) {
+	if (drafts.length === 1) return `Got it. Building ${drafts[0].spoken.trim().slice(0, 80)}.`;
+	return `Got it. Building ${drafts.length} pieces.`;
 }
 function patch(partial, remember = true) {
 	useLab.setState(partial);
@@ -498,12 +606,17 @@ function noteStatus(status, line) {
 }
 async function buildPieces(drafts, transcript, thenWear, again) {
 	const my = begin();
-	const line = drafts.length > 1 ? copy.buildingThose : copy.buildingOne;
+	const started = useLab.getState().view;
+	const previous = useLab.getState().lastJob;
+	const previousIds = again && previous?.kind === "pieces" ? previous.pieceIds ?? [] : [];
+	const line = buildingLine(drafts);
 	noteStatus(line, line);
 	patch({ lastJob: {
 		kind: "pieces",
 		drafts,
-		transcript
+		transcript,
+		thenWear,
+		pieceIds: previousIds
 	} });
 	const made = [];
 	let missed = 0;
@@ -525,13 +638,15 @@ async function buildPieces(drafts, transcript, thenWear, again) {
 			missed += 1;
 			continue;
 		}
+		const image = await shrink(result.image);
+		if (!alive(my)) return;
 		const id = nextId("piece");
 		patch({ pieces: [{
 			id,
 			category: draft.category,
 			spoken: draft.spoken,
 			sourceTranscript: transcript,
-			image: result.image,
+			image,
 			selected: true,
 			ticketId,
 			createdAt: Date.now()
@@ -557,9 +672,18 @@ async function buildPieces(drafts, transcript, thenWear, again) {
 		finish(my);
 		return;
 	}
+	if (previousIds.length && made.length === drafts.length) patch({ pieces: useLab.getState().pieces.filter((piece) => !previousIds.includes(piece.id)) });
+	patch({ lastJob: {
+		kind: "pieces",
+		drafts,
+		transcript,
+		thenWear,
+		pieceIds: made
+	} });
 	if (!thenWear) {
-		noteStatus(missed ? copy.partial : copy.onBoard);
-		patch({ view: "board" });
+		const done = missed ? copy.partial : copy.onBoard;
+		noteStatus(done, done);
+		patch({ view: sameScreen(started, "board") });
 		finish(my);
 		return;
 	}
@@ -578,6 +702,7 @@ async function buildLook(my = begin(), again = false) {
 		lastJob: { kind: "look" },
 		view: "look"
 	});
+	const stage = "look";
 	const ticketId = nextId("GEN");
 	let result = null;
 	try {
@@ -593,13 +718,14 @@ async function buildLook(my = begin(), again = false) {
 	}
 	if (!alive(my)) return;
 	if (!result || !result.ok) {
-		noteStatus(result && !result.ok && result.kind === "unavailable" ? copy.cantBuild : copy.missed, copy.missed);
+		const missedLine = failLine(result);
+		noteStatus(missedLine, missedLine);
 		finish(my);
 		return;
 	}
 	const draft = {
 		id: nextId("look"),
-		image: result.image,
+		image: await shrink(result.image),
 		spoken,
 		pieceIds: picked.map((piece) => piece.id),
 		ticketId,
@@ -607,7 +733,7 @@ async function buildLook(my = begin(), again = false) {
 	};
 	patch({
 		draft,
-		view: "look"
+		view: sameScreen(stage, "look")
 	});
 	rememberTicket({
 		id: ticketId,
@@ -653,13 +779,14 @@ async function tweakLook(change, my = begin(), again = false) {
 	}
 	if (!alive(my)) return;
 	if (!result || !result.ok) {
-		noteStatus(result && !result.ok && result.kind === "unavailable" ? copy.cantBuild : copy.missed, copy.missed);
+		const missedLine = failLine(result);
+		noteStatus(missedLine, missedLine);
 		finish(my);
 		return;
 	}
 	const draft = {
 		id: nextId("look"),
-		image: result.image,
+		image: await shrink(result.image),
 		spoken: `${current.spoken}. ${change}`,
 		pieceIds: current.pieceIds,
 		ticketId,
@@ -667,7 +794,7 @@ async function tweakLook(change, my = begin(), again = false) {
 	};
 	patch({
 		draft,
-		view: "look"
+		view: sameScreen("look", "look")
 	});
 	rememberTicket({
 		id: ticketId,
@@ -693,11 +820,12 @@ async function walk(my = begin(), again = false) {
 		return;
 	}
 	const reaction = useLab.getState().reaction;
-	noteStatus(copy.walking, copy.runwayUp);
+	noteStatus(copy.walking, copy.walking);
 	patch({
 		lastJob: { kind: "video" },
 		view: "runway"
 	});
+	const stage = "runway";
 	const ticketId = nextId("GEN");
 	let started = null;
 	try {
@@ -713,7 +841,8 @@ async function walk(my = begin(), again = false) {
 	}
 	if (!alive(my)) return;
 	if (!started || !started.ok) {
-		noteStatus(started && !started.ok && started.kind === "unavailable" ? copy.cantBuild : copy.missed, copy.missed);
+		const missedLine = failLine(started);
+		noteStatus(missedLine, missedLine);
 		finish(my);
 		return;
 	}
@@ -729,6 +858,7 @@ async function walk(my = begin(), again = false) {
 		status: "Pending",
 		createdAt: Date.now()
 	});
+	let misses = 0;
 	for (let attempt = 0; attempt < 45; attempt += 1) {
 		if (!alive(my)) return;
 		await new Promise((resolve) => setTimeout(resolve, 4e3));
@@ -742,10 +872,15 @@ async function walk(my = begin(), again = false) {
 		}
 		if (!alive(my)) return;
 		if (!polled || !polled.ok) {
-			noteStatus(copy.missed, copy.missed);
-			finish(my);
-			return;
+			misses += 1;
+			if (misses >= 3) {
+				noteStatus(copy.missed, copy.missed);
+				finish(my);
+				return;
+			}
+			continue;
 		}
+		misses = 0;
 		if (polled.status === "failed") {
 			noteStatus(copy.missed, copy.missed);
 			finish(my);
@@ -757,13 +892,15 @@ async function walk(my = begin(), again = false) {
 			if (latest && latest.id === draft.id) {
 				const next = {
 					...latest,
-					videoUrl
+					videoUrl,
+					videoReaction: reaction
 				};
 				patch({
 					draft: next,
 					looks: useLab.getState().looks.map((look) => look.id === next.id ? {
 						...look,
-						videoUrl
+						videoUrl,
+						videoReaction: reaction
 					} : look)
 				});
 			}
@@ -773,7 +910,7 @@ async function walk(my = begin(), again = false) {
 					status: again ? "Regenerated" : "Generated",
 					output: videoUrl
 				} : ticket),
-				view: "runway"
+				view: sameScreen(stage, "runway")
 			});
 			noteStatus(copy.runwayUp);
 			finish(my);
@@ -799,7 +936,7 @@ function runIntent(intent, view, text) {
 			useLab.setState({ status: copy.unclear });
 			return;
 		}
-		if (job.kind === "pieces") buildPieces(job.drafts, job.transcript, false, true);
+		if (job.kind === "pieces") buildPieces(job.drafts, job.transcript, Boolean(job.thenWear), true);
 		if (job.kind === "look") buildLook(begin(), true);
 		if (job.kind === "tweak") tweakLook(job.change, begin(), true);
 		if (job.kind === "video") walk(begin(), true);
@@ -825,7 +962,7 @@ function runIntent(intent, view, text) {
 		return;
 	}
 	if (view === "look" && (intent.type === "unclear" || intent.type === "pieces")) {
-		if (text.trim().length < 8) {
+		if (text.trim().length < 3) {
 			useLab.setState({ status: copy.unclear });
 			return;
 		}
@@ -958,6 +1095,10 @@ var useLab = create((set, get) => ({
 		});
 		persist();
 	},
+	dropLook: (id) => {
+		set({ looks: get().looks.filter((look) => look.id !== id) });
+		persist();
+	},
 	handleTranscript: (text) => {
 		const cleaned = text.trim();
 		if (!cleaned) return;
@@ -997,7 +1138,7 @@ var useLab = create((set, get) => ({
 		walk(begin(), true);
 	}
 }));
-function Composer({ prominent = false, flush = false }) {
+function Composer({ placeholder = copy.typePiece, suggestions = [] }) {
 	const busy = useLab((state) => state.busy);
 	const status = useLab((state) => state.status);
 	const setStatus = useLab((state) => state.setStatus);
@@ -1007,6 +1148,18 @@ function Composer({ prominent = false, flush = false }) {
 	const stopRef = (0, import_react.useRef)(null);
 	(0, import_react.useEffect)(() => {
 		return () => stopRef.current?.();
+	}, []);
+	(0, import_react.useEffect)(() => {
+		function onKey(event) {
+			if (event.key === "Escape" && useLab.getState().busy) {
+				stopGeneration();
+				stopRef.current?.();
+				stopRef.current = null;
+				setListening(false);
+			}
+		}
+		window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
 	}, []);
 	function stopListen() {
 		stopRef.current?.();
@@ -1050,49 +1203,69 @@ function Composer({ prominent = false, flush = false }) {
 	function onSubmit(event) {
 		event.preventDefault();
 		const text = draft.trim();
-		if (!text) return;
+		if (!text || busy) return;
 		setDraft("");
 		handleTranscript(text);
 	}
+	const micLabel = busy ? copy.stop : listening ? copy.listening : copy.talk;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "flex flex-col items-center gap-4",
+		className: "flex flex-col gap-3",
+		"aria-busy": busy,
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-				type: "button",
-				onClick: onMic,
-				"aria-label": busy ? copy.stop : copy.talk,
-				"aria-pressed": listening,
-				className: cn("relative inline-flex items-center justify-center rounded-full transition-[opacity,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-fg", prominent ? "size-32" : "size-16", busy || prominent ? "border-2 border-ink bg-accent text-accent-fg" : "border-2 border-ink bg-cream text-fg", listening && "mic-live"),
-				children: busy ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Square, {
-					className: prominent ? "size-8" : "size-5",
-					fill: "currentColor"
-				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Mic, { className: prominent ? "size-10" : "size-6" })
-			}),
-			busy ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "text-sm font-medium",
-				children: copy.stop
-			}) : null,
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Status, { text: status }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
 				onSubmit,
-				className: cn("flex w-full gap-2", !flush && "px-5"),
+				className: "flex w-full gap-2",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, {
 					id: "say",
 					value: draft,
 					onChange: (event) => setDraft(event.target.value),
-					placeholder: copy.typeIt,
-					"aria-label": copy.typeIt,
-					autoComplete: "off"
+					placeholder,
+					"aria-label": placeholder,
+					autoComplete: "off",
+					disabled: busy
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
 					type: "submit",
 					variant: "ghost",
-					className: "shrink-0",
+					className: "min-w-16 shrink-0",
+					disabled: busy || draft.trim().length === 0,
 					children: copy.go
 				})]
-			})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "flex items-center gap-3",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "button",
+					onClick: onMic,
+					"aria-label": micLabel,
+					"aria-pressed": listening,
+					className: cn("relative inline-flex size-14 shrink-0 items-center justify-center rounded-full border-2 border-ink transition-[opacity,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ink", busy || listening ? "bg-accent text-accent-fg" : "bg-cream text-fg", listening && "mic-live"),
+					children: busy ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Square, {
+						className: "size-5",
+						fill: "currentColor"
+					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Mic, { className: "size-6" })
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "text-sm font-bold",
+					children: micLabel
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Status, { text: status }),
+			suggestions.length > 0 && !busy && draft.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "flex flex-wrap gap-2",
+				children: suggestions.map((suggestion) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "button",
+					onClick: () => handleTranscript(suggestion),
+					className: "h-11 rounded-full border-2 border-line bg-cream px-3 text-sm font-bold text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ink",
+					children: suggestion
+				}, suggestion))
+			}) : null
 		]
 	});
 }
+var EXAMPLES$2 = [
+	"black hoodie",
+	"wool trousers",
+	"leather loafers"
+];
 function BoardScreen() {
 	const setView = useLab((state) => state.setView);
 	const pieces = useLab((state) => state.pieces);
@@ -1100,89 +1273,91 @@ function BoardScreen() {
 	const dropPiece = useLab((state) => state.dropPiece);
 	const requestLook = useLab((state) => state.requestLook);
 	const busy = useLab((state) => state.busy);
-	const selected = pieces.some((piece) => piece.selected);
+	const selected = pieces.filter((piece) => piece.selected).length;
+	const filled = CATEGORIES.filter((category) => pieces.some((piece) => piece.category === category));
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Shell, { children: [
-		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Header, { action: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextButton, {
-			onClick: () => setView("hub"),
-			children: copy.hub
-		}) }),
-		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "min-h-0 flex-1 overflow-y-auto py-4",
-			children: [pieces.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "px-1 pb-4",
-				children: copy.emptyBoard
-			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "px-1 pb-3 text-sm text-muted",
-				children: copy.pick
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Header, {
+			title: copy.board,
+			action: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextButton, {
+				onClick: () => setView("hub"),
+				children: copy.hub
+			})
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: "min-h-0 flex-1 overflow-y-auto px-4 py-4",
+			children: pieces.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: copy.emptyBoard }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "flex flex-col gap-5",
-				children: CATEGORIES.map((category) => {
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "text-sm text-muted",
+					children: copy.pick
+				}), filled.map((category) => {
 					const items = pieces.filter((piece) => piece.category === category);
 					return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-						className: "px-5 text-sm font-medium text-muted",
+						className: "font-display text-sm font-bold tracking-widest text-muted uppercase",
 						children: category
-					}), items.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "px-5 py-4 text-sm text-subtle",
-						children: copy.empty
-					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "mt-2 flex gap-3 overflow-x-auto px-5 pb-1",
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "mt-2 flex gap-3 overflow-x-auto pb-1",
 						children: items.map((piece) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "relative w-40 shrink-0",
+							className: "w-40 shrink-0",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 								type: "button",
 								onClick: () => togglePiece(piece.id),
 								"aria-pressed": piece.selected,
-								className: cn("w-full overflow-hidden rounded-lg border-2 text-left", piece.selected ? "border-pipe" : "border-line"),
+								className: cn("w-full overflow-hidden rounded-lg border-2 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ink", piece.selected ? "border-pipe" : "border-line"),
 								children: [
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
 										src: piece.image,
-										alt: piece.spoken,
+										alt: "",
 										className: "aspect-square w-full object-cover"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										className: "clamp-2 block px-2 py-2 text-xs text-muted",
+										className: "line-clamp-2 block px-2 pt-2 text-xs text-muted",
 										children: piece.spoken
 									}),
-									piece.selected ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										className: "block px-2 pb-2 text-xs font-medium",
-										children: copy.on
-									}) : null
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: cn("block px-2 pb-2 text-xs font-bold", !piece.selected && "invisible"),
+										children: copy.wearing
+									})
 								]
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 								type: "button",
-								"aria-label": copy.drop,
 								onClick: () => dropPiece(piece.id),
-								className: "absolute top-1 right-1 flex size-11 items-center justify-center rounded-full bg-bg/80 text-fg",
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, { className: "size-4" })
+								"aria-label": `${copy.drop} ${piece.spoken}`,
+								className: "mt-1 h-11 w-full rounded-md border-2 border-line text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ink",
+								children: copy.drop
 							})]
 						}, piece.id))
 					})] }, category);
-				})
-			})]
+				})]
+			})
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "safe-bottom border-t border-line px-5 pt-3",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "mb-3",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Composer, { flush: true })
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-				className: "w-full",
+			className: "safe-bottom shrink-0 border-t border-line px-4 pt-3",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Composer, { suggestions: pieces.length === 0 ? EXAMPLES$2 : [] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+				className: "mt-3 w-full",
 				size: "lg",
-				disabled: busy || !selected,
+				disabled: busy || selected === 0,
 				onClick: requestLook,
-				children: copy.putOn
+				children: selected > 0 ? `${copy.putOn} (${selected})` : copy.putOn
 			})]
 		})
 	] });
 }
+var EXAMPLES$1 = [
+	"black hoodie",
+	"wool trousers",
+	"leather loafers"
+];
 function HubScreen() {
 	const setView = useLab((state) => state.setView);
 	const draft = useLab((state) => state.draft);
 	const looks = useLab((state) => state.looks);
 	const pieces = useLab((state) => state.pieces);
 	const openSaved = useLab((state) => state.openSaved);
+	const dropLook = useLab((state) => state.dropLook);
 	const [install, setInstall] = (0, import_react.useState)(null);
 	const [hideInstall, setHideInstall] = (0, import_react.useState)(false);
+	const wearing = pieces.filter((piece) => piece.selected).length;
 	(0, import_react.useEffect)(() => {
 		const onPrompt = (event) => {
 			event.preventDefault();
@@ -1191,128 +1366,121 @@ function HubScreen() {
 		window.addEventListener("beforeinstallprompt", onPrompt);
 		return () => window.removeEventListener("beforeinstallprompt", onPrompt);
 	}, []);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Shell, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Header, { action: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "flex",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextButton, {
-			onClick: () => setView("lock"),
-			children: copy.face
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextButton, {
-			onClick: () => setView("board"),
-			children: copy.board
-		})]
-	}) }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "flex min-h-0 flex-1 flex-col gap-5 overflow-x-hidden overflow-y-auto py-5",
-		children: [
-			pieces.length === 0 && !draft ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "flex flex-col gap-2 px-1",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "text-lg italic",
-					children: copy.crown
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: copy.hubJob })]
-			}) : null,
-			draft ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-				type: "button",
-				onClick: () => setView("look"),
-				className: "px-4 text-left",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-					src: draft.image,
-					alt: draft.spoken,
-					className: "seam aspect-3/4 w-full object-cover"
-				})
-			}) : null,
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Composer, { prominent: true }),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
-				className: "mx-4 border-2 border-dashed border-ink bg-mint px-3 py-3",
-				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "font-display text-xs font-extrabold tracking-widest uppercase",
-						children: "Keep it"
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "mt-1 text-sm",
-						children: copy.pinned
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "mt-1 text-sm",
-						children: copy.installHow
-					}),
-					install && !hideInstall ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "mt-2 flex gap-2",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextButton, {
-							onClick: () => {
-								install.prompt();
-								setHideInstall(true);
-							},
-							children: copy.add
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextButton, {
-							onClick: () => setHideInstall(true),
-							children: copy.notNow
-						})]
-					}) : null
-				]
-			}),
-			looks.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-				className: "px-4 font-display text-sm font-bold tracking-widest text-ink uppercase",
-				children: copy.savedHead
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "mt-2 flex gap-3 overflow-x-auto px-4 pb-2",
-				children: looks.map((look) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Shell, { children: [
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Header, {
+			title: copy.title,
+			action: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextButton, {
+				onClick: () => setView("lock"),
+				children: copy.face
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextButton, {
+				onClick: () => setView("board"),
+				children: copy.board
+			})] })
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "flex min-h-0 flex-1 flex-col gap-5 overflow-x-hidden overflow-y-auto px-4 py-4 *:shrink-0",
+			children: [
+				pieces.length === 0 && !draft ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex flex-col gap-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "text-lg italic",
+						children: copy.crown
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: copy.hubJob })]
+				}) : null,
+				pieces.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+					className: "text-sm text-muted",
+					children: [
+						pieces.length,
+						" pieces on the board. ",
+						wearing,
+						" selected."
+					]
+				}) : null,
+				draft ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 					type: "button",
-					onClick: () => openSaved(look.id),
-					className: "w-24 shrink-0",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-						src: look.image,
-						alt: look.spoken,
+					onClick: () => setView("look"),
+					className: "text-left",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+						src: draft.image,
+						alt: "",
 						className: "seam aspect-3/4 w-full object-cover"
-					})
-				}, look.id))
-			})] }) : null
-		]
-	})] });
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "mt-2 line-clamp-2 block text-sm",
+						children: draft.spoken
+					})]
+				}) : null,
+				looks.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+					className: "font-display text-sm font-bold tracking-widest text-ink uppercase",
+					children: copy.savedHead
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-2 flex gap-3 overflow-x-auto pb-2",
+					children: looks.map((look) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "w-28 shrink-0",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							type: "button",
+							onClick: () => openSaved(look.id),
+							className: "w-full text-left",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+								src: look.image,
+								alt: "",
+								className: "seam aspect-3/4 w-full object-cover"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "mt-1 line-clamp-2 block text-xs text-muted",
+								children: look.spoken
+							})]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							type: "button",
+							onClick: () => dropLook(look.id),
+							"aria-label": `${copy.drop} ${look.spoken}`,
+							className: "mt-1 h-11 w-full rounded-md border-2 border-line text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ink",
+							children: copy.drop
+						})]
+					}, look.id))
+				})] }) : null,
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("details", {
+					className: "border-2 border-ink bg-mint px-3 py-3",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("summary", {
+							className: "font-display text-sm font-extrabold tracking-widest uppercase",
+							children: copy.keepIt
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "mt-2 text-sm",
+							children: copy.pinned
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "mt-1 text-sm",
+							children: copy.installHow
+						}),
+						install && !hideInstall ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "mt-2 flex gap-2",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextButton, {
+								onClick: () => {
+									install.prompt();
+									setHideInstall(true);
+								},
+								children: copy.add
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextButton, {
+								onClick: () => setHideInstall(true),
+								children: copy.notNow
+							})]
+						}) : null
+					]
+				})
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: "safe-bottom shrink-0 border-t border-line px-4 pt-3",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Composer, { suggestions: EXAMPLES$1 })
+		})
+	] });
 }
-function compressDataUrl(dataUrl, maxEdge = 800, quality = .72) {
-	return new Promise((resolve, reject) => {
-		const image = new Image();
-		image.onload = () => {
-			const scale = Math.min(1, maxEdge / Math.max(image.width, image.height));
-			const width = Math.max(1, Math.round(image.width * scale));
-			const height = Math.max(1, Math.round(image.height * scale));
-			const canvas = document.createElement("canvas");
-			canvas.width = width;
-			canvas.height = height;
-			const ctx = canvas.getContext("2d");
-			if (!ctx) {
-				resolve(dataUrl);
-				return;
-			}
-			ctx.drawImage(image, 0, 0, width, height);
-			resolve(canvas.toDataURL("image/jpeg", quality));
-		};
-		image.onerror = () => reject(/* @__PURE__ */ new Error("photo"));
-		image.src = dataUrl;
-	});
-}
-function readFileAsDataUrl(file) {
-	return new Promise((resolve, reject) => {
-		const reader = new FileReader();
-		reader.onload = () => resolve(String(reader.result ?? ""));
-		reader.onerror = () => reject(reader.error);
-		reader.readAsDataURL(file);
-	});
-}
-function frameToDataUrl(video, maxEdge = 800, quality = .72) {
-	const width = video.videoWidth;
-	const height = video.videoHeight;
-	if (!width || !height) return null;
-	const scale = Math.min(1, maxEdge / Math.max(width, height));
-	const canvas = document.createElement("canvas");
-	canvas.width = Math.max(1, Math.round(width * scale));
-	canvas.height = Math.max(1, Math.round(height * scale));
-	const ctx = canvas.getContext("2d");
-	if (!ctx) return null;
-	ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-	return canvas.toDataURL("image/jpeg", quality);
-}
+var SLOT_ORDER = [
+	"front",
+	"side",
+	"threequarter",
+	"extra"
+];
 function LockScreen() {
 	const refs = useLab((state) => state.refs);
 	const setRef = useLab((state) => state.setRef);
@@ -1331,6 +1499,8 @@ function LockScreen() {
 	}, []);
 	const ready = REQUIRED_SLOTS.every((id) => refs.some((ref) => ref.id === id));
 	const got = REQUIRED_SLOTS.filter((id) => refs.some((ref) => ref.id === id)).length;
+	const missing = REQUIRED_SLOTS.filter((id) => !refs.some((ref) => ref.id === id)).map((id) => copy.slots[id]);
+	const active = refs.find((ref) => ref.id === slot);
 	async function openCamera() {
 		if (!navigator.mediaDevices?.getUserMedia) {
 			setNote(copy.cameraBlocked);
@@ -1360,87 +1530,105 @@ function LockScreen() {
 			dataUrl: image,
 			createdAt: Date.now()
 		});
-		const next = SLOTS.find((id) => id !== target && !useLab.getState().refs.some((ref) => ref.id === id));
+		const next = REQUIRED_SLOTS.find((id) => id !== target && !useLab.getState().refs.some((ref) => ref.id === id));
 		if (next) setSlot(next);
 	}
 	function shoot() {
 		const video = videoRef.current;
 		if (!video) return;
-		const frame = frameToDataUrl(video);
-		if (!frame) return;
+		const frame = frameToDataUrl(video, 800, .72, true);
+		if (!frame) {
+			setNote(copy.cameraWait);
+			return;
+		}
+		setNote("");
 		savePhoto(frame, slot);
 	}
 	async function onFile(file) {
 		if (!file || !file.type.startsWith("image/")) {
-			setNote(copy.missed);
+			setNote(copy.notPhoto);
 			return;
 		}
 		try {
 			await savePhoto(await readFileAsDataUrl(file), slot);
 			setNote("");
 		} catch {
-			setNote(copy.missed);
+			setNote(copy.notPhoto);
 		}
 	}
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Shell, { children: [
-		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Header, {}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Header, { title: copy.yourFace }),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 py-5",
+			className: "flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4 *:shrink-0",
 			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "text-base",
-					children: copy.lockLead
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "text-sm text-muted",
-					children: copy.lockCount
-				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: copy.lockLead }),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 					className: "seam overflow-hidden bg-lilac",
 					children: live ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("video", {
 						ref: videoRef,
-						className: "aspect-square w-full object-cover",
+						className: "aspect-4/3 max-h-56 w-full -scale-x-100 object-cover",
 						playsInline: true,
 						muted: true,
-						autoPlay: true
+						autoPlay: true,
+						"aria-label": `${copy.takePhoto}, ${copy.slots[slot]}`
+					}) : active ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+						src: active.dataUrl,
+						alt: "",
+						className: "aspect-4/3 max-h-56 w-full object-cover"
 					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "flex aspect-square flex-col items-center justify-end p-3",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-							className: "w-full",
-							size: "lg",
-							onClick: () => void openCamera(),
-							children: copy.openCamera
+						className: "flex aspect-4/3 max-h-56 items-center justify-center px-4",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "text-center text-muted",
+							children: copy.slots[slot]
 						})
 					})
 				}),
+				live ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex items-center justify-center gap-3",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						type: "button",
+						onClick: shoot,
+						"aria-label": `${copy.takePhoto}, ${copy.slots[slot]}`,
+						className: "size-16 shrink-0 rounded-full border-4 border-fg bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ink"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "font-display text-sm font-bold",
+						children: [
+							copy.takePhoto,
+							": ",
+							copy.slots[slot]
+						]
+					})]
+				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+					className: "w-full",
+					size: "lg",
+					onClick: () => void openCamera(),
+					children: copy.openCamera
+				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 					className: "grid grid-cols-4 gap-2",
-					children: SLOTS.map((id) => {
+					children: SLOT_ORDER.map((id) => {
 						const photo = refs.find((ref) => ref.id === id);
-						return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						const label = copy.slots[id];
+						return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 							type: "button",
 							onClick: () => setSlot(id),
-							className: cn("overflow-hidden rounded-md border-2 text-left", slot === id ? "border-2 border-pipe" : "border-2 border-line"),
-							children: photo ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+							"aria-pressed": slot === id,
+							"aria-label": `${label}${id === "extra" ? `, ${copy.optional}` : ""}${photo ? ", photo added" : ", empty"}`,
+							className: cn("overflow-hidden rounded-md border-2 bg-cream text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ink", slot === id ? "border-pipe" : "border-line"),
+							children: [photo ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
 								src: photo.dataUrl,
-								alt: copy.slots[id],
+								alt: "",
 								className: "aspect-square w-full object-cover"
-							}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								className: "flex aspect-square items-end p-1.5 text-xs text-subtle",
-								children: copy.slots[id]
-							})
+							}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "block aspect-square bg-lilac" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+								className: "block px-1 py-1 text-center text-xs font-bold text-ink",
+								children: [label, id === "extra" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "block font-medium text-muted",
+									children: copy.optional
+								}) : null]
+							})]
 						}, id);
 					})
 				}),
-				live ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "flex justify-center",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-						type: "button",
-						onClick: shoot,
-						"aria-label": copy.slots[slot],
-						className: "size-20 rounded-full border-4 border-fg bg-accent transition-[opacity,transform] duration-150 active:scale-[0.98]"
-					})
-				}) : null,
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
 					className: "w-full",
 					size: "lg",
@@ -1453,6 +1641,8 @@ function LockScreen() {
 					ref: fileRef,
 					type: "file",
 					accept: "image/*",
+					tabIndex: -1,
+					"aria-hidden": "true",
 					className: "sr-only",
 					onChange: (event) => {
 						onFile(event.target.files?.[0]);
@@ -1461,26 +1651,31 @@ function LockScreen() {
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Status, { text: note || status }),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "text-sm text-subtle",
+					className: "text-sm text-muted",
 					children: copy.stay
 				})
 			]
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "safe-bottom border-t border-line px-3 pt-3",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+			className: "safe-bottom shrink-0 border-t border-line px-4 pt-3",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "mb-2 text-center text-sm",
-				children: [got, " of 3"]
+				children: ready ? copy.lockCount : `${got} of 3. Still need ${missing.join(", ")}.`
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
 				className: "w-full",
 				size: "lg",
 				disabled: !ready,
 				onClick: lockIn,
-				children: copy.lockedIn
+				children: copy.usePhotos
 			})]
 		})
 	] });
 }
+var EXAMPLES = [
+	"make it black",
+	"add a hat",
+	"shorter coat"
+];
 function LookScreen() {
 	const setView = useLab((state) => state.setView);
 	const draft = useLab((state) => state.draft);
@@ -1488,38 +1683,52 @@ function LookScreen() {
 	const saveDraft = useLab((state) => state.saveDraft);
 	const requestRunway = useLab((state) => state.requestRunway);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Shell, { children: [
-		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Header, { action: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "flex",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextButton, {
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Header, {
+			title: copy.look,
+			action: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextButton, {
 				onClick: () => setView("hub"),
 				children: copy.hub
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextButton, {
 				onClick: () => setView("board"),
 				children: copy.board
-			})]
-		}) }),
+			})] })
+		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			className: "flex min-h-0 flex-1 items-center justify-center px-5 py-4",
-			children: draft ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-				src: draft.image,
-				alt: draft.spoken,
-				className: "seam max-h-full max-w-full object-contain"
-			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "aspect-3/4 w-full rounded-xl bg-surface" })
+			className: "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4 *:shrink-0",
+			children: draft ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("figure", {
+				className: "flex flex-col items-center gap-2",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+					src: draft.image,
+					alt: draft.spoken,
+					className: cn("seam mx-auto max-h-72 max-w-full object-contain", busy && "pending-pulse")
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("figcaption", {
+					className: "text-center text-sm text-muted",
+					children: draft.spoken
+				})]
+			}) : busy ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "pending-pulse text-center text-lg",
+				children: copy.puttingOn
+			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "flex flex-col items-center gap-3 text-center",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: copy.nothingOn }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+					onClick: () => setView("board"),
+					children: copy.openBoard
+				})]
+			})
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "safe-bottom border-t border-line px-5 pt-4",
+			className: "safe-bottom shrink-0 border-t border-line px-4 pt-3",
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "mb-3 text-center text-sm",
+					className: "mb-3 text-sm text-muted",
 					children: copy.runwayHint
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "mb-3 text-center text-sm text-muted",
-					children: copy.change
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Composer, {
+					placeholder: copy.changeHint,
+					suggestions: draft ? EXAMPLES : []
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Composer, { flush: true }),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "mt-4 grid grid-cols-2 gap-3",
+					className: "mt-3 grid grid-cols-2 gap-3",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
 						variant: "ghost",
 						disabled: !draft || busy,
@@ -1558,55 +1767,100 @@ function RunwayScreen() {
 	const status = useLab((state) => state.status);
 	const retryReaction = useLab((state) => state.retryReaction);
 	const [broken, setBroken] = (0, import_react.useState)(false);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Shell, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Header, { action: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextButton, {
-		onClick: () => setView("look"),
-		children: copy.look
-	}) }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-4",
-		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "seam overflow-hidden bg-surface",
-				children: draft?.videoUrl && !broken ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("video", {
-					src: draft.videoUrl,
-					className: "aspect-9/16 max-h-[28rem] w-full bg-bg object-contain",
-					controls: true,
-					playsInline: true,
-					autoPlay: true,
-					onError: () => setBroken(true)
-				}, draft.videoUrl) : draft ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-					src: draft.image,
-					alt: draft.spoken,
-					className: "aspect-9/16 max-h-[28rem] w-full object-cover"
-				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "aspect-9/16 w-full" })
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				"aria-live": "polite",
-				className: "text-center text-muted",
-				children: broken ? copy.clipGone : status
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "mb-2 text-sm text-muted",
-				children: copy.judges
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				role: "radiogroup",
-				"aria-label": copy.judges,
-				className: "grid grid-cols-3 gap-2",
-				children: CHOICES.map((choice) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-					type: "button",
-					role: "radio",
-					"aria-checked": reaction === choice.id,
-					onClick: () => setReaction(choice.id),
-					className: cn("h-12 rounded-md border text-sm font-medium", reaction === choice.id ? "border-ink bg-accent font-extrabold text-accent-fg" : "border-line bg-cream text-fg"),
-					children: choice.label
-				}, choice.id))
-			})] }),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
-				variant: "ghost",
-				disabled: busy || !draft,
-				onClick: retryReaction,
-				children: copy.tryReaction
+	const videoUrl = draft?.videoUrl;
+	(0, import_react.useEffect)(() => {
+		setBroken(false);
+	}, [videoUrl]);
+	const shot = draft?.videoReaction;
+	const mismatch = Boolean(videoUrl && shot && shot !== reaction);
+	const shotLabel = CHOICES.find((choice) => choice.id === shot)?.label;
+	function move(direction, group) {
+		const next = CHOICES[(CHOICES.findIndex((choice) => choice.id === reaction) + direction + CHOICES.length) % CHOICES.length];
+		setReaction(next.id);
+		group.querySelector(`[data-reaction="${next.id}"]`)?.focus();
+	}
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Shell, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Header, {
+		title: copy.runway,
+		action: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TextButton, {
+			onClick: () => setView("look"),
+			children: copy.look
+		})
+	}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: "seam flex min-h-48 w-full flex-1 items-center justify-center overflow-hidden bg-surface",
+			children: videoUrl && !broken ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("video", {
+				src: videoUrl,
+				className: "max-h-full w-full bg-bg object-contain",
+				controls: true,
+				playsInline: true,
+				autoPlay: true,
+				onError: () => setBroken(true)
+			}, videoUrl) : draft ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+				src: draft.image,
+				alt: draft.spoken,
+				className: "max-h-full w-full object-contain"
+			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "p-6 text-center text-muted",
+				children: copy.noWalk
 			})
-		]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "flex shrink-0 flex-col gap-4",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					"aria-live": "polite",
+					className: "text-center text-muted",
+					children: broken ? copy.clipGone : busy ? copy.walking : status
+				}),
+				mismatch && shotLabel ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+					className: "text-center text-sm",
+					children: [
+						copy.reshootNote,
+						" Last walk: ",
+						shotLabel,
+						"."
+					]
+				}) : null,
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mb-2 text-sm text-muted",
+					id: "judges-label",
+					children: copy.judges
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					role: "radiogroup",
+					"aria-labelledby": "judges-label",
+					className: "grid grid-cols-3 gap-2",
+					onKeyDown: (event) => {
+						if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+							event.preventDefault();
+							move(1, event.currentTarget);
+						}
+						if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+							event.preventDefault();
+							move(-1, event.currentTarget);
+						}
+					},
+					children: CHOICES.map((choice) => {
+						const selected = reaction === choice.id;
+						return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							type: "button",
+							role: "radio",
+							"data-reaction": choice.id,
+							"aria-checked": selected,
+							tabIndex: selected ? 0 : -1,
+							onClick: () => setReaction(choice.id),
+							className: cn("h-12 rounded-md border text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ink", selected ? "border-ink bg-accent font-extrabold text-accent-fg" : "border-line bg-cream text-fg"),
+							children: choice.label
+						}, choice.id);
+					})
+				})] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
+					variant: mismatch || broken ? "primary" : "ghost",
+					disabled: busy || !draft,
+					onClick: retryReaction,
+					children: copy.tryReaction
+				})
+			]
+		})]
 	})] });
 }
 function LabApp() {
@@ -1625,6 +1879,16 @@ function LabApp() {
 		if (!("serviceWorker" in navigator)) return;
 		navigator.serviceWorker.register("/sw.js").catch(() => void 0);
 	}, []);
+	(0, import_react.useEffect)(() => {
+		const titles = {
+			lock: copy.yourFace,
+			hub: copy.title,
+			board: copy.board,
+			look: copy.look,
+			runway: copy.runway
+		};
+		document.title = open ? `${titles[view] ?? copy.title} · ${copy.lab}` : copy.title;
+	}, [open, view]);
 	if (!ready) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Splash, {});
 	if (!open) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Splash, { onEnter: () => {
 		sessionStorage.setItem("sr-open", "1");

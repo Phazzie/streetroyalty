@@ -1,4 +1,4 @@
-//#region node_modules/.nitro/vite/services/ssr/assets/tickets-DTwv3wmS.js
+//#region node_modules/.nitro/vite/services/ssr/assets/tickets-B6Ik5l_m.js
 var CATEGORIES = [
 	"Tops",
 	"Bottoms",
@@ -6,12 +6,6 @@ var CATEGORIES = [
 	"Hats",
 	"Shoes",
 	"Accessories"
-];
-var SLOTS = [
-	"front",
-	"side",
-	"threequarter",
-	"extra"
 ];
 var REQUIRED_SLOTS = [
 	"front",
@@ -56,7 +50,11 @@ var LEX = [
 	{
 		category: "Outer",
 		words: [
+			"jean jacket",
+			"denim jacket",
+			"leather jacket",
 			"overcoat",
+			"cardigan",
 			"trench",
 			"bomber",
 			"parka",
@@ -79,7 +77,8 @@ var LEX = [
 			"cargo",
 			"slacks",
 			"shorts",
-			"short",
+			"skirt",
+			"skirts",
 			"jean",
 			"slack"
 		]
@@ -87,10 +86,15 @@ var LEX = [
 	{
 		category: "Tops",
 		words: [
+			"tank top",
+			"crop top",
+			"tube top",
+			"polo shirt",
 			"t-shirt",
 			"tshirt",
 			"hoodie",
 			"sweater",
+			"jumper",
 			"jersey",
 			"blouse",
 			"shirt",
@@ -134,6 +138,13 @@ function findHits(text) {
 		category: entry.category
 	}))).sort((a, b) => b.word.length - a.word.length);
 	const taken = new Array(text.length).fill(false);
+	for (const phrase of SKIP_PHRASES) {
+		const re = new RegExp(`\\b${escapeRegExp(phrase)}\\b`, "gi");
+		for (const match of text.matchAll(re)) {
+			const index = match.index ?? 0;
+			for (let i = index; i < index + match[0].length; i += 1) taken[i] = true;
+		}
+	}
 	const hits = [];
 	for (const entry of entries) {
 		const re = new RegExp(`\\b${escapeRegExp(entry.word)}\\b`, "gi");
@@ -152,6 +163,13 @@ function findHits(text) {
 	hits.sort((a, b) => a.index - b.index);
 	return hits;
 }
+var SKIP_PHRASES = [
+	"short sleeve",
+	"short-sleeve",
+	"boot cut",
+	"boot-cut",
+	"bootcut"
+];
 var SEPARATORS = [
 	",",
 	";",
@@ -217,7 +235,19 @@ function splitPieces(transcript) {
 			spoken
 		});
 	}
-	return pieces;
+	return mergeSameCategory(pieces);
+}
+function mergeSameCategory(pieces) {
+	const merged = [];
+	for (const piece of pieces) {
+		const prev = merged[merged.length - 1];
+		if (prev && prev.category === piece.category) {
+			if (!prev.spoken.toLowerCase().includes(piece.spoken.toLowerCase())) prev.spoken = cleanEdge(`${prev.spoken} ${piece.spoken}`);
+			continue;
+		}
+		merged.push({ ...piece });
+	}
+	return merged;
 }
 function reactionIn(text) {
 	const lower = text.toLowerCase();
@@ -299,4 +329,4 @@ function videoPrompt(reaction, spoken, hasFace) {
 	return `The person in the still walks a short dark runway toward the camera, same face, same outfit, steady stride, one spotlight.${outfitLine} ${crowd} Realistic live action, no on-screen text.`;
 }
 //#endregion
-export { interpret as a, piecePrompt as c, SLOTS as i, tweakPrompt as l, LOCK_LINE as n, isCategory as o, REQUIRED_SLOTS as r, lookPrompt as s, CATEGORIES as t, videoPrompt as u };
+export { isCategory as a, tweakPrompt as c, interpret as i, videoPrompt as l, LOCK_LINE as n, lookPrompt as o, REQUIRED_SLOTS as r, piecePrompt as s, CATEGORIES as t };

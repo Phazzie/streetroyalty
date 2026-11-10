@@ -5,6 +5,7 @@ import { HubScreen } from "@/components/lab/hub-screen";
 import { LockScreen } from "@/components/lab/lock-screen";
 import { LookScreen } from "@/components/lab/look-screen";
 import { RunwayScreen } from "@/components/lab/runway-screen";
+import { copy } from "@/lib/copy";
 import { hydrate, useLab } from "@/lib/store";
 import { REQUIRED_SLOTS } from "@/lib/types";
 
@@ -27,6 +28,17 @@ export function LabApp() {
     if (!import.meta.env.PROD || !("serviceWorker" in navigator)) return;
     navigator.serviceWorker.register("/sw.js").catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    const titles: Record<string, string> = {
+      lock: copy.yourFace,
+      hub: copy.title,
+      board: copy.board,
+      look: copy.look,
+      runway: copy.runway,
+    };
+    document.title = open ? `${titles[view] ?? copy.title} · ${copy.lab}` : copy.title;
+  }, [open, view]);
 
   if (!ready) return <Splash />;
   if (!open) {
