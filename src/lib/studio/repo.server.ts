@@ -12,7 +12,11 @@ import { getPodProvider, readPaymentsMode, readPodMode, readMarkup } from "../po
 import type { CatalogProduct, Recipient } from "../pod/types.ts";
 import { PodError } from "../pod/types.ts";
 import { createCheckoutSession, retrieveCheckoutSession } from "../payments/stripe.ts";
-import { printFileAuthorized, printSigningSecret, signedPrintFileUrl } from "../pod/print-access.ts";
+import {
+  printFileAuthorized,
+  printSigningSecret,
+  signedPrintFileUrl,
+} from "../pod/print-access.ts";
 import { centsToDecimal } from "../pod/money.ts";
 import {
   canBuyDesign,
@@ -25,7 +29,14 @@ import {
   printQualityWarning,
   slugify,
 } from "./validate.ts";
-import type { CartLine, CollectionRecord, DesignRecord, DesignSummary, OrderSummary, StudioConfig } from "./models.ts";
+import type {
+  CartLine,
+  CollectionRecord,
+  DesignRecord,
+  DesignSummary,
+  OrderSummary,
+  StudioConfig,
+} from "./models.ts";
 
 type DesignRow = {
   id: string;
@@ -80,13 +91,24 @@ function summary(row: DesignRow): DesignSummary {
 }
 
 function record(row: DesignRow): DesignRecord {
-  return { ...summary(row), layers: parseLayers(JSON.parse(row.layers_json)), printFileId: row.print_file_id };
+  return {
+    ...summary(row),
+    layers: parseLayers(JSON.parse(row.layers_json)),
+    printFileId: row.print_file_id,
+  };
 }
 
 function origin(): string {
   const configured = process.env.APP_PUBLIC_URL?.trim();
   if (configured) return configured.replace(/\/$/, "");
   return new URL(getRequest().url).origin;
+}
+
+function sumCents(lines: { unitCents: number; quantity: number }[]): number {
+  return lines.reduce(
+    (sum, line) => sum + Math.round(line.unitCents) * Math.round(line.quantity),
+    0,
+  );
 }
 
 function fileUrl(id: string): string {
@@ -134,7 +156,9 @@ export async function loadCatalog(offset: number, limit: number) {
   };
 }
 
-export async function loadProduct(productId: string): Promise<CatalogProduct & { podMode: StudioConfig["podMode"] }> {
+export async function loadProduct(
+  productId: string,
+): Promise<CatalogProduct & { podMode: StudioConfig["podMode"] }> {
   const product = await getPodProvider().getProduct(productId);
   return { ...product, podMode: readStudioConfig().podMode };
 }
@@ -202,7 +226,10 @@ type SaveInput = {
   mockupUrl?: string | null;
 };
 
-export async function saveDesign(userId: string, input: SaveInput): Promise<DesignRecord & { warnings: string[] }> {
+export async function saveDesign(
+  userId: string,
+  input: SaveInput,
+): Promise<DesignRecord & { warnings: string[] }> {
   const title = input.title.trim().slice(0, 80);
   if (title.length < 2) throw new Error("Name the piece.");
   const layers = parseLayers(input.layers);
@@ -210,12 +237,15 @@ export async function saveDesign(userId: string, input: SaveInput): Promise<Desi
   const provider = getPodProvider();
   const product = await provider.getProduct(input.productId);
   const variant = product.variants.find((item) => item.id === input.variantId);
-  if (!variant || variant.retailCents == null) throw new Error("That size and color is not in the catalog.");
+  if (!variant || variant.retailCents == null)
+    throw new Error("That size and color is not in the catalog.");
   const placement = product.placements.find((item) => item.placement === input.placement);
   if (!placement) throw new Error("That product does not print there.");
   const sql = await getSql();
   if (input.collectionId) {
-    const owned = await sql<{ id: string }>`select id from collections where id = ${input.collectionId} and user_id = ${userId}`;
+    const owned = await sql<{
+      id: string;
+    }>`select id from collections where id = ${input.collectionId} and user_id = ${userId}`;
     if (!owned[0]) throw new Error("That collection is not yours.");
   }
   const id = input.id || crypto.randomUUID();
@@ -230,7 +260,9 @@ export async function saveDesign(userId: string, input: SaveInput): Promise<Desi
   const warnings: string[] = [];
   if (print) {
     const dims = imageDimensions(print.mime, print.base64);
-    const area = variant.printAreas.find((item) => item.placement === placement.placement) ?? variant.printAreas[0];
+    const area =
+      variant.printAreas.find((item) => item.placement === placement.placement) ??
+      variant.printAreas[0];
     if (dims && area) {
       const warning = printQualityWarning(dims, area);
       if (warning) warnings.push(warning);
@@ -295,17 +327,22 @@ export async function generateMockup(input: {
   if (!variant) throw new Error("Pick a color and size first.");
   const placement = product.placements.find((item) => item.placement === input.placement);
   if (!placement) throw new Error("That placement is not on this product.");
-  const area = variant.printAreas.find((item) => item.placement === placement.placement) ?? variant.printAreas[0];
+  const area =
+    variant.printAreas.find((item) => item.placement === placement.placement) ??
+    variant.printAreas[0];
   let publicUrl: string | undefined;
   if (readStudioConfig().podMode === "live") {
     const print = parsePrintFile(input.printFile);
-    if (!print || !input.userId) throw new Error("Sign in and export the print file before asking Printful for a mockup.");
+    if (!print || !input.userId)
+      throw new Error("Sign in and export the print file before asking Printful for a mockup.");
     const sql = await getSql();
     const fileId = crypto.randomUUID();
     await sql`insert into print_files (id, user_id, mime, data_base64) values (${fileId}, ${input.userId}, ${print.mime}, ${print.base64})`;
     publicUrl = fileUrl(fileId);
     if (!isPublicHttpUrl(publicUrl)) {
-      throw new Error("Printful has to download the print file. Set APP_PUBLIC_URL to the public https origin.");
+      throw new Error(
+        "Printful has to download the print file. Set APP_PUBLIC_URL to the public https origin.",
+      );
     }
     await provider.uploadFile({ url: publicUrl, filename: `${fileId}.png` });
   }
@@ -335,7 +372,8 @@ export async function publishDesign(userId: string, designId: string): Promise<D
   let providerProductId = row.provider_product_id ?? null;
   if (config.podMode === "live") {
     const url = fileUrl(row.print_file_id);
-    if (!isPublicHttpUrl(url)) throw new Error("Set APP_PUBLIC_URL so Printful can fetch the print file.");
+    if (!isPublicHttpUrl(url))
+      throw new Error("Set APP_PUBLIC_URL so Printful can fetch the print file.");
     const synced = await getPodProvider().syncProduct({
       externalId: row.id,
       name: row.title,
@@ -369,25 +407,41 @@ export async function listShop(): Promise<DesignSummary[]> {
   return rows.map(summary);
 }
 
-export async function getShopDesign(slug: string): Promise<DesignSummary & { sizes: { variantId: string; label: string; retailCents: number }[] }> {
+export async function getShopDesign(
+  slug: string,
+): Promise<DesignSummary & { sizes: { variantId: string; label: string; retailCents: number }[] }> {
   const sql = await getSql();
-  const rows = await sql<DesignRow>`select * from designs where slug = ${slug} and status = 'published'`;
+  const rows =
+    await sql<DesignRow>`select * from designs where slug = ${slug} and status = 'published'`;
   const row = rows[0];
   if (!row) throw new Error("That piece is not on the rack.");
   const product = await getPodProvider().getProduct(row.product_id);
   const sizes = product.variants
     .filter((variant) => variant.color === row.color_name && variant.retailCents != null)
-    .map((variant) => ({ variantId: variant.id, label: variant.size, retailCents: variant.retailCents ?? Number(row.retail_cents) }));
+    .map((variant) => ({
+      variantId: variant.id,
+      label: variant.size,
+      retailCents: variant.retailCents ?? Number(row.retail_cents),
+    }));
   if (!sizes.some((size) => size.variantId === row.variant_id)) {
-    sizes.push({ variantId: row.variant_id, label: row.size_label, retailCents: Number(row.retail_cents) });
+    sizes.push({
+      variantId: row.variant_id,
+      label: row.size_label,
+      retailCents: Number(row.retail_cents),
+    });
   }
   return { ...summary(row), sizes };
 }
 
-export async function readPrintFile(id: string): Promise<{ mime: string; bytes: Uint8Array } | null> {
+export async function readPrintFile(
+  id: string,
+): Promise<{ mime: string; bytes: Uint8Array } | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const sql = await getSql();
-  const rows = await sql<{ mime: string; data_base64: string }>`select mime, data_base64 from print_files where id = ${id}`;
+  const rows = await sql<{
+    mime: string;
+    data_base64: string;
+  }>`select mime, data_base64 from print_files where id = ${id}`;
   const row = rows[0];
   if (!row) return null;
   const binary = atob(row.data_base64);
@@ -396,7 +450,11 @@ export async function readPrintFile(id: string): Promise<{ mime: string; bytes: 
   return { mime: row.mime, bytes };
 }
 
-export async function addToCart(userId: string, designId: string, variantId: string): Promise<void> {
+export async function addToCart(
+  userId: string,
+  designId: string,
+  variantId: string,
+): Promise<void> {
   const sql = await getSql();
   const rows = await sql<DesignRow>`select * from designs where id = ${designId}`;
   const design = rows[0];
@@ -404,7 +462,9 @@ export async function addToCart(userId: string, designId: string, variantId: str
     throw new Error("That piece is not for sale.");
   }
   const product = await getPodProvider().getProduct(design.product_id);
-  const variant = product.variants.find((item) => item.id === variantId && item.color === design.color_name);
+  const variant = product.variants.find(
+    (item) => item.id === variantId && item.color === design.color_name,
+  );
   if (!variant) throw new Error("Pick a size in this color.");
   const id = crypto.randomUUID();
   await sql`
@@ -426,7 +486,12 @@ export async function updateCart(userId: string, cartId: string, quantity: numbe
   await sql`update cart_items set quantity = ${Math.min(10, next)} where id = ${cartId} and user_id = ${userId}`;
 }
 
-type CartJoin = DesignRow & { cart_id: string; cart_variant_id: string; cart_variant_label: string; quantity: number };
+type CartJoin = DesignRow & {
+  cart_id: string;
+  cart_variant_id: string;
+  cart_variant_label: string;
+  quantity: number;
+};
 
 async function cartRows(userId: string): Promise<CartJoin[]> {
   const sql = await getSql();
@@ -484,8 +549,10 @@ async function priceCart(userId: string) {
       products.set(row.product_id, product);
     }
     const variant = product.variants.find((item) => item.id === row.cart_variant_id);
-    if (!variant || variant.retailCents == null) throw new Error(`${row.title} is not available in that size.`);
-    const area = variant.printAreas.find((item) => item.placement === row.placement) ?? variant.printAreas[0];
+    if (!variant || variant.retailCents == null)
+      throw new Error(`${row.title} is not available in that size.`);
+    const area =
+      variant.printAreas.find((item) => item.placement === row.placement) ?? variant.printAreas[0];
     lines.push({
       designId: row.id,
       title: row.title,
@@ -508,13 +575,19 @@ export async function quoteShipping(userId: string, recipientInput: unknown) {
   const rates = await provider.shippingRates({
     recipient,
     currency: "USD",
-    items: lines.map((line) => ({ variantId: line.variantId, quantity: line.quantity, retailCents: line.unitCents })),
+    items: lines.map((line) => ({
+      variantId: line.variantId,
+      quantity: line.quantity,
+      retailCents: line.unitCents,
+    })),
   });
-  const subtotalCents = Math.round(lines.reduce((sum, line) => sum + line.unitCents * line.quantity, 0));
-  return { rates, subtotalCents, currency: "USD" as const };
+  return { rates, subtotalCents: sumCents(lines), currency: "USD" as const };
 }
 
-export async function startCheckout(userId: string, input: { recipient: unknown; shippingMethod: string }) {
+export async function startCheckout(
+  userId: string,
+  input: { recipient: unknown; shippingMethod: string },
+) {
   const recipient: Recipient = parseRecipient(input.recipient);
   const config = readStudioConfig();
   const { provider, lines } = await priceCart(userId);
@@ -524,12 +597,16 @@ export async function startCheckout(userId: string, input: { recipient: unknown;
   const rates = await provider.shippingRates({
     recipient,
     currency: "USD",
-    items: lines.map((line) => ({ variantId: line.variantId, quantity: line.quantity, retailCents: line.unitCents })),
+    items: lines.map((line) => ({
+      variantId: line.variantId,
+      quantity: line.quantity,
+      retailCents: line.unitCents,
+    })),
   });
   const rate = rates.find((item) => item.id === input.shippingMethod);
   if (!rate) throw new Error("Pick a shipping method from the quote.");
-  const subtotalCents = Math.round(lines.reduce((sum, line) => sum + line.unitCents * line.quantity, 0));
-  const totalCents = Math.round(subtotalCents + rate.rateCents);
+  const subtotalCents = sumCents(lines);
+  const totalCents = subtotalCents + rate.rateCents;
   const orderId = crypto.randomUUID();
   let draftId: string | null = null;
   try {
@@ -582,7 +659,11 @@ export async function startCheckout(userId: string, input: { recipient: unknown;
         orderId,
         currency: "USD",
         lines: [
-          ...lines.map((line) => ({ name: line.title, quantity: line.quantity, unitAmountCents: line.unitCents })),
+          ...lines.map((line) => ({
+            name: line.title,
+            quantity: line.quantity,
+            unitAmountCents: line.unitCents,
+          })),
           { name: rate.name, quantity: 1, unitAmountCents: rate.rateCents },
         ],
         successUrl: `${base}/orders?session_id={CHECKOUT_SESSION_ID}`,
@@ -605,10 +686,12 @@ export async function startCheckout(userId: string, input: { recipient: unknown;
 function dbStore(sql: Sql): OrderStore {
   return {
     async getOrder(id) {
-      const rows = await sql<FulfillmentOrder & { provider_order_id: string | null; payment_status: string }>`
+      const rows = await sql<
+        FulfillmentOrder & { provider_order_id: string | null; payment_status: string }
+      >`
         select id, status, payment_status, total_cents, provider_order_id from orders where id = ${id}
       `;
-      const row = rows[0] as (Record<string, unknown> | undefined);
+      const row = rows[0] as Record<string, unknown> | undefined;
       if (!row) return null;
       return {
         id: String(row.id),
@@ -622,7 +705,9 @@ function dbStore(sql: Sql): OrderStore {
       return this.getOrder(externalId);
     },
     async findByProviderOrderId(providerOrderId) {
-      const rows = await sql<{ id: string }>`select id from orders where provider_order_id = ${providerOrderId} limit 1`;
+      const rows = await sql<{
+        id: string;
+      }>`select id from orders where provider_order_id = ${providerOrderId} limit 1`;
       if (!rows[0]) return null;
       return this.getOrder(rows[0].id);
     },
@@ -675,7 +760,9 @@ export async function completeSandboxPayment(userId: string, orderId: string) {
   const config = readStudioConfig();
   if (config.paymentsMode !== "sandbox") throw new Error("Sandbox payment is off.");
   const sql = await getSql();
-  const rows = await sql<{ id: string }>`select id from orders where id = ${orderId} and user_id = ${userId}`;
+  const rows = await sql<{
+    id: string;
+  }>`select id from orders where id = ${orderId} and user_id = ${userId}`;
   if (!rows[0]) throw new Error("Order not found.");
   const result = await fulfillPaidOrder(dbStore(sql), getPodProvider(), {
     orderId,
@@ -695,7 +782,9 @@ export async function syncStripeReturn(userId: string, sessionId: string) {
   const session = await retrieveCheckoutSession(sessionId, { secretKey: secret });
   if (!session.orderId) throw new Error("That payment is not tied to an order.");
   const sql = await getSql();
-  const rows = await sql<{ id: string }>`select id from orders where id = ${session.orderId} and user_id = ${userId}`;
+  const rows = await sql<{
+    id: string;
+  }>`select id from orders where id = ${session.orderId} and user_id = ${userId}`;
   if (!rows[0]) throw new Error("Order not found.");
   const result = await fulfillPaidOrder(dbStore(sql), getPodProvider(), {
     orderId: session.orderId,
@@ -758,7 +847,10 @@ export async function retryFulfillment(userId: string, orderId: string) {
   return { orderId, status: "submitted" as const };
 }
 
-export async function receiveStripeWebhook(rawBody: string, signature: string | null): Promise<{ status: number; body: Record<string, unknown> }> {
+export async function receiveStripeWebhook(
+  rawBody: string,
+  signature: string | null,
+): Promise<{ status: number; body: Record<string, unknown> }> {
   const sql = await getSql();
   const config = readStudioConfig();
   return processStripeWebhook({
@@ -772,7 +864,10 @@ export async function receiveStripeWebhook(rawBody: string, signature: string | 
   });
 }
 
-export async function receivePrintfulWebhook(rawBody: string, signature: string | null): Promise<{ status: number; body: Record<string, unknown> }> {
+export async function receivePrintfulWebhook(
+  rawBody: string,
+  signature: string | null,
+): Promise<{ status: number; body: Record<string, unknown> }> {
   const sql = await getSql();
   return processPrintfulWebhook({
     rawBody,
@@ -786,8 +881,18 @@ export async function connectWebhooks() {
   const config = readStudioConfig();
   const url = `${origin()}/api/webhooks/printful`;
   if (config.podMode === "sandbox") {
-    return { url, mode: "sandbox" as const, events: [] as string[], secretHex: undefined as string | undefined };
+    return {
+      url,
+      mode: "sandbox" as const,
+      events: [] as string[],
+      secretHex: undefined as string | undefined,
+    };
   }
   const registration = await getPodProvider().registerWebhooks(url);
-  return { url, mode: "live" as const, events: registration.events, secretHex: registration.secretHex };
+  return {
+    url,
+    mode: "live" as const,
+    events: registration.events,
+    secretHex: registration.secretHex,
+  };
 }
