@@ -1,0 +1,96 @@
+import type { DesignLayer, Recipient } from "../pod/types.ts";
+
+export const STUDIO_FONTS = ["Archivo Black", "Outfit"] as const;
+
+const MAX_LAYERS = 8;
+const MAX_LAYER_SRC = 1_400_000;
+const MAX_PRINT = 2_400_000;
+
+function clamp(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(max, Math.max(min, value));
+}
+
+export function parseLayers(input: unknown): DesignLayer[] {
+  if (!Array.isArray(input) || input.length === 0) throw new Error("Add at least one layer.");
+  if (input.length > MAX_LAYERS) throw new Error("Eight layers is the limit.");
+  return input.map((entry, index) => {
+    if (!entry || typeof entry !== "object") throw new Error("A layer is incomplete.");
+    const layer = entry as Record<string, unknown>;
+    const shared = {
+      id: String(layer.id ?? `layer-${index}`).slice(0, 40),
+      x: clamp(Number(layer.x), 0, 1),
+      y: clamp(Number(layer.y), 0, 1),
+      scale: clamp(Number(layer.scale), 0.15, 3),
+      rotation: clamp(Number(layer.rotation), -180, 180),
+    };
+    if (layer.type === "image") {
+      const src = String(layer.src ?? "");
+      if (!src.startsWith("data:image/") && !src.startsWith("https://")) throw new Error("Artwork has to be an image.");
+      if (src.length > MAX_LAYER_SRC) throw new Error("That artwork is too heavy. Use a smaller file.");
+      return { ...shared, type: "image" as const, src };
+    }
+    const font = STUDIO_FONTS.includes(layer.font as (typeof STUDIO_FONTS)[number]) ? String(layer.font) : "Archivo Black";
+    const color = /^#[0-9a-fA-F]{6}$/.test(String(layer.color ?? "")) ? String(layer.color) : "#d6ff3c";
+    const text = String(layer.text ?? "").trim().slice(0, 80);
+    if (!text) throw new Error("Text layers need words.");
+    return { ...shared, type: "text" as const, text, font, color };
+  });
+}
+
+export function parsePrintFile(input: unknown): { mime: string; base64: string } | null {
+  if (input == null || input === "") return null;
+  const value = String(input);
+  const match = /^data:(image\/(?:png|jpeg|webp));base64,([a-zA-Z0-9+/=]+)$/.exec(value);
+  if (!match) throw new Error("The print file has to be a PNG or JPEG.");
+  if (value.length > MAX_PRINT) throw new Error("The print file is too large.");
+  return { mime: match[1] ?? "image/png", base64: match[2] ?? "" };
+}
+
+export function parseRecipient(input: unknown): Recipient {
+  const raw = (input ?? {}) as Record<string, unknown>;
+  const recipient: Recipient = {
+    name: String(raw.name ?? "").trim().slice(0, 80),
+    address1: String(raw.address1 ?? "").trim().slice(0, 120),
+    address2: String(raw.address2 ?? "").trim().slice(0, 120) || undefined,
+    city: String(raw.city ?? "").trim().slice(0, 80),
+    stateCode: String(raw.stateCode ?? "").trim().toUpperCase().slice(0, 8) || undefined,
+    countryCode: String(raw.countryCode ?? "").trim().toUpperCase().slice(0, 2),
+    zip: String(raw.zip ?? "").trim().slice(0, 16),
+    phone: String(raw.phone ?? "").trim().slice(0, 32) || undefined,
+    email: String(raw.email ?? "").trim().slice(0, 120) || undefined,
+  };
+  if (recipient.name.length < 2) throw new Error("Add the recipient name.");
+  if (recipient.address1.length < 3) throw new Error("Add a street address.");
+  if (recipient.city.length < 2) throw new Error("Add a city.");
+  if (!/^[A-Z]{2}$/.test(recipient.countryCode)) throw new Error("Use a two-letter country code.");
+  if (recipient.zip.length < 3) throw new Error("Add a postal code.");
+  if ((recipient.countryCode === "US" || recipient.countryCode === "CA") && !recipient.stateCode) {
+    throw new Error("Add a state or province.");
+  }
+  if (recipient.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.email)) {
+    throw new Error("That email does not look right.");
+  }
+  return recipient;
+}
+
+export function slugify(title: string, id: string): string {
+  const base = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+  return `${base || "piece"}-${id.replace(/-/g, "").slice(0, 8)}`;
+}
+
+export function isPublicHttpUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+    const host = parsed.hostname;
+    if (host === "localhost" || host === "127.0.0.1" || host === "0.0.0.0" || host.endsWith(".local")) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}

@@ -1,0 +1,63 @@
+import { useEffect, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
+import { StudioShell } from "@/components/studio/shell";
+import { formatMoney } from "@/lib/pod/money";
+import { cartList, cartSet } from "@/lib/studio/api";
+import type { CartLine } from "@/lib/studio/models";
+
+export const Route = createFileRoute("/cart")({ component: CartPage });
+
+function CartPage() {
+  const [lines, setLines] = useState<CartLine[] | null>(null);
+  const [error, setError] = useState("");
+
+  function reload() {
+    void cartList()
+      .then(setLines)
+      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Sign in to see the cart."));
+  }
+
+  useEffect(() => {
+    reload();
+  }, []);
+
+  const total = (lines ?? []).reduce((sum, line) => sum + line.unitCents * line.quantity, 0);
+
+  return (
+    <StudioShell current="/cart">
+      <h1 className="mb-4 font-display text-4xl leading-none">Cart</h1>
+      {error ? <p className="mb-4 border-2 border-pipe p-4">{error}</p> : null}
+      {lines && lines.length === 0 ? <p className="border-2 border-dashed border-line p-6">Nothing in the bag. The shop is open.</p> : null}
+      <ul className="flex flex-col gap-3">
+        {(lines ?? []).map((line) => (
+          <li key={line.id} className="grid grid-cols-[5rem_1fr] gap-3 border-2 border-ink bg-surface p-3 sm:grid-cols-[6rem_1fr_auto]">
+            {line.mockupUrl ? <img src={line.mockupUrl} alt="" className="aspect-square w-full object-cover" /> : <div className="aspect-square bg-bg" />}
+            <div>
+              <p className="font-display uppercase">{line.title}</p>
+              <p className="text-sm text-muted">{line.variantLabel}</p>
+              <p>{formatMoney(line.unitCents)}</p>
+            </div>
+            <div className="col-span-2 flex items-center gap-2 sm:col-span-1">
+              <Button variant="ghost" onClick={() => void cartSet({ data: { cartId: line.id, quantity: line.quantity - 1 } }).then(reload)}>
+                −
+              </Button>
+              <span className="min-w-6 text-center">{line.quantity}</span>
+              <Button variant="ghost" onClick={() => void cartSet({ data: { cartId: line.id, quantity: line.quantity + 1 } }).then(reload)}>
+                +
+              </Button>
+            </div>
+          </li>
+        ))}
+      </ul>
+      {lines && lines.length > 0 ? (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <p className="font-display text-2xl">{formatMoney(total)} before shipping</p>
+          <Link to="/checkout" className="chip chip-on">
+            Checkout
+          </Link>
+        </div>
+      ) : null}
+    </StudioShell>
+  );
+}

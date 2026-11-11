@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
 
@@ -67,6 +68,7 @@ export function Shell({ children }: { children: ReactNode }) {
       <div className="phone-frame relative flex h-dvh w-full max-w-md flex-col overflow-hidden bg-cream text-fg">
         <div className="edge-gutter relative z-10 flex min-h-0 min-w-0 flex-1 flex-col">
           <Marquee />
+          <LabLinks />
           {children}
         </div>
         <Edges />
@@ -84,8 +86,21 @@ function Edges() {
   );
 }
 
+function LabLinks() {
+  return (
+    <div className="flex gap-2 border-b border-line bg-bg px-3 py-2">
+      <Link to="/studio" className="chip chip-on">
+        Studio
+      </Link>
+      <Link to="/shop" className="chip">
+        Shop
+      </Link>
+    </div>
+  );
+}
+
 function Marquee() {
-  const line = "On the beam  ·  On the moon  ·  In the boat  ·  At the flyer  ·  ";
+  const line = "Street royalty  ·  Print the piece  ·  Crown stays on  ·  ";
   return (
     <div className="mash-bar edge-b overflow-hidden text-cream">
       <div className="marquee-track py-1.5 font-display text-xs font-bold tracking-widest uppercase">
@@ -142,7 +157,7 @@ export function Splash({ onEnter }: { onEnter?: () => void }) {
           <p className="italic">{copy.splashLead}</p>
           <p>{copy.splashSteps}</p>
         </div>
-        <div className="safe-bottom border-t border-line px-5 pt-3">
+        <div className="safe-bottom flex flex-col gap-2 border-t border-line px-5 pt-3">
           {onEnter ? (
             <Button className="w-full" size="lg" onClick={onEnter}>
               {copy.openIt}
@@ -150,6 +165,9 @@ export function Splash({ onEnter }: { onEnter?: () => void }) {
           ) : (
             <p className="pb-3 text-sm text-muted">{copy.lab}</p>
           )}
+          <Link to="/studio" className="chip chip-on mb-2 w-full">
+            Design studio
+          </Link>
         </div>
       </div>
     </main>

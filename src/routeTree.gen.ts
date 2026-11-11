@@ -10,33 +10,192 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CartRouteImport } from './routes/cart'
+import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as GalleryRouteImport } from './routes/gallery'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as OrdersRouteImport } from './routes/orders'
+import { Route as ShopRouteImport } from './routes/shop'
+import { Route as StudioRouteImport } from './routes/studio'
+import { Route as ShopSlugRouteImport } from './routes/shop.$slug'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiPrintFilesIdRouteImport } from './routes/api/print-files/$id'
+import { Route as ApiWebhooksPrintfulRouteImport } from './routes/api/webhooks/printful'
+import { Route as ApiWebhooksStripeRouteImport } from './routes/api/webhooks/stripe'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CartRoute = CartRouteImport.update({
+  id: '/cart',
+  path: '/cart',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutRoute = CheckoutRouteImport.update({
+  id: '/checkout',
+  path: '/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GalleryRoute = GalleryRouteImport.update({
+  id: '/gallery',
+  path: '/gallery',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrdersRoute = OrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShopRoute = ShopRouteImport.update({
+  id: '/shop',
+  path: '/shop',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudioRoute = StudioRouteImport.update({
+  id: '/studio',
+  path: '/studio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShopSlugRoute = ShopSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPrintFilesIdRoute = ApiPrintFilesIdRouteImport.update({
+  id: '/api/print-files/$id',
+  path: '/api/print-files/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWebhooksPrintfulRoute = ApiWebhooksPrintfulRouteImport.update({
+  id: '/api/webhooks/printful',
+  path: '/api/webhooks/printful',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWebhooksStripeRoute = ApiWebhooksStripeRouteImport.update({
+  id: '/api/webhooks/stripe',
+  path: '/api/webhooks/stripe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cart': typeof CartRoute
+  '/checkout': typeof CheckoutRoute
+  '/gallery': typeof GalleryRoute
+  '/login': typeof LoginRoute
+  '/orders': typeof OrdersRoute
+  '/shop': typeof ShopRouteWithChildren
+  '/studio': typeof StudioRoute
+  '/shop/$slug': typeof ShopSlugRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/print-files/$id': typeof ApiPrintFilesIdRoute
+  '/api/webhooks/printful': typeof ApiWebhooksPrintfulRoute
+  '/api/webhooks/stripe': typeof ApiWebhooksStripeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cart': typeof CartRoute
+  '/checkout': typeof CheckoutRoute
+  '/gallery': typeof GalleryRoute
+  '/login': typeof LoginRoute
+  '/orders': typeof OrdersRoute
+  '/shop': typeof ShopRouteWithChildren
+  '/studio': typeof StudioRoute
+  '/shop/$slug': typeof ShopSlugRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/print-files/$id': typeof ApiPrintFilesIdRoute
+  '/api/webhooks/printful': typeof ApiWebhooksPrintfulRoute
+  '/api/webhooks/stripe': typeof ApiWebhooksStripeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cart': typeof CartRoute
+  '/checkout': typeof CheckoutRoute
+  '/gallery': typeof GalleryRoute
+  '/login': typeof LoginRoute
+  '/orders': typeof OrdersRoute
+  '/shop': typeof ShopRouteWithChildren
+  '/studio': typeof StudioRoute
+  '/shop/$slug': typeof ShopSlugRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/print-files/$id': typeof ApiPrintFilesIdRoute
+  '/api/webhooks/printful': typeof ApiWebhooksPrintfulRoute
+  '/api/webhooks/stripe': typeof ApiWebhooksStripeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/cart'
+    | '/checkout'
+    | '/gallery'
+    | '/login'
+    | '/orders'
+    | '/shop'
+    | '/studio'
+    | '/shop/$slug'
+    | '/api/auth/$'
+    | '/api/print-files/$id'
+    | '/api/webhooks/printful'
+    | '/api/webhooks/stripe'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/cart'
+    | '/checkout'
+    | '/gallery'
+    | '/login'
+    | '/orders'
+    | '/shop'
+    | '/studio'
+    | '/shop/$slug'
+    | '/api/auth/$'
+    | '/api/print-files/$id'
+    | '/api/webhooks/printful'
+    | '/api/webhooks/stripe'
+  id:
+    | '__root__'
+    | '/'
+    | '/cart'
+    | '/checkout'
+    | '/gallery'
+    | '/login'
+    | '/orders'
+    | '/shop'
+    | '/studio'
+    | '/shop/$slug'
+    | '/api/auth/$'
+    | '/api/print-files/$id'
+    | '/api/webhooks/printful'
+    | '/api/webhooks/stripe'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CartRoute: typeof CartRoute
+  CheckoutRoute: typeof CheckoutRoute
+  GalleryRoute: typeof GalleryRoute
+  LoginRoute: typeof LoginRoute
+  OrdersRoute: typeof OrdersRoute
+  ShopRoute: typeof ShopRouteWithChildren
+  StudioRoute: typeof StudioRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiPrintFilesIdRoute: typeof ApiPrintFilesIdRoute
+  ApiWebhooksPrintfulRoute: typeof ApiWebhooksPrintfulRoute
+  ApiWebhooksStripeRoute: typeof ApiWebhooksStripeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +207,116 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cart': {
+      id: '/cart'
+      path: '/cart'
+      fullPath: '/cart'
+      preLoaderRoute: typeof CartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout': {
+      id: '/checkout'
+      path: '/checkout'
+      fullPath: '/checkout'
+      preLoaderRoute: typeof CheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gallery': {
+      id: '/gallery'
+      path: '/gallery'
+      fullPath: '/gallery'
+      preLoaderRoute: typeof GalleryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/orders': {
+      id: '/orders'
+      path: '/orders'
+      fullPath: '/orders'
+      preLoaderRoute: typeof OrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shop': {
+      id: '/shop'
+      path: '/shop'
+      fullPath: '/shop'
+      preLoaderRoute: typeof ShopRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/studio': {
+      id: '/studio'
+      path: '/studio'
+      fullPath: '/studio'
+      preLoaderRoute: typeof StudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shop/$slug': {
+      id: '/shop/$slug'
+      path: '/$slug'
+      fullPath: '/shop/$slug'
+      preLoaderRoute: typeof ShopSlugRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/print-files/$id': {
+      id: '/api/print-files/$id'
+      path: '/api/print-files/$id'
+      fullPath: '/api/print-files/$id'
+      preLoaderRoute: typeof ApiPrintFilesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/webhooks/printful': {
+      id: '/api/webhooks/printful'
+      path: '/api/webhooks/printful'
+      fullPath: '/api/webhooks/printful'
+      preLoaderRoute: typeof ApiWebhooksPrintfulRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/webhooks/stripe': {
+      id: '/api/webhooks/stripe'
+      path: '/api/webhooks/stripe'
+      fullPath: '/api/webhooks/stripe'
+      preLoaderRoute: typeof ApiWebhooksStripeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface ShopRouteChildren {
+  ShopSlugRoute: typeof ShopSlugRoute
+}
+
+const ShopRouteChildren: ShopRouteChildren = {
+  ShopSlugRoute: ShopSlugRoute,
+}
+
+const ShopRouteWithChildren = ShopRoute._addFileChildren(ShopRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CartRoute: CartRoute,
+  CheckoutRoute: CheckoutRoute,
+  GalleryRoute: GalleryRoute,
+  LoginRoute: LoginRoute,
+  OrdersRoute: OrdersRoute,
+  ShopRoute: ShopRouteWithChildren,
+  StudioRoute: StudioRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiPrintFilesIdRoute: ApiPrintFilesIdRoute,
+  ApiWebhooksPrintfulRoute: ApiWebhooksPrintfulRoute,
+  ApiWebhooksStripeRoute: ApiWebhooksStripeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

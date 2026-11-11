@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Header, Shell, TextButton } from "@/components/lab/chrome";
 import { Composer } from "@/components/lab/mic";
@@ -10,6 +11,7 @@ export function LookScreen() {
   const busy = useLab((state) => state.busy);
   const saveDraft = useLab((state) => state.saveDraft);
   const requestRunway = useLab((state) => state.requestRunway);
+  const navigate = useNavigate();
 
   return (
     <Shell>
@@ -42,6 +44,18 @@ export function LookScreen() {
           </Button>
           <Button disabled={!draft || busy} onClick={requestRunway}>
             {copy.runway}
+          </Button>
+          <Button
+            variant="ghost"
+            className="col-span-2"
+            disabled={!draft}
+            onClick={() => {
+              if (!draft) return;
+              sessionStorage.setItem("sr-print-art", draft.image);
+              void navigate({ to: "/studio" });
+            }}
+          >
+            Print this
           </Button>
         </div>
       </div>
