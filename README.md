@@ -40,6 +40,7 @@ Copy `.env.example` to the host’s secret store. Do not commit real keys. This 
 | `PAYMENTS_MODE` | No | `sandbox` (default without a key) or `live`. |
 | `APP_PUBLIC_URL` | Live print | Public https origin, no trailing slash. Printful downloads print files from `{APP_PUBLIC_URL}/api/print-files/{id}`. |
 | `STUDIO_MARKUP` | No | Retail = wholesale × markup. Default `2.2`. Clamped between 1 and 5. |
+| `PRINT_FILE_SIGNING_SECRET` | Live print files | HMAC key for print-file URLs. Sandbox uses a built-in secret. Live mode will not publish a file URL without it. |
 | `DATABASE_URL` | Deploy | Postgres connection. Injected on deploy. Unset in local preview. |
 
 ## Accounts to create

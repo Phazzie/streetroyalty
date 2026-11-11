@@ -8,6 +8,7 @@ export type OrderStatus =
   | "paid"
   | "submitted"
   | "failed"
+  | "needs_review"
   | "canceled"
   | "shipped"
   | "delivered";
@@ -35,6 +36,10 @@ export interface OrderStore {
   findByExternalId(externalId: string): Promise<FulfillmentOrder | null>;
   findByProviderOrderId(providerOrderId: string): Promise<FulfillmentOrder | null>;
   markSubmitted(id: string, providerStatus: string): Promise<void>;
+  /** Payment was captured but the printer rejected or dropped the confirm. Retryable. Not a refund. */
+  markFulfillmentFailed(id: string, reason: string): Promise<void>;
+  /** The captured amount does not match the order. Do not print. A human refunds in Stripe. */
+  markNeedsReview(id: string, reason: string): Promise<void>;
   applyProviderUpdate(
     id: string,
     patch: { status?: OrderStatus; providerStatus?: string; trackingNumber?: string; trackingUrl?: string },
@@ -51,7 +56,9 @@ const FORWARD: OrderStatus[] = ["draft", "awaiting_payment", "paid", "submitted"
 
 export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
   if (from === to) return true;
-  if (to === "failed" || to === "canceled") return from !== "delivered" && from !== "canceled";
+  if (from === "needs_review") return false;
+  if (from === "failed" && to === "submitted") return true;
+  if (to === "failed" || to === "canceled") return from !== "delivered" && from !== "canceled" && from !== "shipped";
   const fromRank = FORWARD.indexOf(from);
   const toRank = FORWARD.indexOf(to);
   if (fromRank < 0 || toRank < 0) return false;
@@ -78,9 +85,11 @@ export function decidePaymentFulfillment(
     return { ok: false, reason: "amount_mismatch" };
   }
   if (order.status === "canceled") return { ok: false, reason: "canceled" };
+  if (order.status === "needs_review") return { ok: false, reason: "needs_review" };
   if (order.status === "submitted" || order.status === "shipped" || order.status === "delivered") {
     return { ok: true, action: "ignored", reason: "already_fulfilled" };
   }
+  if (order.status === "failed" && order.paymentStatus !== "paid") return { ok: false, reason: "unpaid" };
   if (!order.providerOrderId) return { ok: false, reason: "missing_provider_order" };
   if (!canTransition(order.status, "submitted")) return { ok: false, reason: "illegal_transition" };
   return { ok: true, action: "confirmed" };
@@ -111,7 +120,11 @@ export async function fulfillPaidOrder(
   try {
     await provider.confirmOrder(providerOrderId);
   } catch (error) {
-    if (!alreadyConfirmed(error)) throw error;
+    if (!alreadyConfirmed(error)) {
+      const message = error instanceof Error ? error.message : "The printer did not accept the order.";
+      await store.markFulfillmentFailed(input.orderId, message);
+      throw error;
+    }
   }
   await store.markSubmitted(input.orderId, "pending");
   return { ok: true, action: "confirmed" };
@@ -246,6 +259,12 @@ export async function processStripeWebhook(args: {
       podMode: args.podMode,
       paymentsMode: args.paymentsMode,
     });
+    if (!result.ok && result.reason === "amount_mismatch") {
+      await args.store.markNeedsReview(
+        event.orderId,
+        "Stripe captured an amount that does not match this order. The print was not submitted. Refund the charge in Stripe.",
+      );
+    }
     await args.store.recordEvent(event.id, "stripe", event.type);
     return { status: 200, body: result };
   } catch (error) {

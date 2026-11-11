@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Note, StudioShell } from "@/components/studio/shell";
 import { formatMoney } from "@/lib/pod/money";
-import { confirmStripeReturn, linkWebhooks, myOrders } from "@/lib/studio/api";
+import { confirmStripeReturn, linkWebhooks, myOrders, retryPrint } from "@/lib/studio/api";
 import type { OrderSummary } from "@/lib/studio/models";
 
 export const Route = createFileRoute("/orders")({
@@ -65,7 +65,7 @@ function OrdersPage() {
           Webhook secret (store it in PRINTFUL_WEBHOOK_SECRET, then clear this screen): {secret}
         </p>
       ) : null}
-      {orders && orders.length === 0 ? <p className="border-2 border-dashed border-line p-6">No orders yet.</p> : null}
+      {orders && orders.length === 0 ? <p className="empty-state">No orders yet. The rack is waiting.</p> : null}
       <ul className="flex flex-col gap-3">
         {(orders ?? []).map((order) => (
           <li key={order.id} className="border-2 border-ink bg-surface p-4">
@@ -77,6 +77,25 @@ function OrdersPage() {
               {order.sandbox ? "Sandbox" : "Live"} · payment {order.paymentStatus}
               {order.providerStatus ? ` · print ${order.providerStatus}` : ""}
             </p>
+            {order.failureReason ? <p className="mt-2 text-sm">{order.failureReason}</p> : null}
+            {order.status === "failed" && order.paymentStatus === "paid" ? (
+              <Button
+                className="mt-3"
+                onClick={() => {
+                  void retryPrint({ data: { orderId: order.id } })
+                    .then(() => {
+                      setNote("Print submitted. The charge was not refunded.");
+                      reload();
+                    })
+                    .catch((reason: unknown) => setNote(reason instanceof Error ? reason.message : "Retry failed."));
+                }}
+              >
+                Retry print
+              </Button>
+            ) : null}
+            {order.status === "needs_review" ? (
+              <p className="mt-2 text-sm">The print was not submitted. The shop refunds this charge in Stripe.</p>
+            ) : null}
             <ul className="mt-2 text-sm">
               {order.items.map((item, index) => (
                 <li key={`${order.id}-${index}`}>

@@ -80,7 +80,7 @@ function CheckoutPage() {
         ).map(([key, label]) => (
           <label key={key} className="block text-sm">
             <span className="mb-1 block text-muted">{label}</span>
-            <Input value={recipient[key]} onChange={(event) => setField(key, event.target.value)} autoComplete="on" required={key !== "address2" && key !== "phone" && key !== "email"} />
+            <Input value={recipient[key]} onChange={(event) => setField(key, event.target.value)} autoComplete="on" />
           </label>
         ))}
         <div className="md:col-span-2">

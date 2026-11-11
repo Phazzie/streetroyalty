@@ -31,7 +31,7 @@ function GalleryPage() {
       <p className="mt-2 mb-6 text-muted">Saved pieces stay with your account.</p>
       {error ? <p className="border-2 border-pipe p-4">{error}. <Link to="/login" className="underline">Sign in</Link></p> : null}
       {designs && designs.length === 0 ? (
-        <p className="border-2 border-dashed border-line p-6">Nothing saved yet. The studio is open.</p>
+        <p className="empty-state">Nothing saved yet. The studio is open.</p>
       ) : null}
       {groups.map((group) => {
         const pieces = (designs ?? []).filter((design) => (group.id ? design.collectionId === group.id : !design.collectionId));

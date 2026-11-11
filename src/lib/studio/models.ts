@@ -67,6 +67,7 @@ export type OrderSummary = {
   trackingNumber: string | null;
   trackingUrl: string | null;
   sandbox: boolean;
+  failureReason: string | null;
   createdAt: string;
   items: { title: string; quantity: number; variantLabel: string; unitCents: number }[];
 };

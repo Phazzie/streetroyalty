@@ -190,7 +190,7 @@ export function Editor({ designId }: { designId: string }) {
         },
       });
       setSavedId(saved.id);
-      setNote("Saved to your rack.");
+      setNote(saved.warnings?.length ? saved.warnings.join(" ") : "Saved to your rack.");
       return saved.id;
     } catch (error) {
       setNote(errorText(error));
@@ -278,7 +278,7 @@ export function Editor({ designId }: { designId: string }) {
               style={{ background: variant?.colorHex ?? "#141414", color: ink }}
             >
               <GarmentHint type={product?.type ?? "T-Shirt"} />
-              <div ref={areaRef} className="absolute inset-[18%_22%_16%_22%] border border-dashed border-current">
+              <div ref={areaRef} className="absolute inset-[18%_22%_16%_22%] overflow-hidden border border-dashed border-current">
                 {layers.map((layer) => (
                   <button
                     key={layer.id}
@@ -295,7 +295,7 @@ export function Editor({ designId }: { designId: string }) {
                     }}
                   >
                     {layer.type === "text" ? (
-                      <span className="font-display text-2xl leading-none whitespace-nowrap">{layer.text}</span>
+                      <span className="block max-w-full text-center font-display text-sm leading-tight">{layer.text}</span>
                     ) : (
                       <img src={layer.src} alt="" className="h-24 w-24 object-contain" />
                     )}

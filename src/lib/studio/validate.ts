@@ -26,7 +26,7 @@ export function parseLayers(input: unknown): DesignLayer[] {
     };
     if (layer.type === "image") {
       const src = String(layer.src ?? "");
-      if (!src.startsWith("data:image/") && !src.startsWith("https://")) throw new Error("Artwork has to be an image.");
+      if (!isArtworkSrc(src)) throw new Error("Artwork has to be a PNG, JPEG, WebP, or GIF.");
       if (src.length > MAX_LAYER_SRC) throw new Error("That artwork is too heavy. Use a smaller file.");
       return { ...shared, type: "image" as const, src };
     }
@@ -81,6 +81,91 @@ export function slugify(title: string, id: string): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, 48);
   return `${base || "piece"}-${id.replace(/-/g, "").slice(0, 8)}`;
+}
+
+const ARTWORK_DATA = /^data:image\/(png|jpeg|webp|gif);base64,[a-zA-Z0-9+/=]+$/;
+
+export function isArtworkSrc(src: string): boolean {
+  if (ARTWORK_DATA.test(src)) return true;
+  if (!src.startsWith("https://") || src.includes(" ")) return false;
+  return true;
+}
+
+/** Owner can buy their own draft. Everyone else only sees published pieces. */
+export function canBuyDesign(design: { ownerId: string; status: string }, buyerId: string): boolean {
+  if (!buyerId || !design.ownerId) return false;
+  if (design.ownerId === buyerId) return true;
+  return design.status === "published";
+}
+
+export function parseMockupUrl(input: unknown): string | null {
+  if (input == null || input === "") return null;
+  const value = String(input);
+  if (value.length > 2_000_000) throw new Error("That mockup is too large.");
+  if (value.startsWith("data:image/svg+xml") || ARTWORK_DATA.test(value) || value.startsWith("data:image/jpeg")) return value;
+  if (value.startsWith("https://")) return value;
+  throw new Error("Mockup has to be an image.");
+}
+
+export function imageDimensions(mime: string, base64: string): { width: number; height: number } | null {
+  let binary: string;
+  try {
+    binary = atob(base64.slice(0, 80_000));
+  } catch {
+    return null;
+  }
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  if (mime === "image/png") return pngSize(bytes);
+  if (mime === "image/jpeg") return jpegSize(bytes);
+  if (mime === "image/webp") return webpSize(bytes);
+  return null;
+}
+
+function pngSize(bytes: Uint8Array): { width: number; height: number } | null {
+  if (bytes.length < 24 || bytes[0] !== 0x89) return null;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  return { width: view.getUint32(16), height: view.getUint32(20) };
+}
+
+function jpegSize(bytes: Uint8Array): { width: number; height: number } | null {
+  if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
+  let offset = 2;
+  while (offset + 9 < bytes.length) {
+    if (bytes[offset] !== 0xff) {
+      offset += 1;
+      continue;
+    }
+    const marker = bytes[offset + 1] ?? 0;
+    if (marker === 0xc0 || marker === 0xc1 || marker === 0xc2) {
+      const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      return { height: view.getUint16(offset + 5), width: view.getUint16(offset + 7) };
+    }
+    const length = (bytes[offset + 2] ?? 0) * 256 + (bytes[offset + 3] ?? 0);
+    if (length < 2) return null;
+    offset += 2 + length;
+  }
+  return null;
+}
+
+function webpSize(bytes: Uint8Array): { width: number; height: number } | null {
+  if (bytes.length < 30) return null;
+  const tag = String.fromCharCode(bytes[12] ?? 0, bytes[13] ?? 0, bytes[14] ?? 0, bytes[15] ?? 0);
+  if (tag !== "VP8X") return null;
+  const width = 1 + (bytes[24] ?? 0) + ((bytes[25] ?? 0) << 8) + ((bytes[26] ?? 0) << 16);
+  const height = 1 + (bytes[27] ?? 0) + ((bytes[28] ?? 0) << 8) + ((bytes[29] ?? 0) << 16);
+  return { width, height };
+}
+
+export function printQualityWarning(
+  size: { width: number; height: number },
+  area: { widthIn: number; heightIn: number; dpi?: number },
+): string | null {
+  const dpi = area.dpi && area.dpi > 0 ? area.dpi : 150;
+  const needW = Math.round(area.widthIn * dpi);
+  const needH = Math.round(area.heightIn * dpi);
+  if (size.width >= needW * 0.75 && size.height >= needH * 0.75) return null;
+  return `Print file is ${size.width}×${size.height}px. About ${needW}×${needH}px (${dpi} DPI) keeps the print sharp.`;
 }
 
 export function isPublicHttpUrl(url: string): boolean {

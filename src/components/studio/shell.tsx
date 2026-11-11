@@ -5,12 +5,12 @@ import { SignedOut, UserButton } from "@/lib/auth/gates";
 import { getStudioConfig } from "@/lib/studio/api";
 
 const LINKS = [
-  { to: "/", label: "Lab" },
-  { to: "/studio", label: "Studio" },
-  { to: "/gallery", label: "Gallery" },
-  { to: "/shop", label: "Shop" },
-  { to: "/cart", label: "Cart" },
-  { to: "/orders", label: "Orders" },
+  { to: "/", label: "Lab", tone: "" },
+  { to: "/studio", label: "Studio", tone: "chip-pink" },
+  { to: "/gallery", label: "Gallery", tone: "chip-violet" },
+  { to: "/shop", label: "Shop", tone: "chip-orange" },
+  { to: "/cart", label: "Cart", tone: "chip-blue" },
+  { to: "/orders", label: "Orders", tone: "" },
 ] as const;
 
 export function StudioShell({ current, children }: { current: string; children: ReactNode }) {
@@ -36,7 +36,7 @@ export function StudioShell({ current, children }: { current: string; children: 
                 key={link.to}
                 to={link.to}
                 aria-current={current === link.to ? "page" : undefined}
-                className="chip"
+                className={`chip ${current === link.to ? "" : link.tone}`}
               >
                 {link.label}
               </Link>

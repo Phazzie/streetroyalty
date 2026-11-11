@@ -194,6 +194,14 @@ export const myOrders = createServerFn({ method: "GET" })
     return listOrders(context.userId);
   });
 
+export const retryPrint = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { orderId?: string }) => ({ orderId: String(input?.orderId ?? "") }))
+  .handler(async ({ data, context }) => {
+    const { retryFulfillment } = await import("./repo.server.ts");
+    return retryFulfillment(context.userId, data.orderId);
+  });
+
 export const linkWebhooks = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .handler(async () => {

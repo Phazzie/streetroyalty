@@ -28,7 +28,7 @@ function CartPage() {
     <StudioShell current="/cart">
       <h1 className="mb-4 font-display text-4xl leading-none">Cart</h1>
       {error ? <p className="mb-4 border-2 border-pipe p-4">{error}</p> : null}
-      {lines && lines.length === 0 ? <p className="border-2 border-dashed border-line p-6">Nothing in the bag. The shop is open.</p> : null}
+      {lines && lines.length === 0 ? <p className="empty-state">Nothing in the bag. The shop is open.</p> : null}
       <ul className="flex flex-col gap-3">
         {(lines ?? []).map((line) => (
           <li key={line.id} className="grid grid-cols-[5rem_1fr] gap-3 border-2 border-ink bg-surface p-3 sm:grid-cols-[6rem_1fr_auto]">

@@ -12,7 +12,19 @@ import { getPodProvider, readPaymentsMode, readPodMode, readMarkup } from "../po
 import type { CatalogProduct, Recipient } from "../pod/types.ts";
 import { PodError } from "../pod/types.ts";
 import { createCheckoutSession, retrieveCheckoutSession } from "../payments/stripe.ts";
-import { isPublicHttpUrl, parseLayers, parsePrintFile, parseRecipient, slugify } from "./validate.ts";
+import { printFileAuthorized, printSigningSecret, signedPrintFileUrl } from "../pod/print-access.ts";
+import { centsToDecimal } from "../pod/money.ts";
+import {
+  canBuyDesign,
+  imageDimensions,
+  isPublicHttpUrl,
+  parseLayers,
+  parseMockupUrl,
+  parsePrintFile,
+  parseRecipient,
+  printQualityWarning,
+  slugify,
+} from "./validate.ts";
 import type { CartLine, CollectionRecord, DesignRecord, DesignSummary, OrderSummary, StudioConfig } from "./models.ts";
 
 type DesignRow = {
@@ -78,7 +90,17 @@ function origin(): string {
 }
 
 function fileUrl(id: string): string {
-  return `${origin()}/api/print-files/${id}`;
+  const secret = printSigningSecret(process.env, readPodMode(process.env));
+  return signedPrintFileUrl(origin(), id, secret);
+}
+
+export function authorizePrintFile(id: string, token: string | null): boolean {
+  try {
+    const secret = printSigningSecret(process.env, readPodMode(process.env));
+    return printFileAuthorized(id, token, secret);
+  } catch {
+    return false;
+  }
 }
 
 export function readStudioConfig(): StudioConfig {
@@ -180,7 +202,7 @@ type SaveInput = {
   mockupUrl?: string | null;
 };
 
-export async function saveDesign(userId: string, input: SaveInput): Promise<DesignRecord> {
+export async function saveDesign(userId: string, input: SaveInput): Promise<DesignRecord & { warnings: string[] }> {
   const title = input.title.trim().slice(0, 80);
   if (title.length < 2) throw new Error("Name the piece.");
   const layers = parseLayers(input.layers);
@@ -204,7 +226,16 @@ export async function saveDesign(userId: string, input: SaveInput): Promise<Desi
     printFileId = crypto.randomUUID();
     await sql`insert into print_files (id, user_id, mime, data_base64) values (${printFileId}, ${userId}, ${print.mime}, ${print.base64})`;
   }
-  const mockup = input.mockupUrl?.slice(0, 2_000_000) || existing?.mockup_url || null;
+  const mockup = parseMockupUrl(input.mockupUrl) ?? existing?.mockup_url ?? null;
+  const warnings: string[] = [];
+  if (print) {
+    const dims = imageDimensions(print.mime, print.base64);
+    const area = variant.printAreas.find((item) => item.placement === placement.placement) ?? variant.printAreas[0];
+    if (dims && area) {
+      const warning = printQualityWarning(dims, area);
+      if (warning) warnings.push(warning);
+    }
+  }
   const layersJson = JSON.stringify(layers);
   if (existing) {
     await sql`
@@ -230,7 +261,7 @@ export async function saveDesign(userId: string, input: SaveInput): Promise<Desi
     `;
     const saved = await ownedDesign(sql, userId, existing.id);
     if (!saved) throw new Error("Save did not land.");
-    return record(saved);
+    return { ...record(saved), warnings };
   }
   const slug = slugify(title, id);
   await sql`
@@ -246,7 +277,7 @@ export async function saveDesign(userId: string, input: SaveInput): Promise<Desi
   `;
   const saved = await ownedDesign(sql, userId, id);
   if (!saved) throw new Error("Save did not land.");
-  return record(saved);
+  return { ...record(saved), warnings };
 }
 
 export async function generateMockup(input: {
@@ -313,7 +344,7 @@ export async function publishDesign(userId: string, designId: string): Promise<D
       variants: [
         {
           catalogVariantId: row.variant_id,
-          retailPrice: (row.retail_cents / 100).toFixed(2),
+          retailPrice: centsToDecimal(Number(row.retail_cents)),
           files: [{ placement: row.placement, url }],
         },
       ],
@@ -367,11 +398,11 @@ export async function readPrintFile(id: string): Promise<{ mime: string; bytes: 
 
 export async function addToCart(userId: string, designId: string, variantId: string): Promise<void> {
   const sql = await getSql();
-  const rows = await sql<DesignRow>`
-    select * from designs where id = ${designId} and (user_id = ${userId} or status = 'published')
-  `;
+  const rows = await sql<DesignRow>`select * from designs where id = ${designId}`;
   const design = rows[0];
-  if (!design) throw new Error("That piece is not for sale.");
+  if (!design || !canBuyDesign({ ownerId: design.user_id, status: design.status }, userId)) {
+    throw new Error("That piece is not for sale.");
+  }
   const product = await getPodProvider().getProduct(design.product_id);
   const variant = product.variants.find((item) => item.id === variantId && item.color === design.color_name);
   if (!variant) throw new Error("Pick a size in this color.");
@@ -387,6 +418,7 @@ export async function addToCart(userId: string, designId: string, variantId: str
 export async function updateCart(userId: string, cartId: string, quantity: number): Promise<void> {
   const sql = await getSql();
   const next = Math.round(quantity);
+  if (!Number.isFinite(next)) throw new Error("Quantity has to be a number.");
   if (next <= 0) {
     await sql`delete from cart_items where id = ${cartId} and user_id = ${userId}`;
     return;
@@ -478,7 +510,7 @@ export async function quoteShipping(userId: string, recipientInput: unknown) {
     currency: "USD",
     items: lines.map((line) => ({ variantId: line.variantId, quantity: line.quantity, retailCents: line.unitCents })),
   });
-  const subtotalCents = lines.reduce((sum, line) => sum + line.unitCents * line.quantity, 0);
+  const subtotalCents = Math.round(lines.reduce((sum, line) => sum + line.unitCents * line.quantity, 0));
   return { rates, subtotalCents, currency: "USD" as const };
 }
 
@@ -496,8 +528,8 @@ export async function startCheckout(userId: string, input: { recipient: unknown;
   });
   const rate = rates.find((item) => item.id === input.shippingMethod);
   if (!rate) throw new Error("Pick a shipping method from the quote.");
-  const subtotalCents = lines.reduce((sum, line) => sum + line.unitCents * line.quantity, 0);
-  const totalCents = subtotalCents + rate.rateCents;
+  const subtotalCents = Math.round(lines.reduce((sum, line) => sum + line.unitCents * line.quantity, 0));
+  const totalCents = Math.round(subtotalCents + rate.rateCents);
   const orderId = crypto.randomUUID();
   let draftId: string | null = null;
   try {
@@ -597,8 +629,22 @@ function dbStore(sql: Sql): OrderStore {
     async markSubmitted(id, providerStatus) {
       await sql`
         update orders
-        set status = 'submitted', payment_status = 'paid', provider_status = ${providerStatus}, updated_at = now()
+        set status = 'submitted', payment_status = 'paid', failure_reason = null, provider_status = ${providerStatus}, updated_at = now()
         where id = ${id}
+      `;
+    },
+    async markFulfillmentFailed(id, reason) {
+      await sql`
+        update orders
+        set status = 'failed', payment_status = 'paid', failure_reason = ${reason.slice(0, 500)}, updated_at = now()
+        where id = ${id} and status not in ('submitted', 'shipped', 'delivered')
+      `;
+    },
+    async markNeedsReview(id, reason) {
+      await sql`
+        update orders
+        set status = 'needs_review', payment_status = 'paid', failure_reason = ${reason.slice(0, 500)}, updated_at = now()
+        where id = ${id} and status in ('draft', 'awaiting_payment', 'failed')
       `;
     },
     async applyProviderUpdate(id, patch) {
@@ -666,7 +712,8 @@ export async function listOrders(userId: string): Promise<OrderSummary[]> {
   const sql = await getSql();
   const rows = await sql<Record<string, unknown>>`
     select id, status, payment_status, currency, subtotal_cents, shipping_cents, total_cents, shipping_method,
-      provider_order_id, provider_status, tracking_number, tracking_url, sandbox, created_at::text as created_at, items_json
+      provider_order_id, provider_status, tracking_number, tracking_url, sandbox, failure_reason,
+      created_at::text as created_at, items_json
     from orders where user_id = ${userId} order by created_at desc limit 40
   `;
   return rows.map((row) => ({
@@ -683,9 +730,32 @@ export async function listOrders(userId: string): Promise<OrderSummary[]> {
     trackingNumber: row.tracking_number ? String(row.tracking_number) : null,
     trackingUrl: row.tracking_url ? String(row.tracking_url) : null,
     sandbox: row.sandbox === true || row.sandbox === "t" || row.sandbox === "true",
+    failureReason: row.failure_reason ? String(row.failure_reason) : null,
     createdAt: String(row.created_at),
     items: JSON.parse(String(row.items_json)) as OrderSummary["items"],
   }));
+}
+
+export async function retryFulfillment(userId: string, orderId: string) {
+  const config = readStudioConfig();
+  const sql = await getSql();
+  const rows = await sql<{ status: string; payment_status: string; total_cents: number }>`
+    select status, payment_status, total_cents from orders where id = ${orderId} and user_id = ${userId}
+  `;
+  const row = rows[0];
+  if (!row) throw new Error("Order not found.");
+  if (row.payment_status !== "paid" || row.status !== "failed") {
+    throw new Error("This order is not waiting on a print retry.");
+  }
+  const result = await fulfillPaidOrder(dbStore(sql), getPodProvider(), {
+    orderId,
+    paid: true,
+    amountCents: Number(row.total_cents),
+    podMode: config.podMode,
+    paymentsMode: config.paymentsMode,
+  });
+  if (!result.ok) throw new Error(`The printer still did not take the order (${result.reason}).`);
+  return { orderId, status: "submitted" as const };
 }
 
 export async function receiveStripeWebhook(rawBody: string, signature: string | null): Promise<{ status: number; body: Record<string, unknown> }> {

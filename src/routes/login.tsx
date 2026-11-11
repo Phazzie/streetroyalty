@@ -18,6 +18,7 @@ function LoginPage() {
   return (
     <StudioShell current="/login">
       <div className="mx-auto max-w-md">
+        <p className="tape mb-3">Members only</p>
         <h1 className="font-display text-4xl leading-none">Sign in</h1>
         <p className="mt-2 mb-6 text-muted">Designs, the cart, and orders stay on your account.</p>
         {authEnabled ? (

@@ -17,6 +17,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as StudioRouteImport } from './routes/studio'
+import { Route as ShopIndexRouteImport } from './routes/shop.index'
 import { Route as ShopSlugRouteImport } from './routes/shop.$slug'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiPrintFilesIdRouteImport } from './routes/api/print-files/$id'
@@ -63,6 +64,11 @@ const StudioRoute = StudioRouteImport.update({
   path: '/studio',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShopIndexRoute = ShopIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShopRoute,
+} as any)
 const ShopSlugRoute = ShopSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/shop': typeof ShopRouteWithChildren
   '/studio': typeof StudioRoute
   '/shop/$slug': typeof ShopSlugRoute
+  '/shop/': typeof ShopIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/print-files/$id': typeof ApiPrintFilesIdRoute
   '/api/webhooks/printful': typeof ApiWebhooksPrintfulRoute
@@ -111,9 +118,9 @@ export interface FileRoutesByTo {
   '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
-  '/shop': typeof ShopRouteWithChildren
   '/studio': typeof StudioRoute
   '/shop/$slug': typeof ShopSlugRoute
+  '/shop': typeof ShopIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/print-files/$id': typeof ApiPrintFilesIdRoute
   '/api/webhooks/printful': typeof ApiWebhooksPrintfulRoute
@@ -130,6 +137,7 @@ export interface FileRoutesById {
   '/shop': typeof ShopRouteWithChildren
   '/studio': typeof StudioRoute
   '/shop/$slug': typeof ShopSlugRoute
+  '/shop/': typeof ShopIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/print-files/$id': typeof ApiPrintFilesIdRoute
   '/api/webhooks/printful': typeof ApiWebhooksPrintfulRoute
@@ -147,6 +155,7 @@ export interface FileRouteTypes {
     | '/shop'
     | '/studio'
     | '/shop/$slug'
+    | '/shop/'
     | '/api/auth/$'
     | '/api/print-files/$id'
     | '/api/webhooks/printful'
@@ -159,9 +168,9 @@ export interface FileRouteTypes {
     | '/gallery'
     | '/login'
     | '/orders'
-    | '/shop'
     | '/studio'
     | '/shop/$slug'
+    | '/shop'
     | '/api/auth/$'
     | '/api/print-files/$id'
     | '/api/webhooks/printful'
@@ -177,6 +186,7 @@ export interface FileRouteTypes {
     | '/shop'
     | '/studio'
     | '/shop/$slug'
+    | '/shop/'
     | '/api/auth/$'
     | '/api/print-files/$id'
     | '/api/webhooks/printful'
@@ -256,6 +266,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/shop/': {
+      id: '/shop/'
+      path: '/'
+      fullPath: '/shop/'
+      preLoaderRoute: typeof ShopIndexRouteImport
+      parentRoute: typeof ShopRoute
+    }
     '/shop/$slug': {
       id: '/shop/$slug'
       path: '/$slug'
@@ -296,10 +313,12 @@ declare module '@tanstack/react-router' {
 
 interface ShopRouteChildren {
   ShopSlugRoute: typeof ShopSlugRoute
+  ShopIndexRoute: typeof ShopIndexRoute
 }
 
 const ShopRouteChildren: ShopRouteChildren = {
   ShopSlugRoute: ShopSlugRoute,
+  ShopIndexRoute: ShopIndexRoute,
 }
 
 const ShopRouteWithChildren = ShopRoute._addFileChildren(ShopRouteChildren)

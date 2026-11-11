@@ -61,6 +61,7 @@ test("app migrations are applied from the top-level directory and the auth sourc
   assert.deepEqual(pendingMigrations(readdirSync(migrationsDir), []), [
     { name: "0001_auth.sql", path: "0001_auth.sql" },
     { name: "0002_studio.sql", path: "0002_studio.sql" },
+    { name: "0003_order_flags.sql", path: "0003_order_flags.sql" },
   ]);
   assert.ok(readdirSync(join(migrationsDir, "auth")).includes("0001_auth.sql"));
 });
