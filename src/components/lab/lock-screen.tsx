@@ -94,44 +94,27 @@ export function LockScreen() {
   return (
     <Shell>
       <Header title={copy.yourFace} />
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4 *:shrink-0">
-        <p>{copy.lockLead}</p>
-        <div className="seam overflow-hidden bg-lilac">
+      <div className="flex min-h-0 flex-1 flex-col px-4 pt-3">
+        <p className="shrink-0 pb-2 text-sm text-muted">{copy.lockLead}</p>
+        <div className="seam relative min-h-0 flex-1 overflow-hidden bg-lilac">
           {live ? (
             <video
               ref={videoRef}
-              className="aspect-4/3 max-h-56 w-full -scale-x-100 object-cover"
+              className="absolute inset-0 h-full w-full -scale-x-100 object-cover"
               playsInline
               muted
               autoPlay
               aria-label={`${copy.takePhoto}, ${copy.slots[slot]}`}
             />
           ) : active ? (
-            <img src={active.dataUrl} alt="" className="aspect-4/3 max-h-56 w-full object-cover" />
+            <img src={active.dataUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
           ) : (
-            <div className="flex aspect-4/3 max-h-56 items-center justify-center px-4">
+            <div className="absolute inset-0 flex items-center justify-center px-4">
               <p className="text-center text-muted">{copy.slots[slot]}</p>
             </div>
           )}
         </div>
-        {live ? (
-          <div className="flex items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={shoot}
-              aria-label={`${copy.takePhoto}, ${copy.slots[slot]}`}
-              className="size-16 shrink-0 rounded-full border-4 border-fg bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ink"
-            />
-            <p className="font-display text-sm font-bold">
-              {copy.takePhoto}: {copy.slots[slot]}
-            </p>
-          </div>
-        ) : (
-          <Button className="w-full" size="lg" onClick={() => void openCamera()}>
-            {copy.openCamera}
-          </Button>
-        )}
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid shrink-0 grid-cols-4 gap-2 py-3">
           {SLOT_ORDER.map((id) => {
             const photo = refs.find((ref) => ref.id === id);
             const label = copy.slots[id];
@@ -160,7 +143,26 @@ export function LockScreen() {
             );
           })}
         </div>
-        <Button className="w-full" size="lg" variant="ghost" onClick={() => fileRef.current?.click()}>
+      </div>
+      <div className="safe-bottom shrink-0 border-t border-line px-4 pt-3">
+        {live ? (
+          <div className="mb-2 flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={shoot}
+              aria-label={`${copy.takePhoto}, ${copy.slots[slot]}`}
+              className="size-14 shrink-0 rounded-full border-4 border-fg bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ink"
+            />
+            <p className="font-display text-sm font-bold">
+              {copy.takePhoto}: {copy.slots[slot]}
+            </p>
+          </div>
+        ) : (
+          <Button className="mb-2 w-full" onClick={() => void openCamera()}>
+            {copy.openCamera}
+          </Button>
+        )}
+        <Button className="mb-2 w-full" variant="ghost" onClick={() => fileRef.current?.click()}>
           {copy.usePhoto}
         </Button>
         <input
@@ -176,14 +178,11 @@ export function LockScreen() {
             event.target.value = "";
           }}
         />
-        <Status text={note || status} />
-        <p className="text-sm text-muted">{copy.stay}</p>
-      </div>
-      <div className="safe-bottom shrink-0 border-t border-line px-4 pt-3">
+        {note || status ? <Status text={note || status} /> : null}
         <p className="mb-2 text-center text-sm">
           {ready ? copy.lockCount : `${got} of 3. Still need ${missing.join(", ")}.`}
         </p>
-        <Button className="w-full" size="lg" disabled={!ready} onClick={lockIn}>
+        <Button className="w-full" disabled={!ready} onClick={lockIn}>
           {copy.usePhotos}
         </Button>
       </div>

@@ -1,5 +1,5 @@
-import { a as isCategory, c as tweakPrompt, l as videoPrompt, o as lookPrompt, s as piecePrompt } from "./tickets-B6Ik5l_m.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/imagine.server-DbSdO04R.js
+import { c as piecePrompt, l as tweakPrompt, o as isCategory, s as lookPrompt, u as videoPrompt } from "./tickets-DTwv3wmS.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/imagine.server-D1GjMv5U.js
 var IMAGE_MODEL = "grok-imagine-image-2.0";
 var IMAGE_FALLBACK = "grok-imagine-image";
 var VIDEO_MODEL = "grok-imagine-video-1.5";
@@ -45,21 +45,6 @@ function bytesToDataUrl(bytes, mime) {
 	const size = 32768;
 	for (let i = 0; i < bytes.length; i += size) binary += String.fromCharCode(...bytes.subarray(i, i + size));
 	return `data:${mime};base64,${btoa(binary)}`;
-}
-async function inlineClip(url) {
-	if (!url.startsWith("https://")) return null;
-	try {
-		const res = await fetch(url, { signal: AbortSignal.timeout(3e4) });
-		if (!res.ok) return null;
-		const bytes = new Uint8Array(await res.arrayBuffer());
-		if (bytes.byteLength === 0 || bytes.byteLength > 25e5) return null;
-		const mime = res.headers.get("content-type")?.split(";")[0] || "video/mp4";
-		if (!mime.startsWith("video/")) return null;
-		return bytesToDataUrl(bytes, mime);
-	} catch (error) {
-		console.error("xai clip", error);
-		return null;
-	}
 }
 async function imageFromPayload(json) {
 	const data = json?.data?.[0];
@@ -133,7 +118,7 @@ async function runLook(input) {
 		ok: false,
 		kind: "missed"
 	};
-	const faces = input.characterImages.slice(0, 3);
+	const faces = input.characterImages.slice(0, 2);
 	let images = [];
 	let prompt = "";
 	if (input.mode === "tweak") {
@@ -250,7 +235,7 @@ async function runPoll(requestId) {
 		if (json.status === "done" && json.video?.url) return {
 			ok: true,
 			status: "done",
-			url: await inlineClip(json.video.url) ?? json.video.url
+			url: json.video.url
 		};
 		if (json.status === "failed" || json.status === "expired") return {
 			ok: true,

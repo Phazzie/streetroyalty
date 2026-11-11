@@ -21,20 +21,19 @@ export function BoardScreen() {
   return (
     <Shell>
       <Header title={copy.board} action={<TextButton onClick={() => setView("hub")}>{copy.hub}</TextButton>} />
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
         {pieces.length === 0 ? (
-          <p>{copy.emptyBoard}</p>
+          <p className="pt-6 text-center">{copy.emptyBoard}</p>
         ) : (
           <div className="flex flex-col gap-5">
-            <p className="text-sm text-muted">{copy.pick}</p>
             {filled.map((category) => {
               const items = pieces.filter((piece) => piece.category === category);
               return (
                 <section key={category}>
                   <h2 className="font-display text-sm font-bold tracking-widest text-muted uppercase">{category}</h2>
-                  <div className="mt-2 flex gap-3 overflow-x-auto pb-1">
+                  <div className={cn("mt-2 grid gap-3", items.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
                     {items.map((piece) => (
-                      <div key={piece.id} className="w-40 shrink-0">
+                      <div key={piece.id}>
                         <button
                           type="button"
                           onClick={() => togglePiece(piece.id)}
@@ -44,8 +43,8 @@ export function BoardScreen() {
                             piece.selected ? "border-pipe" : "border-line",
                           )}
                         >
-                          <img src={piece.image} alt="" className="aspect-square w-full object-cover" />
-                          <span className="line-clamp-2 block px-2 pt-2 text-xs text-muted">{piece.spoken}</span>
+                          <img src={piece.image} alt={piece.spoken} className="aspect-square w-full object-cover" />
+                          <span className="line-clamp-2 block px-2 pt-2 text-sm">{piece.spoken}</span>
                           <span className={cn("block px-2 pb-2 text-xs font-bold", !piece.selected && "invisible")}>
                             {copy.wearing}
                           </span>
@@ -69,7 +68,7 @@ export function BoardScreen() {
       </div>
       <div className="safe-bottom shrink-0 border-t border-line px-4 pt-3">
         <Composer suggestions={pieces.length === 0 ? EXAMPLES : []} />
-        <Button className="mt-3 w-full" size="lg" disabled={busy || selected === 0} onClick={requestLook}>
+        <Button className="mt-2 w-full" disabled={busy || selected === 0} onClick={requestLook}>
           {selected > 0 ? `${copy.putOn} (${selected})` : copy.putOn}
         </Button>
       </div>

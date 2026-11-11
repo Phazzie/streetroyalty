@@ -71,21 +71,8 @@ function Clip({
 export function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="mess-field flex min-h-dvh justify-center">
-      <div className="phone-frame relative flex h-dvh w-full max-w-lg flex-col overflow-hidden bg-cream text-fg">
-        <Marquee />
+      <div className="phone-frame safe-top relative flex h-dvh w-full max-w-lg flex-col overflow-hidden bg-cream text-fg">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-function Marquee() {
-  const line = "On the beam  ·  On the moon  ·  In the boat  ·  At the flyer  ·  ";
-  return (
-    <div className="mash-bar edge-b safe-top shrink-0 overflow-hidden text-cream" aria-hidden="true">
-      <div className="marquee-track py-1.5 font-display text-xs font-bold tracking-widest uppercase">
-        <span className="px-3">{line}</span>
-        <span className="px-3">{line}</span>
       </div>
     </div>
   );
@@ -93,12 +80,9 @@ function Marquee() {
 
 export function Header({ title, action }: { title: string; action?: ReactNode }) {
   return (
-    <header className="flex shrink-0 flex-col gap-3 border-b border-line bg-cream px-4 pt-3 pb-3">
-      <div>
-        <p className="font-display text-xs font-bold tracking-widest text-muted uppercase">{copy.lab}</p>
-        <h1 className="font-display text-3xl font-extrabold leading-none tracking-tight text-ink">{title}</h1>
-      </div>
-      {action ? <div className="flex flex-wrap gap-2">{action}</div> : null}
+    <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-line bg-cream px-4 py-2.5">
+      <h1 className="font-display text-2xl font-extrabold leading-none tracking-tight text-ink">{title}</h1>
+      {action ? <div className="flex flex-wrap justify-end gap-2">{action}</div> : null}
     </header>
   );
 }
@@ -155,7 +139,7 @@ export function Splash({ onEnter }: { onEnter?: () => void }) {
 
 export function Status({ text }: { text: string }) {
   return (
-    <p aria-live="polite" className="min-h-6 text-base text-muted">
+    <p aria-live="polite" className="text-sm text-muted">
       {text}
     </p>
   );

@@ -5,7 +5,7 @@ import { copy } from "@/lib/copy";
 import { cn } from "@/lib/cn";
 import { useLab } from "@/lib/store";
 
-const EXAMPLES = ["make it black", "add a hat", "shorter coat"] as const;
+const EXAMPLES = ["make it black", "shorter coat"] as const;
 
 export function LookScreen() {
   const setView = useLab((state) => state.setView);
@@ -25,29 +25,30 @@ export function LookScreen() {
           </>
         }
       />
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4 *:shrink-0">
+      <div className="flex min-h-0 flex-1 flex-col px-4 pt-3">
         {draft ? (
-          <figure className="flex flex-col items-center gap-2">
-            <img
-              src={draft.image}
-              alt={draft.spoken}
-              className={cn("seam mx-auto max-h-72 max-w-full object-contain", busy && "pending-pulse")}
-            />
-            <figcaption className="text-center text-sm text-muted">{draft.spoken}</figcaption>
+          <figure className="flex min-h-0 flex-1 flex-col">
+            <div className="relative min-h-0 flex-1">
+              <img
+                src={draft.image}
+                alt={draft.spoken}
+                className={cn("absolute inset-0 h-full w-full object-contain", busy && "pending-pulse")}
+              />
+            </div>
+            <figcaption className="line-clamp-2 shrink-0 py-2 text-center text-sm">{draft.spoken}</figcaption>
           </figure>
         ) : busy ? (
-          <p className="pending-pulse text-center text-lg">{copy.puttingOn}</p>
+          <p className="pending-pulse flex flex-1 items-center justify-center text-center text-lg">{copy.puttingOn}</p>
         ) : (
-          <div className="flex flex-col items-center gap-3 text-center">
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
             <p>{copy.nothingOn}</p>
             <Button onClick={() => setView("board")}>{copy.openBoard}</Button>
           </div>
         )}
       </div>
       <div className="safe-bottom shrink-0 border-t border-line px-4 pt-3">
-        <p className="mb-3 text-sm text-muted">{copy.runwayHint}</p>
         <Composer placeholder={copy.changeHint} suggestions={draft ? EXAMPLES : []} />
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="mt-2 grid grid-cols-2 gap-2">
           <Button variant="ghost" disabled={!draft || busy} onClick={saveDraft}>
             {copy.saveThis}
           </Button>

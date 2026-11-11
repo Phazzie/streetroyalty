@@ -41,28 +41,30 @@ export function RunwayScreen() {
   return (
     <Shell>
       <Header title={copy.runway} action={<TextButton onClick={() => setView("look")}>{copy.look}</TextButton>} />
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
-        <div className="seam flex min-h-48 w-full flex-1 items-center justify-center overflow-hidden bg-surface">
+      <div className="flex min-h-0 flex-1 flex-col px-4 pt-3">
+        <div className="seam relative min-h-48 w-full flex-1 overflow-hidden bg-surface">
           {videoUrl && !broken ? (
             <video
               key={videoUrl}
               src={videoUrl}
-              className="max-h-full w-full bg-bg object-contain"
+              className="absolute inset-0 h-full w-full bg-bg object-contain"
               controls
               playsInline
               autoPlay
               onError={() => setBroken(true)}
             />
           ) : draft ? (
-            <img src={draft.image} alt={draft.spoken} className="max-h-full w-full object-contain" />
+            <img src={draft.image} alt={draft.spoken} className="absolute inset-0 h-full w-full object-contain" />
           ) : (
-            <p className="p-6 text-center text-muted">{copy.noWalk}</p>
+            <p className="absolute inset-0 flex items-center justify-center p-6 text-center text-muted">{copy.noWalk}</p>
           )}
         </div>
-        <div className="flex shrink-0 flex-col gap-4">
-        <p aria-live="polite" className="text-center text-muted">
-          {broken ? copy.clipGone : busy ? copy.walking : status}
-        </p>
+        <div className="flex shrink-0 flex-col gap-3 py-3">
+        {broken || busy || status ? (
+          <p aria-live="polite" className="text-center text-sm text-muted">
+            {broken ? copy.clipGone : busy ? copy.walking : status}
+          </p>
+        ) : null}
         {mismatch && shotLabel ? (
           <p className="text-center text-sm">
             {copy.reshootNote} Last walk: {shotLabel}.

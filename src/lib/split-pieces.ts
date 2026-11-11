@@ -1,4 +1,4 @@
-import { CATEGORIES, type Category, type PieceDraft, type Reaction } from "./types.ts";
+import { CATEGORIES, type Category, type PieceDraft, type Reaction, type View } from "./types.ts";
 
 const LEX: { category: Category; words: string[] }[] = [
   {
@@ -182,12 +182,13 @@ function boundaryBefore(text: string, matchIndex: number, prevStart: number, pre
 
 function cleanEdge(value: string): string {
   let next = value.trim();
-  for (let pass = 0; pass < 3; pass += 1) {
+  for (let pass = 0; pass < 4; pass += 1) {
     next = next
       .replace(/^[\s,;]+/, "")
       .replace(/[\s,;]+$/, "")
-      .replace(/^(and|plus|tucked into|paired with)\s+/i, "")
+      .replace(/^(and|plus|tucked into|paired with|add|also)\s+/i, "")
       .replace(/\s+(and|plus|tucked into|paired with)$/i, "")
+      .replace(/^(a|an|the)\s+/i, "")
       .trim();
   }
   return next;
@@ -219,14 +220,25 @@ export function splitPieces(transcript: string): PieceDraft[] {
     if (!text.toLowerCase().includes(spoken.toLowerCase())) continue;
     pieces.push({ category: limited[i].category, spoken });
   }
-  return mergeSameCategory(pieces);
+  return mergeCompounds(text, pieces);
 }
 
-function mergeSameCategory(pieces: PieceDraft[]): PieceDraft[] {
+function separated(text: string, left: string, right: string): boolean {
+  const lower = text.toLowerCase();
+  const leftAt = lower.indexOf(left.toLowerCase());
+  if (leftAt < 0) return true;
+  const rightAt = lower.indexOf(right.toLowerCase(), leftAt + left.length);
+  if (rightAt < 0) return true;
+  const between = lower.slice(leftAt + left.length, rightAt);
+  return /[,;]|\band\b|\bplus\b|\bwith\b|\bpaired\b|\btucked\b/.test(between);
+}
+
+function mergeCompounds(text: string, pieces: PieceDraft[]): PieceDraft[] {
   const merged: PieceDraft[] = [];
   for (const piece of pieces) {
     const prev = merged[merged.length - 1];
-    if (prev && prev.category === piece.category) {
+    const compound = prev && prev.category === piece.category && !separated(text, prev.spoken, piece.spoken);
+    if (prev && compound) {
       if (!prev.spoken.toLowerCase().includes(piece.spoken.toLowerCase())) {
         prev.spoken = cleanEdge(`${prev.spoken} ${piece.spoken}`);
       }
@@ -235,6 +247,32 @@ function mergeSameCategory(pieces: PieceDraft[]): PieceDraft[] {
     merged.push({ ...piece });
   }
   return merged;
+}
+
+const EDIT_WORDS =
+  /\b(make|shorter|longer|darker|lighter|looser|tighter|bigger|smaller|change|without|lose|less|more|tweak)\b/i;
+
+export type PaidPlan =
+  | { kind: "pieces"; pieces: PieceDraft[] }
+  | { kind: "tweak" }
+  | { kind: "wear" }
+  | { kind: "runway"; reaction?: Reaction }
+  | { kind: "again" }
+  | { kind: "free" };
+
+export function paidPlan(transcript: string, view: View): PaidPlan {
+  const intent = interpret(transcript);
+  if (intent.type === "again") return { kind: "again" };
+  if (intent.type === "runway") return { kind: "runway", reaction: intent.reaction };
+  if (intent.type === "wear") return { kind: "wear" };
+  if (view === "look" && (intent.type === "pieces" || intent.type === "unclear")) {
+    if (intent.type === "pieces" && !EDIT_WORDS.test(transcript)) {
+      return { kind: "pieces", pieces: intent.pieces };
+    }
+    return { kind: "tweak" };
+  }
+  if (intent.type === "pieces") return { kind: "pieces", pieces: intent.pieces };
+  return { kind: "free" };
 }
 
 function reactionIn(text: string): Reaction | undefined {

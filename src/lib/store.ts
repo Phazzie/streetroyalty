@@ -3,7 +3,8 @@ import { copy } from "@/lib/copy";
 import { idbGet, idbSet } from "@/lib/idb";
 import { compressDataUrl } from "@/lib/images";
 import { generateLook, generatePiece, pollRunway, startRunway } from "@/lib/lab-api";
-import { interpret, type Intent } from "@/lib/split-pieces";
+import { settleRetry } from "@/lib/piece-batch";
+import { interpret, paidPlan, type Intent } from "@/lib/split-pieces";
 import { LOCK_LINE } from "@/lib/tickets";
 import type {
   Category,
@@ -181,7 +182,7 @@ async function buildPieces(drafts: PieceDraft[], transcript: string, thenWear: b
   const line = buildingLine(drafts);
   noteStatus(line, line);
   patch({ lastJob: { kind: "pieces", drafts, transcript, thenWear, pieceIds: previousIds } });
-  const made: string[] = [];
+  const outcomes: (string | null)[] = [];
   let missed = 0;
   for (const draft of drafts) {
     if (!alive(my)) return;
@@ -196,6 +197,7 @@ async function buildPieces(drafts: PieceDraft[], transcript: string, thenWear: b
     if (!alive(my)) return;
     if (!result || !result.ok) {
       missed += 1;
+      outcomes.push(null);
       continue;
     }
     const image = await shrink(result.image);
@@ -226,18 +228,21 @@ async function buildPieces(drafts: PieceDraft[], transcript: string, thenWear: b
       status: again ? "Regenerated" : "Generated",
       createdAt: Date.now(),
     });
-    made.push(id);
+    outcomes.push(id);
   }
   if (!alive(my)) return;
-  if (made.length === 0) {
+  const settled = settleRetry(previousIds, outcomes);
+  if (settled.replaced.length) {
+    patch({
+      pieces: useLab.getState().pieces.filter((piece) => !settled.replaced.includes(piece.id)),
+    });
+  }
+  patch({ lastJob: { kind: "pieces", drafts, transcript, thenWear, pieceIds: settled.nextIds } });
+  if (!settled.nextIds.some(Boolean)) {
     noteStatus(copy.missed, copy.missed);
     finish(my);
     return;
   }
-  if (previousIds.length && made.length === drafts.length) {
-    patch({ pieces: useLab.getState().pieces.filter((piece) => !previousIds.includes(piece.id)) });
-  }
-  patch({ lastJob: { kind: "pieces", drafts, transcript, thenWear, pieceIds: made } });
   if (!thenWear) {
     const done = missed ? copy.partial : copy.onBoard;
     noteStatus(done, done);
@@ -266,7 +271,7 @@ async function buildLook(my = begin(), again = false) {
       data: {
         mode: "look",
         spoken,
-        characterImages: faces(),
+        characterImages: faces().slice(0, 2),
         clothingImages: picked.map((piece) => piece.image),
       },
     });
@@ -324,7 +329,7 @@ async function tweakLook(change: string, my = begin(), again = false) {
         mode: "tweak",
         spoken: change,
         baseSpoken: current.spoken,
-        characterImages: faces(),
+        characterImages: faces().slice(0, 2),
         lookImage: current.image,
       },
     });
@@ -506,6 +511,12 @@ function runIntent(intent: Intent, view: View, text: string) {
     return;
   }
   if (view === "look" && (intent.type === "unclear" || intent.type === "pieces")) {
+    const plan = paidPlan(text, view);
+    if (plan.kind === "pieces") {
+      const wear = intent.type === "pieces" && intent.thenWear;
+      void buildPieces(plan.pieces, text, wear, false);
+      return;
+    }
     if (text.trim().length < 3) {
       useLab.setState({ status: copy.unclear });
       return;
@@ -535,15 +546,6 @@ export async function hydrate() {
     }
     const locked = REQUIRED_SLOTS.every((slot) => data.refs?.some((ref) => ref.id === slot));
     const view = locked ? (data.view === "lock" ? "hub" : data.view) : "lock";
-    const status = !locked
-      ? ""
-      : view === "look" && data.draft
-        ? copy.sharp
-        : view === "runway"
-          ? copy.runwayUp
-          : view === "hub"
-            ? copy.boardOpen
-            : "";
     useLab.setState({
       ...data,
       refs: data.refs ?? [],
@@ -557,7 +559,7 @@ export async function hydrate() {
       view,
       ready: true,
       busy: false,
-      status,
+      status: "",
     });
   } catch {
     useLab.setState({ ready: true, view: "lock" });
@@ -579,7 +581,7 @@ export const useLab = create<LabState>((set, get) => ({
   status: "",
   setStatus: (status) => set({ status }),
   setView: (view) => {
-    set({ view });
+    set({ view, status: "" });
     persist();
   },
   setReaction: (reaction) => {
@@ -605,7 +607,7 @@ export const useLab = create<LabState>((set, get) => ({
   lockIn: () => {
     const ready = REQUIRED_SLOTS.every((slot) => get().refs.some((ref) => ref.id === slot));
     if (!ready) return;
-    set({ view: "hub", status: copy.boardOpen });
+    set({ view: "hub", status: "" });
     persist();
     speak(copy.lockedIn);
   },

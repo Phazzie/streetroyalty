@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { interpret, splitPieces } from "./split-pieces.ts";
+import { interpret, paidPlan, splitPieces } from "./split-pieces.ts";
 
 describe("splitPieces", () => {
   it("keeps a short sleeve shirt as one top", () => {
@@ -35,6 +35,17 @@ describe("splitPieces", () => {
     assert.deepEqual(splitPieces("trench coat"), [{ category: "Outer", spoken: "trench coat" }]);
   });
 
+  it("keeps two tops as two pieces", () => {
+    assert.deepEqual(splitPieces("white tee and a polo"), [
+      { category: "Tops", spoken: "white tee" },
+      { category: "Tops", spoken: "polo" },
+    ]);
+  });
+
+  it("names an added hat as the hat", () => {
+    assert.deepEqual(splitPieces("add a hat"), [{ category: "Hats", spoken: "hat" }]);
+  });
+
   it("returns nothing when no garment is named", () => {
     assert.deepEqual(splitPieces("something cool"), []);
   });
@@ -50,5 +61,24 @@ describe("interpret", () => {
 
   it("does not invent pieces from chatter", () => {
     assert.equal(interpret("hello there").type, "unclear");
+  });
+});
+
+describe("paidPlan", () => {
+  it("builds two tops instead of one shirt", () => {
+    const plan = paidPlan("white tee and a polo", "hub");
+    assert.equal(plan.kind, "pieces");
+    if (plan.kind === "pieces") assert.equal(plan.pieces.length, 2);
+  });
+
+  it("adds a hat on the look instead of rewriting the photo", () => {
+    const plan = paidPlan("add a hat", "look");
+    assert.equal(plan.kind, "pieces");
+    if (plan.kind === "pieces") assert.equal(plan.pieces[0]?.spoken, "hat");
+  });
+
+  it("keeps a shorter coat as a change to the photo", () => {
+    assert.equal(paidPlan("shorter coat", "look").kind, "tweak");
+    assert.equal(paidPlan("make it black", "look").kind, "tweak");
   });
 });

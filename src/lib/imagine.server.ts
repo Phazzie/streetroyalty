@@ -130,7 +130,7 @@ export async function runLook(input: {
   lookImage: string | null;
 }): Promise<ImageResult> {
   if (!input.spoken) return { ok: false, kind: "missed" };
-  const faces = input.characterImages.slice(0, 3);
+  const faces = input.characterImages.slice(0, 2);
   let images: { type: "image_url"; url: string }[] = [];
   let prompt = "";
   if (input.mode === "tweak") {

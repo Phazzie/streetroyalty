@@ -71,7 +71,7 @@ export type PieceDraft = {
 };
 
 export type LastJob =
-  | { kind: "pieces"; drafts: PieceDraft[]; transcript: string; thenWear?: boolean; pieceIds?: string[] }
+  | { kind: "pieces"; drafts: PieceDraft[]; transcript: string; thenWear?: boolean; pieceIds?: (string | null)[] }
   | { kind: "look" }
   | { kind: "tweak"; change: string }
   | { kind: "video" };

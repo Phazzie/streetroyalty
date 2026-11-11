@@ -42,49 +42,54 @@ export function HubScreen() {
           </>
         }
       />
-      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-x-hidden overflow-y-auto px-4 py-4 *:shrink-0">
-        {pieces.length === 0 && !draft ? (
-          <div className="flex flex-col gap-2">
+      <div className="flex min-h-0 flex-1 flex-col px-4 pt-3">
+        {draft ? (
+          <div className="flex min-h-0 flex-1 flex-col">
+            <button
+              type="button"
+              onClick={() => setView("look")}
+              aria-label={draft.spoken}
+              className="relative min-h-0 flex-1"
+            >
+              <img src={draft.image} alt="" className="absolute inset-0 h-full w-full object-contain" />
+            </button>
+            <p className="line-clamp-2 shrink-0 py-2 text-center text-sm">{draft.spoken}</p>
+          </div>
+        ) : (
+          <div className="flex flex-1 flex-col justify-center gap-3">
             <p className="text-lg italic">{copy.crown}</p>
             <p>{copy.hubJob}</p>
+            {pieces.length > 0 ? (
+              <p className="text-sm text-muted">
+                {pieces.length} pieces on the board. {wearing} selected.
+              </p>
+            ) : null}
+          </div>
+        )}
+        {looks.length > 0 ? (
+          <div className="flex shrink-0 gap-3 overflow-x-auto pb-2">
+            {looks.map((look) => (
+              <div key={look.id} className="w-24 shrink-0">
+                <button type="button" onClick={() => openSaved(look.id)} className="w-full text-left" aria-label={look.spoken}>
+                  <img src={look.image} alt="" className="aspect-3/4 w-full rounded-md object-cover" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => dropLook(look.id)}
+                  aria-label={`${copy.drop} ${look.spoken}`}
+                  className="mt-1 h-11 w-full rounded-md border-2 border-line text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ink"
+                >
+                  {copy.drop}
+                </button>
+              </div>
+            ))}
           </div>
         ) : null}
-        {pieces.length > 0 ? (
-          <p className="text-sm text-muted">
-            {pieces.length} pieces on the board. {wearing} selected.
-          </p>
-        ) : null}
-        {draft ? (
-          <button type="button" onClick={() => setView("look")} className="text-left">
-            <img src={draft.image} alt="" className="seam aspect-3/4 w-full object-cover" />
-            <span className="mt-2 line-clamp-2 block text-sm">{draft.spoken}</span>
-          </button>
-        ) : null}
-        {looks.length > 0 ? (
-          <section>
-            <h2 className="font-display text-sm font-bold tracking-widest text-ink uppercase">{copy.savedHead}</h2>
-            <div className="mt-2 flex gap-3 overflow-x-auto pb-2">
-              {looks.map((look) => (
-                <div key={look.id} className="w-28 shrink-0">
-                  <button type="button" onClick={() => openSaved(look.id)} className="w-full text-left">
-                    <img src={look.image} alt="" className="seam aspect-3/4 w-full object-cover" />
-                    <span className="mt-1 line-clamp-2 block text-xs text-muted">{look.spoken}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => dropLook(look.id)}
-                    aria-label={`${copy.drop} ${look.spoken}`}
-                    className="mt-1 h-11 w-full rounded-md border-2 border-line text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ink"
-                  >
-                    {copy.drop}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : null}
-        <details className="border-2 border-ink bg-mint px-3 py-3">
-          <summary className="font-display text-sm font-extrabold tracking-widest uppercase">{copy.keepIt}</summary>
+      </div>
+      <div className="safe-bottom shrink-0 border-t border-line px-4 pt-3">
+        <Composer suggestions={draft ? [] : EXAMPLES} />
+        <details className="mt-2 border-t border-line pt-2">
+          <summary className="font-display text-xs font-bold tracking-widest text-muted uppercase">{copy.keepIt}</summary>
           <p className="mt-2 text-sm">{copy.pinned}</p>
           <p className="mt-1 text-sm">{copy.installHow}</p>
           {install && !hideInstall ? (
@@ -101,9 +106,6 @@ export function HubScreen() {
             </div>
           ) : null}
         </details>
-      </div>
-      <div className="safe-bottom shrink-0 border-t border-line px-4 pt-3">
-        <Composer suggestions={EXAMPLES} />
       </div>
     </Shell>
   );
