@@ -1,25 +1,27 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #f4efe4;
-  --color-cream: #fffaf2;
-  --color-ink: #1c1712;
-  --color-fg: #1c1712;
-  --color-lilac: #cbb6ee;
-  --color-mint: #a8d4c3;
-  --color-pipe: #ef6d22;
-  --color-surface: #fffaf2;
-  --color-muted: #5c5348;
-  --color-subtle: #8a7f72;
-  --color-line: #d9d0c2;
-  --color-accent: #ef6d22;
-  --color-accent-fg: #1c1712;
-  --font-display: "Syne", "Avenir Next", "Segoe UI", sans-serif;
-  --font-sans: "Fraunces", "Iowan Old Style", "Palatino Linotype", serif;
-  --radius-sm: 0.5rem;
-  --radius-md: 0.85rem;
-  --radius-lg: 1.15rem;
-  --radius-xl: 1.6rem;
+  --color-bg: #0b0614;
+  --color-cream: #161022;
+  --color-ink: #f6f1ff;
+  --color-fg: #f6f1ff;
+  --color-lilac: #7c5cff;
+  --color-mint: #12343a;
+  --color-pipe: #ff2d95;
+  --color-cyan: #3df0ff;
+  --color-amber: #ffb020;
+  --color-surface: #20182c;
+  --color-muted: #d5cbe8;
+  --color-subtle: #b7a8d4;
+  --color-line: #3a2d52;
+  --color-accent: #d6ff3c;
+  --color-accent-fg: #14081c;
+  --font-display: "Archivo Black", "Arial Black", sans-serif;
+  --font-sans: "Outfit", "Avenir Next", "Segoe UI", sans-serif;
+  --radius-sm: 0.35rem;
+  --radius-md: 0.55rem;
+  --radius-lg: 0.8rem;
+  --radius-xl: 1.1rem;
 }
 
 @layer base {
@@ -29,7 +31,7 @@
   }
 
   html {
-    background: var(--color-ink);
+    background: var(--color-bg);
     color: var(--color-fg);
   }
 
@@ -37,7 +39,7 @@
     font-family: var(--font-sans);
     line-height: 1.5;
     text-wrap: pretty;
-    background: var(--color-ink);
+    background: var(--color-bg);
     color: var(--color-fg);
     overflow-x: clip;
   }
@@ -82,19 +84,20 @@
 }
 
 .mess-field {
-  background-color: var(--color-ink);
-  background-image: url("/wild/mess.jpg");
-  background-size: cover;
+  background-color: var(--color-bg);
+  background-image:
+    linear-gradient(115deg, transparent 0 42%, color-mix(in srgb, var(--color-pipe) 28%, transparent) 42% 46%, transparent 46%),
+    linear-gradient(115deg, transparent 0 68%, color-mix(in srgb, var(--color-accent) 22%, transparent) 68% 71%, transparent 71%),
+    url("/wild/mess.jpg");
+  background-size: auto, auto, cover;
   background-position: center;
 }
 
 .banner-head {
-  background-color: var(--color-lilac);
-  background-image:
-    linear-gradient(180deg, color-mix(in srgb, var(--color-cream) 88%, transparent), color-mix(in srgb, var(--color-lilac) 72%, transparent)),
-    url("/wild/banner.jpg");
-  background-size: cover;
-  background-position: center;
+  background-color: #120a1c;
+  background-image: linear-gradient(90deg, color-mix(in srgb, var(--color-pipe) 55%, transparent), color-mix(in srgb, var(--color-cyan) 28%, transparent));
+  border-bottom: 3px solid var(--color-pipe);
+  color: var(--color-fg);
 }
 
 .mash-bar {
@@ -237,11 +240,89 @@
   animation: live-ring 1.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
 
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0 0.9rem;
+  border: 2px solid var(--color-ink);
+  background: var(--color-surface);
+  color: var(--color-fg);
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.chip:hover {
+  transform: translateY(-2px);
+}
+
+.chip-on,
+.chip[aria-current="page"] {
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  border: 2px solid var(--color-ink);
+  background: var(--color-pipe);
+  color: #14081c;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  box-shadow: 3px 3px 0 var(--color-accent);
+}
+
+.studio-card {
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.studio-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 6px 6px 0 var(--color-pipe);
+}
+
+.sticker-shadow {
+  box-shadow: 4px 4px 0 var(--color-pipe);
+}
+
+.sticker-shadow:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 6px 6px 0 var(--color-pipe);
+}
+
+input[type="range"] {
+  accent-color: var(--color-accent);
+  width: 100%;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .mic-live::after,
   .marquee-track,
   .walker-left,
-  .walker-right {
+  .walker-right,
+  .studio-card,
+  .chip,
+  .sticker-shadow {
     animation: none;
+    transition: none;
+  }
+
+  .studio-card:hover,
+  .chip:hover,
+  .sticker-shadow:hover {
+    transform: none;
   }
 }
