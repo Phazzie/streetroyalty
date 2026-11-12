@@ -1,9 +1,11 @@
 import { create } from "zustand";
 import { copy } from "@/lib/copy";
 import { idbGet, idbSet } from "@/lib/idb";
+import { compressDataUrl } from "@/lib/images";
 import { generateLook, generatePiece, pollRunway, startRunway } from "@/lib/lab-api";
-import { interpret, type Intent } from "@/lib/split-pieces";
-import { LOCK_LINE } from "@/lib/tickets";
+import { settleRetry } from "@/lib/piece-batch";
+import { interpret, isLookChange, paidPlan, type Intent } from "@/lib/split-pieces";
+import { LOCK_LINE, runwayTicketOutput } from "@/lib/tickets";
 import type {
   Category,
   CharacterRef,
@@ -44,6 +46,7 @@ type LabState = Persisted & {
   lockIn: () => void;
   saveDraft: () => void;
   openSaved: (id: string) => void;
+  dropLook: (id: string) => void;
   handleTranscript: (text: string) => void;
   requestLook: () => void;
   requestRunway: () => void;
@@ -81,7 +84,36 @@ function snapshot(state: LabState): Persisted {
 
 function persist() {
   const data = snapshot(useLab.getState());
-  persistQueue = persistQueue.then(() => idbSet("lab", data)).catch(() => undefined);
+  persistQueue = persistQueue
+    .then(() => idbSet("lab", data))
+    .catch((error: unknown) => {
+      const name = error instanceof DOMException ? error.name : "";
+      if (name === "QuotaExceededError") useLab.setState({ status: copy.storageFull });
+    });
+}
+
+function sameScreen(stage: View, next: View): View {
+  return useLab.getState().view === stage ? next : useLab.getState().view;
+}
+
+function failLine(result: { ok: boolean; kind?: string } | null): string {
+  return result && !result.ok && result.kind === "unavailable" ? copy.cantBuild : copy.missed;
+}
+
+async function shrink(image: string): Promise<string> {
+  try {
+    return await compressDataUrl(image);
+  } catch {
+    return image;
+  }
+}
+
+function buildingLine(drafts: PieceDraft[]): string {
+  if (drafts.length === 1) {
+    const name = drafts[0].spoken.trim().slice(0, 80);
+    return `Got it. Building ${name}.`;
+  }
+  return `Got it. Building ${drafts.length} pieces.`;
 }
 
 function patch(partial: Partial<LabState>, remember = true) {
@@ -144,10 +176,13 @@ function noteStatus(status: string, line?: string) {
 
 async function buildPieces(drafts: PieceDraft[], transcript: string, thenWear: boolean, again: boolean) {
   const my = begin();
-  const line = drafts.length > 1 ? copy.buildingThose : copy.buildingOne;
+  const started = useLab.getState().view;
+  const previous = useLab.getState().lastJob;
+  const previousIds = again && previous?.kind === "pieces" ? (previous.pieceIds ?? []) : [];
+  const line = buildingLine(drafts);
   noteStatus(line, line);
-  patch({ lastJob: { kind: "pieces", drafts, transcript } });
-  const made: string[] = [];
+  patch({ lastJob: { kind: "pieces", drafts, transcript, thenWear, pieceIds: previousIds } });
+  const outcomes: (string | null)[] = [];
   let missed = 0;
   for (const draft of drafts) {
     if (!alive(my)) return;
@@ -162,15 +197,18 @@ async function buildPieces(drafts: PieceDraft[], transcript: string, thenWear: b
     if (!alive(my)) return;
     if (!result || !result.ok) {
       missed += 1;
+      outcomes.push(null);
       continue;
     }
+    const image = await shrink(result.image);
+    if (!alive(my)) return;
     const id = nextId("piece");
     const piece: Piece = {
       id,
       category: draft.category,
       spoken: draft.spoken,
       sourceTranscript: transcript,
-      image: result.image,
+      image,
       selected: true,
       ticketId,
       createdAt: Date.now(),
@@ -190,17 +228,25 @@ async function buildPieces(drafts: PieceDraft[], transcript: string, thenWear: b
       status: again ? "Regenerated" : "Generated",
       createdAt: Date.now(),
     });
-    made.push(id);
+    outcomes.push(id);
   }
   if (!alive(my)) return;
-  if (made.length === 0) {
+  const settled = settleRetry(previousIds, outcomes);
+  if (settled.replaced.length) {
+    patch({
+      pieces: useLab.getState().pieces.filter((piece) => !settled.replaced.includes(piece.id)),
+    });
+  }
+  patch({ lastJob: { kind: "pieces", drafts, transcript, thenWear, pieceIds: settled.nextIds } });
+  if (!settled.nextIds.some(Boolean)) {
     noteStatus(copy.missed, copy.missed);
     finish(my);
     return;
   }
   if (!thenWear) {
-    noteStatus(missed ? copy.partial : copy.onBoard);
-    patch({ view: "board" });
+    const done = missed ? copy.partial : copy.onBoard;
+    noteStatus(done, done);
+    patch({ view: sameScreen(started, "board") });
     finish(my);
     return;
   }
@@ -217,6 +263,7 @@ async function buildLook(my = begin(), again = false) {
   const spoken = spokenFrom(picked);
   noteStatus(copy.puttingOn, copy.puttingOn);
   patch({ lastJob: { kind: "look" }, view: "look" });
+  const stage: View = "look";
   const ticketId = nextId("GEN");
   let result: Awaited<ReturnType<typeof generateLook>> | null = null;
   try {
@@ -224,7 +271,7 @@ async function buildLook(my = begin(), again = false) {
       data: {
         mode: "look",
         spoken,
-        characterImages: faces(),
+        characterImages: faces().slice(0, 2),
         clothingImages: picked.map((piece) => piece.image),
       },
     });
@@ -234,19 +281,22 @@ async function buildLook(my = begin(), again = false) {
   }
   if (!alive(my)) return;
   if (!result || !result.ok) {
-    noteStatus(result && !result.ok && result.kind === "unavailable" ? copy.cantBuild : copy.missed, copy.missed);
+    const missedLine = failLine(result);
+    noteStatus(missedLine, missedLine);
     finish(my);
     return;
   }
+  const image = await shrink(result.image);
+  if (!alive(my)) return;
   const draft: Look = {
     id: nextId("look"),
-    image: result.image,
+    image,
     spoken,
     pieceIds: picked.map((piece) => piece.id),
     ticketId,
     createdAt: Date.now(),
   };
-  patch({ draft, view: "look" });
+  patch({ draft, view: sameScreen(stage, "look") });
   rememberTicket({
     id: ticketId,
     type: "Full Look",
@@ -281,7 +331,7 @@ async function tweakLook(change: string, my = begin(), again = false) {
         mode: "tweak",
         spoken: change,
         baseSpoken: current.spoken,
-        characterImages: faces(),
+        characterImages: faces().slice(0, 2),
         lookImage: current.image,
       },
     });
@@ -291,19 +341,22 @@ async function tweakLook(change: string, my = begin(), again = false) {
   }
   if (!alive(my)) return;
   if (!result || !result.ok) {
-    noteStatus(result && !result.ok && result.kind === "unavailable" ? copy.cantBuild : copy.missed, copy.missed);
+    const missedLine = failLine(result);
+    noteStatus(missedLine, missedLine);
     finish(my);
     return;
   }
+  const image = await shrink(result.image);
+  if (!alive(my)) return;
   const draft: Look = {
     id: nextId("look"),
-    image: result.image,
+    image,
     spoken: `${current.spoken}. ${change}`,
     pieceIds: current.pieceIds,
     ticketId,
     createdAt: Date.now(),
   };
-  patch({ draft, view: "look" });
+  patch({ draft, view: sameScreen("look", "look") });
   rememberTicket({
     id: ticketId,
     type: "Full Look",
@@ -329,8 +382,9 @@ async function walk(my = begin(), again = false) {
     return;
   }
   const reaction = useLab.getState().reaction;
-  noteStatus(copy.walking, copy.runwayUp);
+  noteStatus(copy.walking, copy.walking);
   patch({ lastJob: { kind: "video" }, view: "runway" });
+  const stage: View = "runway";
   const ticketId = nextId("GEN");
   let started: Awaited<ReturnType<typeof startRunway>> | null = null;
   try {
@@ -348,7 +402,8 @@ async function walk(my = begin(), again = false) {
   }
   if (!alive(my)) return;
   if (!started || !started.ok) {
-    noteStatus(started && !started.ok && started.kind === "unavailable" ? copy.cantBuild : copy.missed, copy.missed);
+    const missedLine = failLine(started);
+    noteStatus(missedLine, missedLine);
     finish(my);
     return;
   }
@@ -364,6 +419,7 @@ async function walk(my = begin(), again = false) {
     status: "Pending",
     createdAt: Date.now(),
   });
+  let misses = 0;
   for (let attempt = 0; attempt < 45; attempt += 1) {
     if (!alive(my)) return;
     await new Promise((resolve) => setTimeout(resolve, 4000));
@@ -377,10 +433,15 @@ async function walk(my = begin(), again = false) {
     }
     if (!alive(my)) return;
     if (!polled || !polled.ok) {
-      noteStatus(copy.missed, copy.missed);
-      finish(my);
-      return;
+      misses += 1;
+      if (misses >= 3) {
+        noteStatus(copy.missed, copy.missed);
+        finish(my);
+        return;
+      }
+      continue;
     }
+    misses = 0;
     if (polled.status === "failed") {
       noteStatus(copy.missed, copy.missed);
       finish(my);
@@ -390,18 +451,22 @@ async function walk(my = begin(), again = false) {
       const videoUrl = polled.url;
       const latest = useLab.getState().draft;
       if (latest && latest.id === draft.id) {
-        const next = { ...latest, videoUrl };
+        const next = { ...latest, videoUrl, videoReaction: reaction };
         const looks = useLab.getState().looks.map((look) =>
-          look.id === next.id ? { ...look, videoUrl } : look,
+          look.id === next.id ? { ...look, videoUrl, videoReaction: reaction } : look,
         );
         patch({ draft: next, looks });
       }
       const tickets = useLab.getState().tickets.map((ticket) =>
         ticket.id === ticketId
-          ? { ...ticket, status: again ? ("Regenerated" as const) : ("Generated" as const), output: videoUrl }
+          ? {
+              ...ticket,
+              status: again ? ("Regenerated" as const) : ("Generated" as const),
+              output: runwayTicketOutput(videoUrl, started.requestId),
+            }
           : ticket,
       );
-      patch({ tickets, view: "runway" });
+      patch({ tickets, view: sameScreen(stage, "runway") });
       noteStatus(copy.runwayUp);
       finish(my);
       return;
@@ -427,7 +492,7 @@ function runIntent(intent: Intent, view: View, text: string) {
       useLab.setState({ status: copy.unclear });
       return;
     }
-    if (job.kind === "pieces") void buildPieces(job.drafts, job.transcript, false, true);
+    if (job.kind === "pieces") void buildPieces(job.drafts, job.transcript, Boolean(job.thenWear), true);
     if (job.kind === "look") void buildLook(begin(), true);
     if (job.kind === "tweak") void tweakLook(job.change, begin(), true);
     if (job.kind === "video") void walk(begin(), true);
@@ -454,11 +519,17 @@ function runIntent(intent: Intent, view: View, text: string) {
     return;
   }
   if (view === "look" && (intent.type === "unclear" || intent.type === "pieces")) {
-    if (text.trim().length < 8) {
-      useLab.setState({ status: copy.unclear });
+    const plan = paidPlan(text, view);
+    if (plan.kind === "pieces") {
+      const wear = intent.type === "pieces" && intent.thenWear;
+      void buildPieces(plan.pieces, text, wear, false);
       return;
     }
-    void tweakLook(text);
+    if (plan.kind === "tweak" && isLookChange(text)) {
+      void tweakLook(text);
+      return;
+    }
+    useLab.setState({ status: copy.unclear });
     return;
   }
   if (view === "runway" && intent.type === "pieces") {
@@ -483,15 +554,6 @@ export async function hydrate() {
     }
     const locked = REQUIRED_SLOTS.every((slot) => data.refs?.some((ref) => ref.id === slot));
     const view = locked ? (data.view === "lock" ? "hub" : data.view) : "lock";
-    const status = !locked
-      ? ""
-      : view === "look" && data.draft
-        ? copy.sharp
-        : view === "runway"
-          ? copy.runwayUp
-          : view === "hub"
-            ? copy.boardOpen
-            : "";
     useLab.setState({
       ...data,
       refs: data.refs ?? [],
@@ -505,7 +567,7 @@ export async function hydrate() {
       view,
       ready: true,
       busy: false,
-      status,
+      status: "",
     });
   } catch {
     useLab.setState({ ready: true, view: "lock" });
@@ -527,7 +589,7 @@ export const useLab = create<LabState>((set, get) => ({
   status: "",
   setStatus: (status) => set({ status }),
   setView: (view) => {
-    set({ view });
+    set({ view, status: "" });
     persist();
   },
   setReaction: (reaction) => {
@@ -553,7 +615,7 @@ export const useLab = create<LabState>((set, get) => ({
   lockIn: () => {
     const ready = REQUIRED_SLOTS.every((slot) => get().refs.some((ref) => ref.id === slot));
     if (!ready) return;
-    set({ view: "hub", status: copy.boardOpen });
+    set({ view: "hub", status: "" });
     persist();
     speak(copy.lockedIn);
   },
@@ -580,6 +642,10 @@ export const useLab = create<LabState>((set, get) => ({
     const look = get().looks.find((item) => item.id === id);
     if (!look) return;
     set({ draft: look, view: "look", status: copy.sharp });
+    persist();
+  },
+  dropLook: (id) => {
+    set({ looks: get().looks.filter((look) => look.id !== id) });
     persist();
   },
   handleTranscript: (text) => {

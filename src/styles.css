@@ -31,7 +31,8 @@
 
 @layer base {
   button:not(:disabled),
-  [role="button"]:not(:disabled) {
+  [role="button"]:not(:disabled),
+  summary {
     cursor: pointer;
   }
 
@@ -156,81 +157,17 @@
   border: 3px solid var(--color-pipe);
 }
 
-.edge-r {
-  border-right: 3px solid var(--color-pipe);
-}
-
-.edge-l {
-  border-left: 3px solid var(--color-pipe);
-}
-
-.edge-t {
-  border-top: 3px solid var(--color-pipe);
-}
-
 .edge-b {
   border-bottom: 3px solid var(--color-pipe);
 }
 
-.edge-gutter {
-  padding-left: 4.5rem;
-  padding-right: 4.5rem;
+.pending-pulse {
+  animation: pending 1.2s ease-in-out infinite;
 }
 
-.edge-clip {
-  position: absolute;
-  z-index: 30;
-  width: 5.75rem;
-  height: 9rem;
-  object-fit: cover;
-  object-position: center 20%;
-  border: 3px solid var(--color-pipe);
-  background: var(--color-ink);
-  pointer-events: none;
-}
-
-.edge-still-left {
-  left: 0;
-  top: 5.5rem;
-}
-
-.edge-still-right {
-  right: 0;
-  top: 5.5rem;
-}
-
-.walker {
-  position: absolute;
-  z-index: 25;
-  width: 3.5rem;
-  height: 5.5rem;
-  object-fit: contain;
-  object-position: center bottom;
-  border: 2px solid var(--color-ink);
-  background: var(--color-cream);
-  pointer-events: none;
-}
-
-.walker-left {
-  left: 0;
-  animation: patrol 8s ease-in-out infinite alternate;
-}
-
-.walker-right {
-  right: 0;
-  animation: patrol 10s ease-in-out infinite alternate-reverse;
-}
-
-.walker-late {
-  animation-delay: -5s;
-}
-
-@keyframes patrol {
-  from {
-    top: 46%;
-  }
-  to {
-    top: calc(100% - 6rem);
+@keyframes pending {
+  50% {
+    opacity: 0.45;
   }
 }
 
@@ -238,17 +175,6 @@
   display: flex;
   width: max-content;
   animation: ticker 22s linear infinite;
-}
-
-.stamp {
-  border: 3px solid var(--color-ink);
-  background: var(--color-cream);
-  padding: 0.45rem 0.45rem 0.55rem;
-  box-shadow: 7px 7px 0 var(--color-lilac);
-}
-
-.stamp-mint {
-  box-shadow: 7px 7px 0 var(--color-mint);
 }
 
 @keyframes ticker {
@@ -409,7 +335,8 @@ input[type="range"] {
   .walker-right,
   .studio-card,
   .chip,
-  .sticker-shadow {
+  .sticker-shadow,
+  .pending-pulse {
     animation: none;
     transition: none;
   }
