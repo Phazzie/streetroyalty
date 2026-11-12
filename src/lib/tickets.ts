@@ -40,6 +40,11 @@ export function lookPrompt(
   ].join(" ");
 }
 
+/** Tickets keep a link or request id. Inline clip bytes stay on the look. */
+export function runwayTicketOutput(url: string, requestId: string): string {
+  return url.startsWith("data:") ? requestId : url;
+}
+
 export function tweakPrompt(baseSpoken: string, change: string): string {
   return [
     LOCK_LINE,

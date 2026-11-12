@@ -4,8 +4,8 @@ import { idbGet, idbSet } from "@/lib/idb";
 import { compressDataUrl } from "@/lib/images";
 import { generateLook, generatePiece, pollRunway, startRunway } from "@/lib/lab-api";
 import { settleRetry } from "@/lib/piece-batch";
-import { interpret, paidPlan, type Intent } from "@/lib/split-pieces";
-import { LOCK_LINE } from "@/lib/tickets";
+import { interpret, isLookChange, paidPlan, type Intent } from "@/lib/split-pieces";
+import { LOCK_LINE, runwayTicketOutput } from "@/lib/tickets";
 import type {
   Category,
   CharacterRef,
@@ -286,9 +286,11 @@ async function buildLook(my = begin(), again = false) {
     finish(my);
     return;
   }
+  const image = await shrink(result.image);
+  if (!alive(my)) return;
   const draft: Look = {
     id: nextId("look"),
-    image: await shrink(result.image),
+    image,
     spoken,
     pieceIds: picked.map((piece) => piece.id),
     ticketId,
@@ -344,9 +346,11 @@ async function tweakLook(change: string, my = begin(), again = false) {
     finish(my);
     return;
   }
+  const image = await shrink(result.image);
+  if (!alive(my)) return;
   const draft: Look = {
     id: nextId("look"),
-    image: await shrink(result.image),
+    image,
     spoken: `${current.spoken}. ${change}`,
     pieceIds: current.pieceIds,
     ticketId,
@@ -455,7 +459,11 @@ async function walk(my = begin(), again = false) {
       }
       const tickets = useLab.getState().tickets.map((ticket) =>
         ticket.id === ticketId
-          ? { ...ticket, status: again ? ("Regenerated" as const) : ("Generated" as const), output: videoUrl }
+          ? {
+              ...ticket,
+              status: again ? ("Regenerated" as const) : ("Generated" as const),
+              output: runwayTicketOutput(videoUrl, started.requestId),
+            }
           : ticket,
       );
       patch({ tickets, view: sameScreen(stage, "runway") });
@@ -517,11 +525,11 @@ function runIntent(intent: Intent, view: View, text: string) {
       void buildPieces(plan.pieces, text, wear, false);
       return;
     }
-    if (text.trim().length < 3) {
-      useLab.setState({ status: copy.unclear });
+    if (plan.kind === "tweak" && isLookChange(text)) {
+      void tweakLook(text);
       return;
     }
-    void tweakLook(text);
+    useLab.setState({ status: copy.unclear });
     return;
   }
   if (view === "runway" && intent.type === "pieces") {

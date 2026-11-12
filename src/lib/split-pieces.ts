@@ -252,6 +252,17 @@ function mergeCompounds(text: string, pieces: PieceDraft[]): PieceDraft[] {
 const EDIT_WORDS =
   /\b(make|shorter|longer|darker|lighter|looser|tighter|bigger|smaller|change|without|lose|less|more|tweak)\b/i;
 
+const CHATTER =
+  /^(y(es|eah|ep)|no|nah|ok(ay)?|nice|cool|wow|fire|dope|sick|good|great|perfect|thanks|thank you|slay|bet|word|lit|hard|clean|sharp|beautiful|gorgeous|love it|love this|love that|looks good|looks great|so good|so fire|i like it|i love it|hell yeah|hello|hi|hey)[.!?\s]*$/i;
+
+/** A look-screen line is a paid edit only when it asks for a change. */
+export function isLookChange(transcript: string): boolean {
+  const text = transcript.trim();
+  if (!text || CHATTER.test(text)) return false;
+  if (EDIT_WORDS.test(text)) return true;
+  return text.length >= 12;
+}
+
 export type PaidPlan =
   | { kind: "pieces"; pieces: PieceDraft[] }
   | { kind: "tweak" }
@@ -265,11 +276,12 @@ export function paidPlan(transcript: string, view: View): PaidPlan {
   if (intent.type === "again") return { kind: "again" };
   if (intent.type === "runway") return { kind: "runway", reaction: intent.reaction };
   if (intent.type === "wear") return { kind: "wear" };
-  if (view === "look" && (intent.type === "pieces" || intent.type === "unclear")) {
-    if (intent.type === "pieces" && !EDIT_WORDS.test(transcript)) {
-      return { kind: "pieces", pieces: intent.pieces };
-    }
+  if (view === "look" && intent.type === "pieces") {
+    if (!EDIT_WORDS.test(transcript)) return { kind: "pieces", pieces: intent.pieces };
     return { kind: "tweak" };
+  }
+  if (view === "look" && intent.type === "unclear") {
+    return isLookChange(transcript) ? { kind: "tweak" } : { kind: "free" };
   }
   if (intent.type === "pieces") return { kind: "pieces", pieces: intent.pieces };
   return { kind: "free" };

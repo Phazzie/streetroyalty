@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { interpret, paidPlan, splitPieces } from "./split-pieces.ts";
+import { interpret, isLookChange, paidPlan, splitPieces } from "./split-pieces.ts";
 
 describe("splitPieces", () => {
   it("keeps a short sleeve shirt as one top", () => {
@@ -80,5 +80,16 @@ describe("paidPlan", () => {
   it("keeps a shorter coat as a change to the photo", () => {
     assert.equal(paidPlan("shorter coat", "look").kind, "tweak");
     assert.equal(paidPlan("make it black", "look").kind, "tweak");
+  });
+
+  it("does not spend a look edit on chatter", () => {
+    assert.equal(isLookChange("nice"), false);
+    assert.equal(isLookChange("yes"), false);
+    assert.equal(isLookChange("hello there"), false);
+    assert.equal(paidPlan("nice", "look").kind, "free");
+    assert.equal(paidPlan("yes", "look").kind, "free");
+    assert.equal(paidPlan("love it", "look").kind, "free");
+    assert.equal(isLookChange("crop the hem and keep the collar"), true);
+    assert.equal(paidPlan("crop the hem and keep the collar", "look").kind, "tweak");
   });
 });

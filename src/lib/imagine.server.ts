@@ -1,3 +1,4 @@
+import { CLIP_BYTE_CAP, declaredByteLength, readCappedBytes } from "@/lib/bounded-bytes";
 import { isCategory } from "@/lib/split-pieces";
 import { lookPrompt, piecePrompt, tweakPrompt, videoPrompt } from "@/lib/tickets";
 import type { Reaction } from "@/lib/types";
@@ -58,10 +59,18 @@ async function inlineClip(url: string): Promise<string | null> {
   if (!url.startsWith("https://")) return null;
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
-    if (!res.ok) return null;
-    const bytes = new Uint8Array(await res.arrayBuffer());
-    if (bytes.byteLength === 0 || bytes.byteLength > 2_500_000) return null;
-    const mime = res.headers.get("content-type")?.split(";")[0] || "video/mp4";
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => undefined);
+      return null;
+    }
+    const declared = declaredByteLength(res.headers.get("content-length"));
+    if (declared === 0 || (declared !== null && declared > CLIP_BYTE_CAP)) {
+      await res.body?.cancel().catch(() => undefined);
+      return null;
+    }
+    const bytes = await readCappedBytes(res.body, CLIP_BYTE_CAP);
+    if (!bytes) return null;
+    const mime = res.headers.get("content-type")?.split(";")[0]?.trim() || "video/mp4";
     if (!mime.startsWith("video/")) return null;
     return bytesToDataUrl(bytes, mime);
   } catch (error) {
