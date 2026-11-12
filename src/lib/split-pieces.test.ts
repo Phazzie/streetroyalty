@@ -42,6 +42,11 @@ describe("splitPieces", () => {
     ]);
   });
 
+  it("keeps a dress as one piece and a dress shirt as a top", () => {
+    assert.deepEqual(splitPieces("silk slip dress"), [{ category: "Dresses", spoken: "silk slip dress" }]);
+    assert.deepEqual(splitPieces("white dress shirt"), [{ category: "Tops", spoken: "white dress shirt" }]);
+  });
+
   it("names an added hat as the hat", () => {
     assert.deepEqual(splitPieces("add a hat"), [{ category: "Hats", spoken: "hat" }]);
   });

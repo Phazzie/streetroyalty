@@ -3,6 +3,7 @@ import { copy } from "@/lib/copy";
 import { idbGet, idbSet } from "@/lib/idb";
 import { compressDataUrl } from "@/lib/images";
 import { generateLook, generatePiece, pollRunway, startRunway } from "@/lib/lab-api";
+import { restoreItem, undoStillGood, withoutId } from "@/lib/lab/closet";
 import { settleRetry } from "@/lib/piece-batch";
 import { interpret, isLookChange, paidPlan, type Intent } from "@/lib/split-pieces";
 import { LOCK_LINE, runwayTicketOutput } from "@/lib/tickets";
@@ -33,20 +34,27 @@ type Persisted = {
   lastJob: LastJob | null;
 };
 
+type DropUndo =
+  | { kind: "look"; look: Look; at: number }
+  | { kind: "piece"; piece: Piece; at: number };
+
 type LabState = Persisted & {
   ready: boolean;
   busy: boolean;
   status: string;
+  undo: DropUndo | null;
   setStatus: (status: string) => void;
   setView: (view: View) => void;
   setReaction: (reaction: Reaction) => void;
   setRef: (ref: CharacterRef) => void;
   togglePiece: (id: string) => void;
   dropPiece: (id: string) => void;
+  rebuildPiece: (id: string) => void;
   lockIn: () => void;
   saveDraft: () => void;
   openSaved: (id: string) => void;
   dropLook: (id: string) => void;
+  restoreUndo: () => void;
   handleTranscript: (text: string) => void;
   requestLook: () => void;
   requestRunway: () => void;
@@ -55,11 +63,12 @@ type LabState = Persisted & {
 
 const CATEGORY_RANK: Record<Category, number> = {
   Tops: 0,
-  Bottoms: 1,
-  Shoes: 2,
-  Outer: 3,
-  Hats: 4,
-  Accessories: 5,
+  Dresses: 1,
+  Bottoms: 2,
+  Shoes: 3,
+  Outer: 4,
+  Hats: 5,
+  Accessories: 6,
 };
 
 const SLOT_RANK: Slot[] = ["front", "side", "threequarter", "extra"];
@@ -477,6 +486,35 @@ async function walk(my = begin(), again = false) {
   finish(my);
 }
 
+async function rebuildOne(id: string) {
+  const piece = useLab.getState().pieces.find((item) => item.id === id);
+  if (!piece) return;
+  const my = begin();
+  const line = `Rebuilding ${piece.spoken}.`;
+  noteStatus(line, line);
+  let result: Awaited<ReturnType<typeof generatePiece>> | null = null;
+  try {
+    result = await generatePiece({ data: { spoken: piece.spoken, category: piece.category } });
+  } catch (error) {
+    console.error(error);
+    result = null;
+  }
+  if (!alive(my)) return;
+  if (!result || !result.ok) {
+    const missedLine = failLine(result);
+    noteStatus(missedLine, missedLine);
+    finish(my);
+    return;
+  }
+  const image = await shrink(result.image);
+  if (!alive(my)) return;
+  patch({
+    pieces: useLab.getState().pieces.map((item) => (item.id === id ? { ...item, image, createdAt: Date.now() } : item)),
+  });
+  noteStatus(copy.onBoard, copy.onBoard);
+  finish(my);
+}
+
 function runIntent(intent: Intent, view: View, text: string) {
   if (intent.type === "stop") {
     stopGeneration();
@@ -568,6 +606,7 @@ export async function hydrate() {
       ready: true,
       busy: false,
       status: "",
+      undo: null,
     });
   } catch {
     useLab.setState({ ready: true, view: "lock" });
@@ -587,6 +626,7 @@ export const useLab = create<LabState>((set, get) => ({
   ready: false,
   busy: false,
   status: "",
+  undo: null,
   setStatus: (status) => set({ status }),
   setView: (view) => {
     set({ view, status: "" });
@@ -609,8 +649,21 @@ export const useLab = create<LabState>((set, get) => ({
     persist();
   },
   dropPiece: (id) => {
-    set({ pieces: get().pieces.filter((piece) => piece.id !== id) });
+    const dropped = withoutId(get().pieces, id);
+    if (!dropped.removed) return;
+    set({
+      pieces: dropped.next,
+      undo: { kind: "piece", piece: dropped.removed, at: Date.now() },
+      status: `Dropped ${dropped.removed.spoken}. Undo is on the board.`,
+    });
     persist();
+  },
+  rebuildPiece: (id) => {
+    if (get().busy) {
+      set({ status: copy.stillBuilding });
+      return;
+    }
+    void rebuildOne(id);
   },
   lockIn: () => {
     const ready = REQUIRED_SLOTS.every((slot) => get().refs.some((ref) => ref.id === slot));
@@ -645,7 +698,26 @@ export const useLab = create<LabState>((set, get) => ({
     persist();
   },
   dropLook: (id) => {
-    set({ looks: get().looks.filter((look) => look.id !== id) });
+    const dropped = withoutId(get().looks, id);
+    if (!dropped.removed) return;
+    set({
+      looks: dropped.next,
+      undo: { kind: "look", look: dropped.removed, at: Date.now() },
+      status: `Dropped ${dropped.removed.spoken}. Undo is on the hub.`,
+    });
+    persist();
+  },
+  restoreUndo: () => {
+    const undo = get().undo;
+    if (!undo || !undoStillGood(undo, Date.now())) {
+      set({ undo: null, status: copy.undoGone });
+      return;
+    }
+    if (undo.kind === "look") {
+      set({ looks: restoreItem(get().looks, undo.look, 12), undo: null, status: copy.restored });
+    } else {
+      set({ pieces: restoreItem(get().pieces, undo.piece, 30), undo: null, status: copy.restored });
+    }
     persist();
   },
   handleTranscript: (text) => {

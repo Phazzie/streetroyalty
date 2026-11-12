@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Header, Shell, TextButton } from "@/components/lab/chrome";
 import { Composer } from "@/components/lab/mic";
+import { UndoBar } from "@/components/lab/undo-bar";
 import { copy } from "@/lib/copy";
 import { useLab } from "@/lib/store";
 
@@ -21,6 +22,7 @@ export function HubScreen() {
   const [install, setInstall] = useState<InstallEvent | null>(null);
   const [hideInstall, setHideInstall] = useState(false);
   const wearing = pieces.filter((piece) => piece.selected).length;
+  const tickets = useLab((state) => state.tickets);
 
   useEffect(() => {
     const onPrompt = (event: Event) => {
@@ -43,6 +45,7 @@ export function HubScreen() {
         }
       />
       <div className="flex min-h-0 flex-1 flex-col px-4 pt-3">
+        <UndoBar />
         {draft ? (
           <div className="flex min-h-0 flex-1 flex-col">
             <button
@@ -92,6 +95,19 @@ export function HubScreen() {
           <summary className="font-display text-xs font-bold tracking-widest text-muted uppercase">{copy.keepIt}</summary>
           <p className="mt-2 text-sm">{copy.pinned}</p>
           <p className="mt-1 text-sm">{copy.installHow}</p>
+          {tickets.length > 0 ? (
+            <ul className="mt-3 flex flex-col gap-2">
+              {tickets.slice(0, 8).map((ticket) => (
+                <li key={ticket.id} className="text-sm">
+                  <span className="font-bold">{ticket.type}</span>
+                  <span className="text-muted"> · {ticket.status}</span>
+                  <span className="block truncate">{ticket.spokenDescription}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm text-muted">{copy.tickets} show up after a build.</p>
+          )}
           {install && !hideInstall ? (
             <div className="mt-2 flex gap-2">
               <TextButton

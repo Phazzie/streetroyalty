@@ -4,7 +4,10 @@ Street Royalty is an outfit lab and a print shop. The lab still locks a face, bu
 
 ## Studio
 
-- **Studio** (`/studio`) — product, color, size, placement (front, back, sleeve when the blank allows it), text, upload, drag, scale, rotate, mockup, save, publish, cart.
+- **Studio** (`/studio`) — product, color, size, placement (front, back, sleeve when the blank allows it), text, upload, drag, scale, rotate, mockup, save, publish, cart. **Write a line** drafts print copy.
+- **Shop search** — type a product word, or **Find** to turn a vibe into catalog words.
+- **Crown** — on a look, **Ask the crown** critiques the outfit and names one thing to add.
+- **Board** — rebuild one piece after a confirm. Dropped pieces and saved looks can be undone for a few seconds. Tickets from each build sit on the hub.
 - **Gallery** — your saved pieces, grouped by collection.
 - **Shop** — published pieces, size picker, add to cart.
 - **Checkout** — shipping quote, then payment. The print order is created as a draft and confirmed only after payment.
@@ -44,6 +47,7 @@ Copy `.env.example` to the host’s secret store. Do not commit real keys. This 
 | `PRINT_FILE_SIGNING_SECRET` | Live print files | HMAC key for print-file URLs. Sandbox uses a built-in secret. Live mode will not publish a file URL without it. |
 | `STUDIO_ADMIN_EMAILS` | Webhook setup | Comma-separated sign-in emails allowed to press **Connect webhooks**. Empty means nobody can. |
 | `DATABASE_URL` | Deploy | Postgres connection. Injected on deploy. Unset in local preview. |
+| `XAI_API_KEY` | AI | Server-only key for image, video, the crown critic, print lines, shop search, and pull-request review. When it is missing, the critic, lines, and search use a built-in fallback and review skips. |
 
 ## Accounts to create
 

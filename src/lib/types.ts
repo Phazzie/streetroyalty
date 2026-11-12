@@ -1,6 +1,7 @@
 export const CATEGORIES = [
   "Tops",
   "Bottoms",
+  "Dresses",
   "Outer",
   "Hats",
   "Shoes",

@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Header, Shell, TextButton } from "@/components/lab/chrome";
 import { Composer } from "@/components/lab/mic";
 import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
 import { cn } from "@/lib/cn";
+import { critiqueOutfit } from "@/lib/ai/api";
+import { localCritique } from "@/lib/ai/local";
 import { useLab } from "@/lib/store";
 
 const EXAMPLES = ["make it black", "shorter coat"] as const;
@@ -15,6 +18,8 @@ export function LookScreen() {
   const saveDraft = useLab((state) => state.saveDraft);
   const requestRunway = useLab((state) => state.requestRunway);
   const navigate = useNavigate();
+  const [crown, setCrown] = useState<{ verdict: string; note: string; next: string; source: string } | null>(null);
+  const [asking, setAsking] = useState(false);
 
   return (
     <Shell>
@@ -57,6 +62,28 @@ export function LookScreen() {
           <Button disabled={!draft || busy} onClick={requestRunway}>
             {copy.runway}
           </Button>
+          <Button
+            variant="ghost"
+            className="col-span-2"
+            disabled={!draft || asking}
+            onClick={() => {
+              if (!draft) return;
+              setAsking(true);
+              void critiqueOutfit({ data: { spoken: draft.spoken } })
+                .then(setCrown)
+                .catch(() => setCrown({ ...localCritique(draft.spoken), source: "local" }))
+                .finally(() => setAsking(false));
+            }}
+          >
+            {copy.crownAsk}
+          </Button>
+          {crown ? (
+            <div className="col-span-2 border-2 border-line p-3 text-sm">
+              <p className="font-display uppercase">{crown.verdict}</p>
+              <p className="mt-1">{crown.note}</p>
+              <p className="mt-1 text-muted">Next: {crown.next}</p>
+            </div>
+          ) : null}
           <Button
             variant="ghost"
             className="col-span-2"

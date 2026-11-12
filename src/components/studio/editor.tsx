@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Note, Panel } from "@/components/studio/shell";
 import { renderPrintFile } from "@/components/studio/print-file";
+import { copy } from "@/lib/copy";
 import { compressDataUrl, readFileAsDataUrl } from "@/lib/images";
 import type { CatalogProduct, DesignLayer, PrintArea } from "@/lib/pod/types";
 import { formatMoney } from "@/lib/pod/money";
@@ -18,6 +19,7 @@ import {
   publishPiece,
   savePiece,
 } from "@/lib/studio/api";
+import { suggestLines } from "@/lib/ai/api";
 import { designVisualKey } from "@/lib/studio/design-key";
 import { MAX_LAYERS, STUDIO_FONTS } from "@/lib/studio/validate";
 
@@ -61,6 +63,7 @@ export function Editor({ designId }: { designId: string }) {
   const mockupStamp = useRef("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [lines, setLines] = useState<string[]>([]);
 
   const chooseProduct = useCallback(async (productId: string, nextVariant?: string) => {
     const detail = await getCatalogProduct({ data: { productId } });
@@ -537,6 +540,35 @@ export function Editor({ designId }: { designId: string }) {
                       patchLayer(active.id, { text: event.target.value.slice(0, 80) })
                     }
                   />
+                  <Button
+                    variant="ghost"
+                    className="w-full"
+                    disabled={busy}
+                    onClick={() => {
+                      void suggestLines({ data: { seed: `${title} ${active.text}` } })
+                        .then((result) => {
+                          setLines(result.lines);
+                          setNote(result.source === "grok" ? "Lines from the crown." : "Lines from the house, no key needed.");
+                        })
+                        .catch((error) => setNote(errorText(error)));
+                    }}
+                  >
+                    {copy.writeLine}
+                  </Button>
+                  {lines.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {lines.map((line) => (
+                        <button
+                          key={line}
+                          type="button"
+                          className="chip"
+                          onClick={() => patchLayer(active.id, { text: line.slice(0, 80) })}
+                        >
+                          {line}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                   <label className="text-sm text-muted" htmlFor="layer-font">
                     Font
                   </label>

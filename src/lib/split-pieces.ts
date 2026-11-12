@@ -39,9 +39,16 @@ const LEX: { category: Category; words: string[] }[] = [
       "parka",
       "blazer",
       "puffer",
+      "suit jacket",
+      "tuxedo",
       "jacket",
       "coat",
+      "suit",
     ],
+  },
+  {
+    category: "Dresses",
+    words: ["slip dress", "shirt dress", "dress", "gown", "jumpsuit", "romper"],
   },
   {
     category: "Bottoms",
@@ -65,6 +72,7 @@ const LEX: { category: Category; words: string[] }[] = [
   {
     category: "Tops",
     words: [
+      "dress shirt",
       "tank top",
       "crop top",
       "tube top",

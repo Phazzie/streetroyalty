@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Header, Shell, TextButton } from "@/components/lab/chrome";
 import { Composer } from "@/components/lab/mic";
+import { UndoBar } from "@/components/lab/undo-bar";
 import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
 import { cn } from "@/lib/cn";
@@ -13,7 +15,9 @@ export function BoardScreen() {
   const pieces = useLab((state) => state.pieces);
   const togglePiece = useLab((state) => state.togglePiece);
   const dropPiece = useLab((state) => state.dropPiece);
+  const rebuildPiece = useLab((state) => state.rebuildPiece);
   const requestLook = useLab((state) => state.requestLook);
+  const [pending, setPending] = useState<string | null>(null);
   const busy = useLab((state) => state.busy);
   const selected = pieces.filter((piece) => piece.selected).length;
   const filled = CATEGORIES.filter((category) => pieces.some((piece) => piece.category === category));
@@ -22,6 +26,7 @@ export function BoardScreen() {
     <Shell>
       <Header title={copy.board} action={<TextButton onClick={() => setView("hub")}>{copy.hub}</TextButton>} />
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+        <UndoBar />
         {pieces.length === 0 ? (
           <p className="pt-6 text-center">{copy.emptyBoard}</p>
         ) : (
@@ -49,14 +54,45 @@ export function BoardScreen() {
                             {copy.wearing}
                           </span>
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => dropPiece(piece.id)}
-                          aria-label={`${copy.drop} ${piece.spoken}`}
-                          className="mt-1 h-11 w-full rounded-md border-2 border-line text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ink"
-                        >
-                          {copy.drop}
-                        </button>
+                        {pending === piece.id ? (
+                          <div className="mt-1 flex gap-2">
+                            <button
+                              type="button"
+                              className="h-11 flex-1 rounded-md border-2 border-ink text-sm font-bold"
+                              onClick={() => {
+                                rebuildPiece(piece.id);
+                                setPending(null);
+                              }}
+                            >
+                              {copy.buildIt}
+                            </button>
+                            <button
+                              type="button"
+                              className="h-11 flex-1 rounded-md border-2 border-line text-sm font-bold"
+                              onClick={() => setPending(null)}
+                            >
+                              {copy.back}
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="mt-1 grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setPending(piece.id)}
+                              className="h-11 rounded-md border-2 border-line text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ink"
+                            >
+                              {copy.rebuild}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => dropPiece(piece.id)}
+                              aria-label={`${copy.drop} ${piece.spoken}`}
+                              className="h-11 rounded-md border-2 border-line text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ink"
+                            >
+                              {copy.drop}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
