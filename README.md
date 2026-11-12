@@ -22,6 +22,7 @@ With no Printful or Stripe keys, the app runs in sandbox:
 - Mockups are drawn in the app.
 - Checkout shows **Confirm test payment**. That confirms the sandbox draft. No card is charged and nothing is sent to a factory.
 - `POD_MODE=live` together with `PAYMENTS_MODE=sandbox` is refused. A test payment cannot confirm a live Printful order.
+- `PAYMENTS_MODE=live` together with sandbox printing is refused before Checkout is created. A card cannot be charged while no printer will receive the garment.
 
 Set the variables below to leave sandbox.
 
@@ -41,13 +42,14 @@ Copy `.env.example` to the host’s secret store. Do not commit real keys. This 
 | `APP_PUBLIC_URL` | Live print | Public https origin, no trailing slash. Printful downloads print files from `{APP_PUBLIC_URL}/api/print-files/{id}`. |
 | `STUDIO_MARKUP` | No | Retail = wholesale × markup. Default `2.2`. Clamped between 1 and 5. |
 | `PRINT_FILE_SIGNING_SECRET` | Live print files | HMAC key for print-file URLs. Sandbox uses a built-in secret. Live mode will not publish a file URL without it. |
+| `STUDIO_ADMIN_EMAILS` | Webhook setup | Comma-separated sign-in emails allowed to press **Connect webhooks**. Empty means nobody can. |
 | `DATABASE_URL` | Deploy | Postgres connection. Injected on deploy. Unset in local preview. |
 
 ## Accounts to create
 
 1. **Printful.** Create a store, create a private API token, and note the store id if the token is account-level. Billing on that store pays for fulfillment. Stripe charges the buyer. Printful bills the store wallet when an order is confirmed.
 2. **Stripe.** Create a Checkout-enabled account. Use test keys until you are ready to charge cards.
-3. **Webhooks.** In the app, signed in, open Orders and choose **Connect webhooks**, or register them yourself.
+3. **Webhooks.** Put the store owner's sign-in email in `STUDIO_ADMIN_EMAILS`. Signed in as that account, open Orders and choose **Connect webhooks**, or register them yourself. Other accounts cannot rotate the Printful webhook.
 
    - Printful: `POST https://your-domain/api/webhooks/printful`  
      Events: `order_created`, `order_updated`, `order_failed`, `order_canceled`, `order_put_hold`, `shipment_sent`, `shipment_delivered`, `shipment_canceled`, `mockup_task_finished`.  

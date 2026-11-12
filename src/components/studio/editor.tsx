@@ -18,7 +18,8 @@ import {
   publishPiece,
   savePiece,
 } from "@/lib/studio/api";
-import { STUDIO_FONTS } from "@/lib/studio/validate";
+import { designVisualKey } from "@/lib/studio/design-key";
+import { MAX_LAYERS, STUDIO_FONTS } from "@/lib/studio/validate";
 
 type CatalogCard = {
   id: string;
@@ -57,6 +58,7 @@ export function Editor({ designId }: { designId: string }) {
   const [collectionId, setCollectionId] = useState("");
   const [collections, setCollections] = useState<{ id: string; name: string }[]>([]);
   const [mockupUrl, setMockupUrl] = useState("");
+  const mockupStamp = useRef("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -66,7 +68,9 @@ export function Editor({ designId }: { designId: string }) {
     const variant = detail.variants.find((item) => item.id === nextVariant) ?? detail.variants[0];
     setVariantId(variant?.id ?? "");
     setPlacement((current) =>
-      detail.placements.some((item) => item.placement === current) ? current : (detail.placements[0]?.placement ?? "front"),
+      detail.placements.some((item) => item.placement === current)
+        ? current
+        : (detail.placements[0]?.placement ?? "front"),
     );
   }, []);
 
@@ -87,10 +91,21 @@ export function Editor({ designId }: { designId: string }) {
       const art = sessionStorage.getItem("sr-print-art");
       if (!art) return;
       sessionStorage.removeItem("sr-print-art");
-      setLayers((current) => [
-        ...current,
-        { id: `art-${Date.now()}`, type: "image", src: art, x: 0.5, y: 0.42, scale: 0.9, rotation: 0 },
-      ]);
+      setLayers((current) => {
+        if (current.length >= MAX_LAYERS) return current;
+        return [
+          ...current,
+          {
+            id: `art-${Date.now()}`,
+            type: "image",
+            src: art,
+            x: 0.5,
+            y: 0.42,
+            scale: 0.9,
+            rotation: 0,
+          },
+        ];
+      });
     } else {
       void myDesign({ data: { designId } })
         .then(async (design) => {
@@ -99,23 +114,49 @@ export function Editor({ designId }: { designId: string }) {
           setLayers(design.layers);
           setPlacement(design.placement);
           setCollectionId(design.collectionId ?? "");
-          setMockupUrl(design.mockupUrl ?? "");
+          setMockupUrl("");
           await chooseProduct(design.productId, design.variantId);
+          const key = designVisualKey({
+            productId: design.productId,
+            variantId: design.variantId,
+            placement: design.placement,
+            layers: design.layers,
+          });
+          mockupStamp.current = design.mockupUrl ? key : "";
+          setMockupUrl(design.mockupUrl ?? "");
         })
         .catch((error) => setNote(errorText(error)));
     }
   }, [chooseProduct, designId]);
 
   const variant = product?.variants.find((item) => item.id === variantId) ?? null;
-  const colors = product ? [...new Map(product.variants.map((item) => [item.color, item])).values()] : [];
+  const colors = product
+    ? [...new Map(product.variants.map((item) => [item.color, item])).values()]
+    : [];
   const sizes = product?.variants.filter((item) => item.color === variant?.color) ?? [];
-  const area: PrintArea =
-    variant?.printAreas.find((item) => item.placement === placement) ??
+  const area: PrintArea = variant?.printAreas.find((item) => item.placement === placement) ??
     variant?.printAreas[0] ?? { placement, widthIn: 12, heightIn: 16, dpi: 150 };
   const active = layers.find((layer) => layer.id === selected) ?? null;
+  const atLayerLimit = layers.length >= MAX_LAYERS;
+
+  useEffect(() => {
+    if (!mockupUrl) return;
+    const key = designVisualKey({
+      productId: product?.id ?? "",
+      variantId,
+      placement,
+      layers,
+    });
+    if (mockupStamp.current !== key) {
+      mockupStamp.current = "";
+      setMockupUrl("");
+    }
+  }, [layers, mockupUrl, placement, product?.id, variantId]);
 
   function patchLayer(id: string, patch: Partial<DesignLayer>) {
-    setLayers((current) => current.map((layer) => (layer.id === id ? ({ ...layer, ...patch } as DesignLayer) : layer)));
+    setLayers((current) =>
+      current.map((layer) => (layer.id === id ? ({ ...layer, ...patch } as DesignLayer) : layer)),
+    );
   }
 
   function onPointerDown(event: React.PointerEvent, id: string) {
@@ -138,11 +179,18 @@ export function Editor({ designId }: { designId: string }) {
 
   async function onUpload(file: File | undefined) {
     if (!file) return;
+    if (layers.length >= MAX_LAYERS) {
+      setNote("Eight layers is the limit.");
+      return;
+    }
     try {
       const raw = await readFileAsDataUrl(file);
       const src = await compressDataUrl(raw, 1200, 0.85);
       const id = `img-${Date.now()}`;
-      setLayers((current) => [...current, { id, type: "image", src, x: 0.5, y: 0.42, scale: 0.85, rotation: 0 }]);
+      setLayers((current) => [
+        ...current,
+        { id, type: "image", src, x: 0.5, y: 0.42, scale: 0.85, rotation: 0 },
+      ]);
       setSelected(id);
     } catch (error) {
       setNote(errorText(error));
@@ -162,6 +210,13 @@ export function Editor({ designId }: { designId: string }) {
       const result = await makeMockup({
         data: { productId: product.id, variantId: variant.id, placement, layers, printFile },
       });
+      const key = designVisualKey({
+        productId: product.id,
+        variantId: variant.id,
+        placement,
+        layers,
+      });
+      mockupStamp.current = key;
       setMockupUrl(result.mockupUrl);
       setNote("Mockup is up.");
     } catch (error) {
@@ -204,13 +259,20 @@ export function Editor({ designId }: { designId: string }) {
     if (!product || !variant) return;
     setBusy(true);
     try {
-      let url = mockupUrl;
       const printFile = await exportPrint();
+      const key = designVisualKey({
+        productId: product.id,
+        variantId: variant.id,
+        placement,
+        layers,
+      });
+      let url = mockupStamp.current === key ? mockupUrl : "";
       if (!url) {
         const result = await makeMockup({
           data: { productId: product.id, variantId: variant.id, placement, layers, printFile },
         });
         url = result.mockupUrl;
+        mockupStamp.current = key;
         setMockupUrl(url);
       }
       const saved = await savePiece({
@@ -259,10 +321,18 @@ export function Editor({ designId }: { designId: string }) {
             <button
               key={item.id}
               type="button"
-              onClick={() => void chooseProduct(item.id).catch((error) => setNote(errorText(error)))}
+              onClick={() =>
+                void chooseProduct(item.id).catch((error) => setNote(errorText(error)))
+              }
               className={`studio-card min-w-40 shrink-0 border-2 p-2 text-left ${product?.id === item.id ? "border-accent" : "border-line"}`}
             >
-              {item.imageUrl ? <img src={item.imageUrl} alt="" className="mb-2 aspect-square w-full object-cover" /> : null}
+              {item.imageUrl ? (
+                <img
+                  src={item.imageUrl}
+                  alt=""
+                  className="mb-2 aspect-square w-full object-cover"
+                />
+              ) : null}
               <span className="block font-display text-xs uppercase">{item.type}</span>
               <span className="block text-sm">{item.name}</span>
             </button>
@@ -278,7 +348,10 @@ export function Editor({ designId }: { designId: string }) {
               style={{ background: variant?.colorHex ?? "#141414", color: ink }}
             >
               <GarmentHint type={product?.type ?? "T-Shirt"} />
-              <div ref={areaRef} className="absolute inset-[18%_22%_16%_22%] overflow-hidden border border-dashed border-current">
+              <div
+                ref={areaRef}
+                className="absolute inset-[18%_22%_16%_22%] overflow-hidden border border-dashed border-current"
+              >
                 {layers.map((layer) => (
                   <button
                     key={layer.id}
@@ -295,7 +368,9 @@ export function Editor({ designId }: { designId: string }) {
                     }}
                   >
                     {layer.type === "text" ? (
-                      <span className="block max-w-full text-center font-display text-sm leading-tight">{layer.text}</span>
+                      <span className="block max-w-full text-center font-display text-sm leading-tight">
+                        {layer.text}
+                      </span>
                     ) : (
                       <img src={layer.src} alt="" className="h-24 w-24 object-contain" />
                     )}
@@ -304,7 +379,8 @@ export function Editor({ designId }: { designId: string }) {
               </div>
             </div>
             <p className="mt-2 text-center text-sm text-muted">
-              Print area {area.widthIn}" × {area.heightIn}". Drag a layer. It stays inside the dashed box.
+              Print area {area.widthIn}" × {area.heightIn}". Drag a layer. It stays inside the
+              dashed box.
             </p>
           </div>
           {note ? (
@@ -315,7 +391,11 @@ export function Editor({ designId }: { designId: string }) {
         </Panel>
         {mockupUrl ? (
           <Panel title="Mockup">
-            <img src={mockupUrl} alt="Product mockup" className="mx-auto max-h-[28rem] w-full object-contain" />
+            <img
+              src={mockupUrl}
+              alt="Product mockup"
+              className="mx-auto max-h-[28rem] w-full object-contain"
+            />
           </Panel>
         ) : null}
       </div>
@@ -325,7 +405,11 @@ export function Editor({ designId }: { designId: string }) {
           <label className="mb-2 block text-sm text-muted" htmlFor="piece-title">
             Name
           </label>
-          <Input id="piece-title" value={title} onChange={(event) => setTitle(event.target.value)} />
+          <Input
+            id="piece-title"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+          />
           <div className="mt-3 flex flex-wrap gap-2">
             {product?.placements.map((item) => (
               <button
@@ -348,7 +432,10 @@ export function Editor({ designId }: { designId: string }) {
                 aria-label={item.color}
                 aria-pressed={variant?.color === item.color}
                 onClick={() => {
-                  const match = product?.variants.find((entry) => entry.color === item.color && entry.size === variant?.size) ?? item;
+                  const match =
+                    product?.variants.find(
+                      (entry) => entry.color === item.color && entry.size === variant?.size,
+                    ) ?? item;
                   setVariantId(match.id);
                 }}
                 className="size-11 border-2 border-ink"
@@ -370,9 +457,13 @@ export function Editor({ designId }: { designId: string }) {
               </button>
             ))}
           </div>
-          <p className="mt-4 font-display text-2xl">{variant?.retailCents != null ? formatMoney(variant.retailCents) : "—"}</p>
+          <p className="mt-4 font-display text-2xl">
+            {variant?.retailCents != null ? formatMoney(variant.retailCents) : "—"}
+          </p>
           <p className="text-sm text-muted">
-            {variant?.wholesaleCents != null ? `Print cost ${formatMoney(variant.wholesaleCents)}` : "Price lands with the catalog."}
+            {variant?.wholesaleCents != null
+              ? `Print cost ${formatMoney(variant.wholesaleCents)}`
+              : "Price lands with the catalog."}
           </p>
         </Panel>
 
@@ -380,23 +471,41 @@ export function Editor({ designId }: { designId: string }) {
           <div className="mb-3 flex flex-wrap gap-2">
             <Button
               variant="ghost"
+              disabled={atLayerLimit}
               onClick={() => {
+                if (layers.length >= MAX_LAYERS) return;
                 const id = `text-${Date.now()}`;
-                setLayers((current) => [
-                  ...current,
-                  { id, type: "text", text: "NEW", font: "Archivo Black", color: "#ff2d95", x: 0.5, y: 0.62, scale: 0.8, rotation: 4 },
-                ]);
+                setLayers((current) => {
+                  if (current.length >= MAX_LAYERS) return current;
+                  return [
+                    ...current,
+                    {
+                      id,
+                      type: "text",
+                      text: "NEW",
+                      font: "Archivo Black",
+                      color: "#ff2d95",
+                      x: 0.5,
+                      y: 0.62,
+                      scale: 0.8,
+                      rotation: 4,
+                    },
+                  ];
+                });
                 setSelected(id);
               }}
             >
               Add text
             </Button>
-            <label className="chip cursor-pointer">
+            <label
+              className={`chip ${atLayerLimit ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
+            >
               Upload art
               <input
                 type="file"
                 accept="image/*"
                 className="sr-only"
+                disabled={atLayerLimit}
                 onChange={(event) => {
                   void onUpload(event.target.files?.[0]);
                   event.target.value = "";
@@ -407,7 +516,11 @@ export function Editor({ designId }: { designId: string }) {
           <ul className="flex flex-col gap-2">
             {layers.map((layer) => (
               <li key={layer.id}>
-                <button type="button" onClick={() => setSelected(layer.id)} className={`chip w-full justify-start ${selected === layer.id ? "chip-on" : ""}`}>
+                <button
+                  type="button"
+                  onClick={() => setSelected(layer.id)}
+                  className={`chip w-full justify-start ${selected === layer.id ? "chip-on" : ""}`}
+                >
                   {layer.type === "text" ? layer.text : "Artwork"}
                 </button>
               </li>
@@ -420,7 +533,9 @@ export function Editor({ designId }: { designId: string }) {
                   <Input
                     aria-label="Layer text"
                     value={active.text}
-                    onChange={(event) => patchLayer(active.id, { text: event.target.value.slice(0, 80) })}
+                    onChange={(event) =>
+                      patchLayer(active.id, { text: event.target.value.slice(0, 80) })
+                    }
                   />
                   <label className="text-sm text-muted" htmlFor="layer-font">
                     Font
@@ -471,7 +586,9 @@ export function Editor({ designId }: { designId: string }) {
                 max={180}
                 step={1}
                 value={active.rotation}
-                onChange={(event) => patchLayer(active.id, { rotation: Number(event.target.value) })}
+                onChange={(event) =>
+                  patchLayer(active.id, { rotation: Number(event.target.value) })
+                }
               />
               <Button
                 variant="ghost"
@@ -547,6 +664,14 @@ function luminance(hex: string): number {
 }
 
 function GarmentHint({ type }: { type: string }) {
-  const label = type.toLowerCase().includes("hat") ? "cap" : type.toLowerCase().includes("hood") ? "hoodie" : "tee";
-  return <span className="pointer-events-none absolute top-3 left-3 font-display text-xs tracking-widest uppercase opacity-70">{label}</span>;
+  const label = type.toLowerCase().includes("hat")
+    ? "cap"
+    : type.toLowerCase().includes("hood")
+      ? "hoodie"
+      : "tee";
+  return (
+    <span className="pointer-events-none absolute top-3 left-3 font-display text-xs tracking-widest uppercase opacity-70">
+      {label}
+    </span>
+  );
 }

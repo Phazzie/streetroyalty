@@ -1,13 +1,16 @@
 import { getRequest } from "@tanstack/react-start/server";
 import { getSql, type Sql } from "../db.ts";
 import {
+  assertLivePaymentHasPrinter,
   fulfillPaidOrder,
   processPrintfulWebhook,
   processStripeWebhook,
+  purchasedLineKeys,
   type FulfillmentOrder,
   type OrderStatus,
   type OrderStore,
 } from "../pod/order-flow.ts";
+import { isStudioAdmin } from "./admin.ts";
 import { getPodProvider, readPaymentsMode, readPodMode, readMarkup } from "../pod/index.ts";
 import type { CatalogProduct, Recipient } from "../pod/types.ts";
 import { PodError } from "../pod/types.ts";
@@ -590,6 +593,7 @@ export async function startCheckout(
 ) {
   const recipient: Recipient = parseRecipient(input.recipient);
   const config = readStudioConfig();
+  assertLivePaymentHasPrinter(config.podMode, config.paymentsMode);
   const { provider, lines } = await priceCart(userId);
   if (config.podMode === "live" && lines.some((line) => !isPublicHttpUrl(line.fileUrl))) {
     throw new Error("Set APP_PUBLIC_URL so Printful can download print files.");
@@ -632,6 +636,8 @@ export async function startCheckout(
     const itemsJson = JSON.stringify(
       lines.map((line) => ({
         title: line.title,
+        designId: line.designId,
+        variantId: line.variantId,
         quantity: line.quantity,
         variantLabel: line.variantLabel,
         unitCents: line.unitCents,
@@ -753,6 +759,25 @@ function dbStore(sql: Sql): OrderStore {
         on conflict (id) do nothing
       `;
     },
+    async clearPurchasedLines(orderId) {
+      const rows = await sql<{ user_id: string; items_json: string }>`
+        select user_id, items_json from orders where id = ${orderId}
+      `;
+      const row = rows[0];
+      if (!row) return;
+      let parsed: unknown = [];
+      try {
+        parsed = JSON.parse(row.items_json);
+      } catch {
+        parsed = [];
+      }
+      for (const line of purchasedLineKeys(parsed)) {
+        await sql`
+          delete from cart_items
+          where user_id = ${row.user_id} and design_id = ${line.designId} and variant_id = ${line.variantId}
+        `;
+      }
+    },
   };
 }
 
@@ -771,7 +796,7 @@ export async function completeSandboxPayment(userId: string, orderId: string) {
     paymentsMode: config.paymentsMode,
   });
   if (!result.ok) throw new Error(`Payment could not submit the print order (${result.reason}).`);
-  await sql`delete from cart_items where user_id = ${userId}`;
+  await dbStore(sql).clearPurchasedLines(orderId);
   return { orderId, status: "submitted" };
 }
 
@@ -793,7 +818,7 @@ export async function syncStripeReturn(userId: string, sessionId: string) {
     podMode: config.podMode,
     paymentsMode: config.paymentsMode,
   });
-  if (result.ok) await sql`delete from cart_items where user_id = ${userId}`;
+  if (result.ok) await dbStore(sql).clearPurchasedLines(session.orderId);
   return result;
 }
 
@@ -877,7 +902,15 @@ export async function receivePrintfulWebhook(
   });
 }
 
-export async function connectWebhooks() {
+export async function readStudioAccess(userId: string): Promise<{ admin: boolean }> {
+  const sql = await getSql();
+  const rows = await sql<{ email: string }>`select email from "user" where id = ${userId}`;
+  return { admin: isStudioAdmin(rows[0]?.email, process.env.STUDIO_ADMIN_EMAILS) };
+}
+
+export async function connectWebhooks(userId: string) {
+  const access = await readStudioAccess(userId);
+  if (!access.admin) throw new Error("Only a store admin can reconnect Printful webhooks.");
   const config = readStudioConfig();
   const url = `${origin()}/api/webhooks/printful`;
   if (config.podMode === "sandbox") {

@@ -42,23 +42,37 @@ export interface OrderStore {
   markNeedsReview(id: string, reason: string): Promise<void>;
   applyProviderUpdate(
     id: string,
-    patch: { status?: OrderStatus; providerStatus?: string; trackingNumber?: string; trackingUrl?: string },
+    patch: {
+      status?: OrderStatus;
+      providerStatus?: string;
+      trackingNumber?: string;
+      trackingUrl?: string;
+    },
   ): Promise<void>;
   hasEvent(id: string): Promise<boolean>;
   recordEvent(id: string, provider: string, type: string): Promise<void>;
+  /** Drop the cart rows that this paid order just bought. */
+  clearPurchasedLines(orderId: string): Promise<void>;
 }
 
 export type FulfillmentResult =
-  | { ok: true; action: "confirmed" | "ignored"; reason?: string }
-  | { ok: false; reason: string };
+  { ok: true; action: "confirmed" | "ignored"; reason?: string } | { ok: false; reason: string };
 
-const FORWARD: OrderStatus[] = ["draft", "awaiting_payment", "paid", "submitted", "shipped", "delivered"];
+const FORWARD: OrderStatus[] = [
+  "draft",
+  "awaiting_payment",
+  "paid",
+  "submitted",
+  "shipped",
+  "delivered",
+];
 
 export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
   if (from === to) return true;
   if (from === "needs_review") return false;
   if (from === "failed" && to === "submitted") return true;
-  if (to === "failed" || to === "canceled") return from !== "delivered" && from !== "canceled" && from !== "shipped";
+  if (to === "failed" || to === "canceled")
+    return from !== "delivered" && from !== "canceled" && from !== "shipped";
   const fromRank = FORWARD.indexOf(from);
   const toRank = FORWARD.indexOf(to);
   if (fromRank < 0 || toRank < 0) return false;
@@ -69,10 +83,36 @@ export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
  * Live Printful orders bill the store wallet the moment they are confirmed.
  * A sandbox payment must never be allowed to do that.
  */
-export function assertFulfillmentAllowed(podMode: "live" | "sandbox", paymentsMode: "live" | "sandbox"): void {
+export function assertFulfillmentAllowed(
+  podMode: "live" | "sandbox",
+  paymentsMode: "live" | "sandbox",
+): void {
   if (podMode === "live" && paymentsMode !== "live") {
     throw new Error("Sandbox payment cannot confirm a live print order.");
   }
+}
+
+/** A card charge with no printer would take money and confirm an in-memory draft. */
+export function assertLivePaymentHasPrinter(
+  podMode: "live" | "sandbox",
+  paymentsMode: "live" | "sandbox",
+): void {
+  if (paymentsMode === "live" && podMode !== "live") {
+    throw new Error("Live payment cannot checkout while printing is sandboxed.");
+  }
+}
+
+export function purchasedLineKeys(items: unknown): { designId: string; variantId: string }[] {
+  if (!Array.isArray(items)) return [];
+  const keys: { designId: string; variantId: string }[] = [];
+  for (const item of items) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as { designId?: unknown; variantId?: unknown };
+    const designId = typeof row.designId === "string" ? row.designId : "";
+    const variantId = typeof row.variantId === "string" ? row.variantId : "";
+    if (designId && variantId) keys.push({ designId, variantId });
+  }
+  return keys;
 }
 
 export function decidePaymentFulfillment(
@@ -89,7 +129,8 @@ export function decidePaymentFulfillment(
   if (order.status === "submitted" || order.status === "shipped" || order.status === "delivered") {
     return { ok: true, action: "ignored", reason: "already_fulfilled" };
   }
-  if (order.status === "failed" && order.paymentStatus !== "paid") return { ok: false, reason: "unpaid" };
+  if (order.status === "failed" && order.paymentStatus !== "paid")
+    return { ok: false, reason: "unpaid" };
   if (!order.providerOrderId) return { ok: false, reason: "missing_provider_order" };
   if (!canTransition(order.status, "submitted")) return { ok: false, reason: "illegal_transition" };
   return { ok: true, action: "confirmed" };
@@ -97,7 +138,9 @@ export function decidePaymentFulfillment(
 
 function alreadyConfirmed(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
-  return /already (confirmed|fulfilled|being fulfilled)|status is (pending|inprocess|in_process)/i.test(message);
+  return /already (confirmed|fulfilled|being fulfilled)|status is (pending|inprocess|in_process)/i.test(
+    message,
+  );
 }
 
 export async function fulfillPaidOrder(
@@ -112,8 +155,12 @@ export async function fulfillPaidOrder(
   },
 ): Promise<FulfillmentResult> {
   const order = await store.getOrder(input.orderId);
-  const decision = decidePaymentFulfillment(order, { paid: input.paid, amountCents: input.amountCents });
+  const decision = decidePaymentFulfillment(order, {
+    paid: input.paid,
+    amountCents: input.amountCents,
+  });
   if (!decision.ok || decision.action === "ignored") return decision;
+  assertLivePaymentHasPrinter(input.podMode, input.paymentsMode);
   assertFulfillmentAllowed(input.podMode, input.paymentsMode);
   const providerOrderId = order?.providerOrderId;
   if (!providerOrderId) return { ok: false, reason: "missing_provider_order" };
@@ -121,7 +168,8 @@ export async function fulfillPaidOrder(
     await provider.confirmOrder(providerOrderId);
   } catch (error) {
     if (!alreadyConfirmed(error)) {
-      const message = error instanceof Error ? error.message : "The printer did not accept the order.";
+      const message =
+        error instanceof Error ? error.message : "The printer did not accept the order.";
       await store.markFulfillmentFailed(input.orderId, message);
       throw error;
     }
@@ -145,7 +193,8 @@ export function parsePrintfulEvent(rawBody: string): ProviderEvent {
   return {
     id: `${type}:${orderId}:${shipmentId}:${occurred}`,
     type,
-    orderExternalId: order.external_id != null && order.external_id !== "" ? String(order.external_id) : undefined,
+    orderExternalId:
+      order.external_id != null && order.external_id !== "" ? String(order.external_id) : undefined,
     providerOrderId: orderId || undefined,
     providerStatus: order.status != null ? String(order.status) : undefined,
     trackingNumber: shipment.tracking_number != null ? String(shipment.tracking_number) : undefined,
@@ -246,10 +295,19 @@ export async function processStripeWebhook(args: {
   if (!event.id) return { status: 400, body: { error: "missing event id" } };
   if (await args.store.hasEvent(event.id)) return { status: 200, body: { duplicate: true } };
   const relevant =
-    event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded";
+    event.type === "checkout.session.completed" ||
+    event.type === "checkout.session.async_payment_succeeded";
   if (!relevant || !event.orderId) {
     await args.store.recordEvent(event.id, "stripe", event.type);
     return { status: 200, body: { ignored: true } };
+  }
+  if (args.paymentsMode === "live" && args.podMode !== "live") {
+    await args.store.markNeedsReview(
+      event.orderId,
+      "Live payment arrived while printing is sandboxed. No garment was sent. Refund the charge in Stripe.",
+    );
+    await args.store.recordEvent(event.id, "stripe", event.type);
+    return { status: 200, body: { ok: false, reason: "sandbox_print" } };
   }
   try {
     const result = await fulfillPaidOrder(args.store, args.provider, {
@@ -265,6 +323,7 @@ export async function processStripeWebhook(args: {
         "Stripe captured an amount that does not match this order. The print was not submitted. Refund the charge in Stripe.",
       );
     }
+    if (result.ok) await args.store.clearPurchasedLines(event.orderId);
     await args.store.recordEvent(event.id, "stripe", event.type);
     return { status: 200, body: result };
   } catch (error) {

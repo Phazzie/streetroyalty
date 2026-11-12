@@ -205,7 +205,11 @@ function escapeXml(value: string): string {
 }
 
 function safeHref(src: string): string | null {
-  if (src.startsWith("data:image/png") || src.startsWith("data:image/jpeg") || src.startsWith("data:image/webp")) {
+  if (
+    src.startsWith("data:image/png") ||
+    src.startsWith("data:image/jpeg") ||
+    src.startsWith("data:image/webp")
+  ) {
     return src.replaceAll('"', "");
   }
   if (/^https:\/\/[^\s"]+$/.test(src)) return escapeXml(src);
@@ -225,7 +229,10 @@ function garmentPath(shape: Blank["shape"]): string {
   return "M148 72 L188 44 H252 L292 72 L368 112 L334 162 L292 140 V420 H148 V140 L106 162 L72 112 Z";
 }
 
-function printWindow(shape: Blank["shape"], placement: string): { x: number; y: number; w: number; h: number } {
+function printWindow(
+  shape: Blank["shape"],
+  placement: string,
+): { x: number; y: number; w: number; h: number } {
   if (shape === "hat") return { x: 150, y: 118, w: 140, h: 52 };
   if (placement === "sleeve_left") return { x: 86, y: 150, w: 48, h: 48 };
   if (placement === "sleeve_right") return { x: 306, y: 150, w: 48, h: 48 };
@@ -313,12 +320,39 @@ function findVariant(blank: Blank, variantId: string, markup: number): CatalogVa
   return variant;
 }
 
-export function createSandboxProvider(orders: Map<string, SandboxOrder> = new Map(), markup = 2.2): PodProvider {
+const sandboxGlobal = globalThis as typeof globalThis & {
+  __srSandboxOrders?: Map<string, SandboxOrder>;
+  __srSandboxSeq?: number;
+};
+
+function nextIdFor(orders: Map<string, SandboxOrder>): () => string {
+  const shared = sandboxGlobal.__srSandboxOrders;
+  if (shared && orders === shared) {
+    return () => {
+      if (sandboxGlobal.__srSandboxSeq == null) {
+        let max = 1000;
+        for (const key of shared.keys()) {
+          const match = /^sb-(\d+)$/.exec(key);
+          if (match) max = Math.max(max, Number(match[1]));
+        }
+        sandboxGlobal.__srSandboxSeq = max;
+      }
+      sandboxGlobal.__srSandboxSeq += 1;
+      return `sb-${sandboxGlobal.__srSandboxSeq}`;
+    };
+  }
   let sequence = 1000;
-  const nextId = () => {
+  return () => {
     sequence += 1;
     return `sb-${sequence}`;
   };
+}
+
+export function createSandboxProvider(
+  orders: Map<string, SandboxOrder> = new Map(),
+  markup = 2.2,
+): PodProvider {
+  const nextId = nextIdFor(orders);
 
   return {
     id: "sandbox",
@@ -362,8 +396,22 @@ export function createSandboxProvider(orders: Map<string, SandboxOrder> = new Ma
       const pieces = input.items.reduce((sum, item) => sum + item.quantity, 0);
       const standard = 595 + Math.max(0, pieces - 1) * 250;
       return [
-        { id: "STANDARD", name: "Standard (sandbox)", rateCents: standard, currency: "USD", minDays: 5, maxDays: 8 },
-        { id: "EXPRESS", name: "Express (sandbox)", rateCents: standard + 900, currency: "USD", minDays: 2, maxDays: 4 },
+        {
+          id: "STANDARD",
+          name: "Standard (sandbox)",
+          rateCents: standard,
+          currency: "USD",
+          minDays: 5,
+          maxDays: 8,
+        },
+        {
+          id: "EXPRESS",
+          name: "Express (sandbox)",
+          rateCents: standard + 900,
+          currency: "USD",
+          minDays: 2,
+          maxDays: 4,
+        },
       ];
     },
     async createDraftOrder(input: DraftOrderRequest): Promise<ProviderOrder> {
@@ -387,7 +435,8 @@ export function createSandboxProvider(orders: Map<string, SandboxOrder> = new Ma
       const order = orders.get(orderId);
       if (!order) throw new PodError(`Sandbox order ${orderId} was not found`, 404);
       if (order.confirmed) throw new PodError("Order is already confirmed", 409);
-      if (order.status === "canceled") throw new PodError("Canceled orders cannot be confirmed", 409);
+      if (order.status === "canceled")
+        throw new PodError("Canceled orders cannot be confirmed", 409);
       order.confirmed = true;
       order.status = "pending";
       return { ...order };
@@ -395,7 +444,8 @@ export function createSandboxProvider(orders: Map<string, SandboxOrder> = new Ma
     async cancelOrder(orderId) {
       const order = orders.get(orderId);
       if (!order) return;
-      if (order.confirmed) throw new PodError("Confirmed sandbox orders cannot be canceled here", 409);
+      if (order.confirmed)
+        throw new PodError("Confirmed sandbox orders cannot be canceled here", 409);
       order.status = "canceled";
     },
     async getOrder(orderId) {
@@ -409,16 +459,18 @@ export function createSandboxProvider(orders: Map<string, SandboxOrder> = new Ma
     async registerWebhooks(url: string): Promise<WebhookRegistration> {
       return {
         url,
-        events: ["order_updated", "shipment_sent", "shipment_delivered", "order_failed", "order_canceled"],
+        events: [
+          "order_updated",
+          "shipment_sent",
+          "shipment_delivered",
+          "order_failed",
+          "order_canceled",
+        ],
         secretHex: undefined,
       };
     },
   };
 }
-
-const sandboxGlobal = globalThis as typeof globalThis & {
-  __srSandboxOrders?: Map<string, SandboxOrder>;
-};
 
 export function sharedSandboxOrders(): Map<string, SandboxOrder> {
   sandboxGlobal.__srSandboxOrders ??= new Map();

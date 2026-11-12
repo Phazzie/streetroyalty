@@ -4,17 +4,22 @@ import { createSandboxProvider } from "./sandbox.ts";
 import { signPrintfulBody } from "./signature.ts";
 import {
   assertFulfillmentAllowed,
+  assertLivePaymentHasPrinter,
   canTransition,
   decidePaymentFulfillment,
   fulfillPaidOrder,
   processPrintfulWebhook,
   processStripeWebhook,
+  purchasedLineKeys,
   type FulfillmentOrder,
   type OrderStore,
 } from "./order-flow.ts";
+import { sharedSandboxOrders } from "./sandbox.ts";
 import { signStripeBody } from "../payments/stripe.ts";
 
-function memoryStore(seed: FulfillmentOrder[]): OrderStore & { orders: Map<string, FulfillmentOrder>; events: string[] } {
+function memoryStore(
+  seed: FulfillmentOrder[],
+): OrderStore & { orders: Map<string, FulfillmentOrder>; events: string[] } {
   const orders = new Map(seed.map((order) => [order.id, { ...order }]));
   const events: string[] = [];
   return {
@@ -62,6 +67,9 @@ function memoryStore(seed: FulfillmentOrder[]): OrderStore & { orders: Map<strin
     async recordEvent(id) {
       events.push(id);
     },
+    async clearPurchasedLines(orderId) {
+      events.push(`cart:${orderId}`);
+    },
   };
 }
 
@@ -78,11 +86,20 @@ describe("payment fulfillment", () => {
     assert.equal(decidePaymentFulfillment(awaiting, { paid: false }).ok, false);
     assert.equal(decidePaymentFulfillment(awaiting, { paid: true, amountCents: 10 }).ok, false);
     assert.equal(decidePaymentFulfillment(null, { paid: true }).ok, false);
-    assert.equal(decidePaymentFulfillment({ ...awaiting, providerOrderId: null }, { paid: true, amountCents: 4000 }).ok, false);
+    assert.equal(
+      decidePaymentFulfillment(
+        { ...awaiting, providerOrderId: null },
+        { paid: true, amountCents: 4000 },
+      ).ok,
+      false,
+    );
   });
 
   it("ignores a second confirmation", () => {
-    const decision = decidePaymentFulfillment({ ...awaiting, status: "submitted", paymentStatus: "paid" }, { paid: true, amountCents: 4000 });
+    const decision = decidePaymentFulfillment(
+      { ...awaiting, status: "submitted", paymentStatus: "paid" },
+      { paid: true, amountCents: 4000 },
+    );
     assert.equal(decision.ok && decision.action, "ignored");
   });
 
@@ -92,6 +109,23 @@ describe("payment fulfillment", () => {
     assert.doesNotThrow(() => assertFulfillmentAllowed("live", "live"));
   });
 
+  it("blocks live payment while printing is sandboxed", () => {
+    assert.throws(() => assertLivePaymentHasPrinter("sandbox", "live"), /sandboxed/);
+    assert.doesNotThrow(() => assertLivePaymentHasPrinter("live", "live"));
+    assert.doesNotThrow(() => assertLivePaymentHasPrinter("sandbox", "sandbox"));
+  });
+
+  it("reads cart keys stored on the order", () => {
+    assert.deepEqual(
+      purchasedLineKeys([
+        { title: "Tee", designId: "d1", variantId: "v1" },
+        { title: "Hat" },
+        null,
+      ]),
+      [{ designId: "d1", variantId: "v1" }],
+    );
+  });
+
   it("confirms the provider draft only after a paid event", async () => {
     const orders = new Map();
     const provider = createSandboxProvider(orders);
@@ -99,7 +133,14 @@ describe("payment fulfillment", () => {
       externalId: "ord-1",
       shippingMethod: "STANDARD",
       currency: "USD",
-      recipient: { name: "Ada", address1: "1 Main", city: "Austin", stateCode: "TX", countryCode: "US", zip: "78701" },
+      recipient: {
+        name: "Ada",
+        address1: "1 Main",
+        city: "Austin",
+        stateCode: "TX",
+        countryCode: "US",
+        zip: "78701",
+      },
       items: [
         {
           externalId: "line",
@@ -160,9 +201,17 @@ describe("webhooks", () => {
     const raw = JSON.stringify({
       type: "shipment_sent",
       occurred_at: "2026-11-11T00:00:00Z",
-      data: { order: { id: 9, external_id: "ord-1", status: "fulfilled" }, shipment: { id: 3, tracking_number: "1Z" } },
+      data: {
+        order: { id: 9, external_id: "ord-1", status: "fulfilled" },
+        shipment: { id: 3, tracking_number: "1Z" },
+      },
     });
-    const bad = await processPrintfulWebhook({ rawBody: raw, signature: "nope", secret: "sandbox-secret", store });
+    const bad = await processPrintfulWebhook({
+      rawBody: raw,
+      signature: "nope",
+      secret: "sandbox-secret",
+      store,
+    });
     assert.equal(bad.status, 401);
     assert.equal(store.orders.get("ord-1")?.status, "awaiting_payment");
 
@@ -191,7 +240,14 @@ describe("webhooks", () => {
       externalId: "ord-1",
       shippingMethod: "STANDARD",
       currency: "USD",
-      recipient: { name: "Ada", address1: "1 Main", city: "Austin", stateCode: "TX", countryCode: "US", zip: "78701" },
+      recipient: {
+        name: "Ada",
+        address1: "1 Main",
+        city: "Austin",
+        stateCode: "TX",
+        countryCode: "US",
+        zip: "78701",
+      },
       items: [
         {
           externalId: "line",
@@ -209,7 +265,9 @@ describe("webhooks", () => {
     const raw = JSON.stringify({
       id: "evt_1",
       type: "checkout.session.completed",
-      data: { object: { payment_status: "paid", amount_total: 4000, metadata: { order_id: "ord-1" } } },
+      data: {
+        object: { payment_status: "paid", amount_total: 4000, metadata: { order_id: "ord-1" } },
+      },
     });
     const now = 1_700_000_000_000;
     const signature = signStripeBody(raw, "whsec_test", now / 1000);
@@ -238,6 +296,7 @@ describe("webhooks", () => {
     });
     assert.equal(ok.status, 200);
     assert.equal(store.orders.get("ord-1")?.status, "submitted");
+    assert.equal(store.events.includes("cart:ord-1"), true);
 
     const replay = await processStripeWebhook({
       rawBody: raw,
@@ -258,7 +317,9 @@ describe("webhooks", () => {
     const raw = JSON.stringify({
       id: "evt_live",
       type: "checkout.session.completed",
-      data: { object: { payment_status: "paid", amount_total: 4000, metadata: { order_id: "ord-1" } } },
+      data: {
+        object: { payment_status: "paid", amount_total: 4000, metadata: { order_id: "ord-1" } },
+      },
     });
     const now = 1_700_000_000_000;
     const result = await processStripeWebhook({
@@ -283,7 +344,14 @@ describe("webhooks", () => {
       externalId: "ord-1",
       shippingMethod: "STANDARD",
       currency: "USD",
-      recipient: { name: "Ada", address1: "1 Main", city: "Austin", stateCode: "TX", countryCode: "US", zip: "78701" },
+      recipient: {
+        name: "Ada",
+        address1: "1 Main",
+        city: "Austin",
+        stateCode: "TX",
+        countryCode: "US",
+        zip: "78701",
+      },
       items: [
         {
           externalId: "line",
@@ -307,7 +375,9 @@ describe("webhooks", () => {
     const raw = JSON.stringify({
       id: "evt_fail",
       type: "checkout.session.completed",
-      data: { object: { payment_status: "paid", amount_total: 4000, metadata: { order_id: "ord-1" } } },
+      data: {
+        object: { payment_status: "paid", amount_total: 4000, metadata: { order_id: "ord-1" } },
+      },
     });
     const now = 1_700_000_000_000;
     const signature = signStripeBody(raw, "whsec_test", now / 1000);
@@ -349,7 +419,14 @@ describe("webhooks", () => {
       externalId: "ord-1",
       shippingMethod: "STANDARD",
       currency: "USD",
-      recipient: { name: "Ada", address1: "1 Main", city: "Austin", stateCode: "TX", countryCode: "US", zip: "78701" },
+      recipient: {
+        name: "Ada",
+        address1: "1 Main",
+        city: "Austin",
+        stateCode: "TX",
+        countryCode: "US",
+        zip: "78701",
+      },
       items: [
         {
           externalId: "line",
@@ -367,7 +444,9 @@ describe("webhooks", () => {
     const raw = JSON.stringify({
       id: "evt_mismatch",
       type: "checkout.session.completed",
-      data: { object: { payment_status: "paid", amount_total: 100, metadata: { order_id: "ord-1" } } },
+      data: {
+        object: { payment_status: "paid", amount_total: 100, metadata: { order_id: "ord-1" } },
+      },
     });
     const now = 1_700_000_000_000;
     const result = await processStripeWebhook({
@@ -392,16 +471,125 @@ describe("webhooks", () => {
     const shipped = JSON.stringify({
       type: "shipment_sent",
       occurred_at: "2026-11-11T00:00:00Z",
-      data: { order: { id: 9, external_id: "ord-1", status: "fulfilled" }, shipment: { id: 3, tracking_number: "1Z" } },
+      data: {
+        order: { id: 9, external_id: "ord-1", status: "fulfilled" },
+        shipment: { id: 3, tracking_number: "1Z" },
+      },
     });
-    await processPrintfulWebhook({ rawBody: shipped, signature: signPrintfulBody(shipped, secret), secret, store });
+    await processPrintfulWebhook({
+      rawBody: shipped,
+      signature: signPrintfulBody(shipped, secret),
+      secret,
+      store,
+    });
     assert.equal(store.orders.get("ord-1")?.status, "shipped");
     const late = JSON.stringify({
       type: "order_updated",
       occurred_at: "2026-11-11T00:05:00Z",
       data: { order: { id: 9, external_id: "ord-1", status: "draft" } },
     });
-    await processPrintfulWebhook({ rawBody: late, signature: signPrintfulBody(late, secret), secret, store });
+    await processPrintfulWebhook({
+      rawBody: late,
+      signature: signPrintfulBody(late, secret),
+      secret,
+      store,
+    });
     assert.equal(store.orders.get("ord-1")?.status, "shipped");
+  });
+
+  it("does not print a sandbox order when Stripe is live", async () => {
+    const orders = new Map();
+    const provider = createSandboxProvider(orders);
+    const draft = await provider.createDraftOrder({
+      externalId: "ord-1",
+      shippingMethod: "STANDARD",
+      currency: "USD",
+      recipient: {
+        name: "Ada",
+        address1: "1 Main",
+        city: "Austin",
+        stateCode: "TX",
+        countryCode: "US",
+        zip: "78701",
+      },
+      items: [
+        {
+          externalId: "line",
+          variantId: "tee-heavy-black-m",
+          quantity: 1,
+          retailCents: 2790,
+          name: "Tee",
+          placement: "front",
+          technique: "dtg",
+          fileUrl: "http://local/print.png",
+        },
+      ],
+    });
+    const store = memoryStore([{ ...awaiting, providerOrderId: draft.id }]);
+    const raw = JSON.stringify({
+      id: "evt_sandbox_print",
+      type: "checkout.session.completed",
+      data: {
+        object: { payment_status: "paid", amount_total: 4000, metadata: { order_id: "ord-1" } },
+      },
+    });
+    const now = 1_700_000_000_000;
+    const result = await processStripeWebhook({
+      rawBody: raw,
+      signature: signStripeBody(raw, "whsec_test", now / 1000),
+      secret: "whsec_test",
+      store,
+      provider,
+      podMode: "sandbox",
+      paymentsMode: "live",
+      now,
+    });
+    assert.equal(result.status, 200);
+    assert.equal(result.body.reason, "sandbox_print");
+    assert.equal(store.orders.get("ord-1")?.status, "needs_review");
+    assert.equal((await provider.getOrder(draft.id)).confirmed, false);
+    assert.equal(store.events.includes("cart:ord-1"), false);
+  });
+
+  it("keeps sandbox order ids unique when a new provider shares the order map", async () => {
+    const shared = sharedSandboxOrders();
+    shared.clear();
+    const first = createSandboxProvider(shared);
+    const second = createSandboxProvider(shared);
+    const item = {
+      externalId: "line",
+      variantId: "tee-heavy-black-m",
+      quantity: 1,
+      retailCents: 2790,
+      name: "Tee",
+      placement: "front" as const,
+      technique: "dtg" as const,
+      fileUrl: "http://local/print.png",
+    };
+    const recipient = {
+      name: "Ada",
+      address1: "1 Main",
+      city: "Austin",
+      stateCode: "TX",
+      countryCode: "US",
+      zip: "78701",
+    };
+    const a = await first.createDraftOrder({
+      externalId: "ord-a",
+      shippingMethod: "STANDARD",
+      currency: "USD",
+      recipient,
+      items: [item],
+    });
+    const b = await second.createDraftOrder({
+      externalId: "ord-b",
+      shippingMethod: "STANDARD",
+      currency: "USD",
+      recipient,
+      items: [{ ...item, externalId: "line-b" }],
+    });
+    assert.notEqual(a.id, b.id);
+    assert.equal((await first.getOrder(a.id)).externalId, "ord-a");
+    assert.equal((await second.getOrder(b.id)).externalId, "ord-b");
   });
 });

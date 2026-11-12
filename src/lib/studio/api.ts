@@ -41,13 +41,21 @@ export const getCatalogProduct = createServerFn({ method: "GET" })
 
 export const makeMockup = createServerFn({ method: "POST" })
   .middleware([optionalUser])
-  .validator((input: { productId?: string; variantId?: string; placement?: string; layers?: unknown; printFile?: unknown }) => ({
-    productId: String(input?.productId ?? ""),
-    variantId: String(input?.variantId ?? ""),
-    placement: String(input?.placement ?? "front"),
-    layers: input?.layers,
-    printFile: input?.printFile,
-  }))
+  .validator(
+    (input: {
+      productId?: string;
+      variantId?: string;
+      placement?: string;
+      layers?: unknown;
+      printFile?: unknown;
+    }) => ({
+      productId: String(input?.productId ?? ""),
+      variantId: String(input?.variantId ?? ""),
+      placement: String(input?.placement ?? "front"),
+      layers: input?.layers,
+      printFile: input?.printFile,
+    }),
+  )
   .handler(async ({ data, context }) => {
     const { generateMockup } = await import("./repo.server.ts");
     return generateMockup({ ...data, userId: context.userId ?? undefined });
@@ -202,9 +210,16 @@ export const retryPrint = createServerFn({ method: "POST" })
     return retryFulfillment(context.userId, data.orderId);
   });
 
+export const studioAccess = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    const { readStudioAccess } = await import("./repo.server.ts");
+    return readStudioAccess(context.userId);
+  });
+
 export const linkWebhooks = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .handler(async () => {
+  .handler(async ({ context }) => {
     const { connectWebhooks } = await import("./repo.server.ts");
-    return connectWebhooks();
+    return connectWebhooks(context.userId);
   });

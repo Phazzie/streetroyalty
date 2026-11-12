@@ -2,7 +2,7 @@ import type { DesignLayer, Recipient } from "../pod/types.ts";
 
 export const STUDIO_FONTS = ["Archivo Black", "Outfit"] as const;
 
-const MAX_LAYERS = 8;
+export const MAX_LAYERS = 8;
 const MAX_LAYER_SRC = 1_400_000;
 const MAX_PRINT = 2_400_000;
 
@@ -27,12 +27,19 @@ export function parseLayers(input: unknown): DesignLayer[] {
     if (layer.type === "image") {
       const src = String(layer.src ?? "");
       if (!isArtworkSrc(src)) throw new Error("Artwork has to be a PNG, JPEG, WebP, or GIF.");
-      if (src.length > MAX_LAYER_SRC) throw new Error("That artwork is too heavy. Use a smaller file.");
+      if (src.length > MAX_LAYER_SRC)
+        throw new Error("That artwork is too heavy. Use a smaller file.");
       return { ...shared, type: "image" as const, src };
     }
-    const font = STUDIO_FONTS.includes(layer.font as (typeof STUDIO_FONTS)[number]) ? String(layer.font) : "Archivo Black";
-    const color = /^#[0-9a-fA-F]{6}$/.test(String(layer.color ?? "")) ? String(layer.color) : "#d6ff3c";
-    const text = String(layer.text ?? "").trim().slice(0, 80);
+    const font = STUDIO_FONTS.includes(layer.font as (typeof STUDIO_FONTS)[number])
+      ? String(layer.font)
+      : "Archivo Black";
+    const color = /^#[0-9a-fA-F]{6}$/.test(String(layer.color ?? ""))
+      ? String(layer.color)
+      : "#d6ff3c";
+    const text = String(layer.text ?? "")
+      .trim()
+      .slice(0, 80);
     if (!text) throw new Error("Text layers need words.");
     return { ...shared, type: "text" as const, text, font, color };
   });
@@ -50,15 +57,39 @@ export function parsePrintFile(input: unknown): { mime: string; base64: string }
 export function parseRecipient(input: unknown): Recipient {
   const raw = (input ?? {}) as Record<string, unknown>;
   const recipient: Recipient = {
-    name: String(raw.name ?? "").trim().slice(0, 80),
-    address1: String(raw.address1 ?? "").trim().slice(0, 120),
-    address2: String(raw.address2 ?? "").trim().slice(0, 120) || undefined,
-    city: String(raw.city ?? "").trim().slice(0, 80),
-    stateCode: String(raw.stateCode ?? "").trim().toUpperCase().slice(0, 8) || undefined,
-    countryCode: String(raw.countryCode ?? "").trim().toUpperCase().slice(0, 2),
-    zip: String(raw.zip ?? "").trim().slice(0, 16),
-    phone: String(raw.phone ?? "").trim().slice(0, 32) || undefined,
-    email: String(raw.email ?? "").trim().slice(0, 120) || undefined,
+    name: String(raw.name ?? "")
+      .trim()
+      .slice(0, 80),
+    address1: String(raw.address1 ?? "")
+      .trim()
+      .slice(0, 120),
+    address2:
+      String(raw.address2 ?? "")
+        .trim()
+        .slice(0, 120) || undefined,
+    city: String(raw.city ?? "")
+      .trim()
+      .slice(0, 80),
+    stateCode:
+      String(raw.stateCode ?? "")
+        .trim()
+        .toUpperCase()
+        .slice(0, 8) || undefined,
+    countryCode: String(raw.countryCode ?? "")
+      .trim()
+      .toUpperCase()
+      .slice(0, 2),
+    zip: String(raw.zip ?? "")
+      .trim()
+      .slice(0, 16),
+    phone:
+      String(raw.phone ?? "")
+        .trim()
+        .slice(0, 32) || undefined,
+    email:
+      String(raw.email ?? "")
+        .trim()
+        .slice(0, 120) || undefined,
   };
   if (recipient.name.length < 2) throw new Error("Add the recipient name.");
   if (recipient.address1.length < 3) throw new Error("Add a street address.");
@@ -92,7 +123,10 @@ export function isArtworkSrc(src: string): boolean {
 }
 
 /** Owner can buy their own draft. Everyone else only sees published pieces. */
-export function canBuyDesign(design: { ownerId: string; status: string }, buyerId: string): boolean {
+export function canBuyDesign(
+  design: { ownerId: string; status: string },
+  buyerId: string,
+): boolean {
   if (!buyerId || !design.ownerId) return false;
   if (design.ownerId === buyerId) return true;
   return design.status === "published";
@@ -102,12 +136,20 @@ export function parseMockupUrl(input: unknown): string | null {
   if (input == null || input === "") return null;
   const value = String(input);
   if (value.length > 2_000_000) throw new Error("That mockup is too large.");
-  if (value.startsWith("data:image/svg+xml") || ARTWORK_DATA.test(value) || value.startsWith("data:image/jpeg")) return value;
+  if (
+    value.startsWith("data:image/svg+xml") ||
+    ARTWORK_DATA.test(value) ||
+    value.startsWith("data:image/jpeg")
+  )
+    return value;
   if (value.startsWith("https://")) return value;
   throw new Error("Mockup has to be an image.");
 }
 
-export function imageDimensions(mime: string, base64: string): { width: number; height: number } | null {
+export function imageDimensions(
+  mime: string,
+  base64: string,
+): { width: number; height: number } | null {
   let binary: string;
   try {
     binary = atob(base64.slice(0, 80_000));
@@ -173,7 +215,13 @@ export function isPublicHttpUrl(url: string): boolean {
     const parsed = new URL(url);
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
     const host = parsed.hostname;
-    if (host === "localhost" || host === "127.0.0.1" || host === "0.0.0.0" || host.endsWith(".local")) return false;
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host.endsWith(".local")
+    )
+      return false;
     return true;
   } catch {
     return false;
