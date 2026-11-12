@@ -20,6 +20,7 @@ import {
   savePiece,
 } from "@/lib/studio/api";
 import { suggestLines } from "@/lib/ai/api";
+import { createSingleFlight } from "@/lib/ui/single-flight";
 import { designVisualKey } from "@/lib/studio/design-key";
 import { MAX_LAYERS, STUDIO_FONTS } from "@/lib/studio/validate";
 
@@ -64,6 +65,7 @@ export function Editor({ designId }: { designId: string }) {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [lines, setLines] = useState<string[]>([]);
+  const flight = useRef(createSingleFlight());
 
   const chooseProduct = useCallback(async (productId: string, nextVariant?: string) => {
     const detail = await getCatalogProduct({ data: { productId } });
@@ -190,10 +192,10 @@ export function Editor({ designId }: { designId: string }) {
       const raw = await readFileAsDataUrl(file);
       const src = await compressDataUrl(raw, 1200, 0.85);
       const id = `img-${Date.now()}`;
-      setLayers((current) => [
-        ...current,
-        { id, type: "image", src, x: 0.5, y: 0.42, scale: 0.85, rotation: 0 },
-      ]);
+      setLayers((current) => {
+        if (current.length >= MAX_LAYERS) return current;
+        return [...current, { id, type: "image" as const, src, x: 0.5, y: 0.42, scale: 0.85, rotation: 0 }];
+      });
       setSelected(id);
     } catch (error) {
       setNote(errorText(error));
@@ -206,6 +208,7 @@ export function Editor({ designId }: { designId: string }) {
 
   async function onMockup() {
     if (!product || !variant) return;
+    await flight.current(async () => {
     setBusy(true);
     setNote("Printing the mockup.");
     try {
@@ -227,10 +230,12 @@ export function Editor({ designId }: { designId: string }) {
     } finally {
       setBusy(false);
     }
+    });
   }
 
   async function onSave() {
     if (!product || !variant) return;
+    await flight.current(async () => {
     setBusy(true);
     try {
       const printFile = await exportPrint();
@@ -256,10 +261,12 @@ export function Editor({ designId }: { designId: string }) {
     } finally {
       setBusy(false);
     }
+    });
   }
 
   async function onPublish() {
     if (!product || !variant) return;
+    await flight.current(async () => {
     setBusy(true);
     try {
       const printFile = await exportPrint();
@@ -300,18 +307,41 @@ export function Editor({ designId }: { designId: string }) {
     } finally {
       setBusy(false);
     }
+    });
   }
 
   async function onCart() {
-    const id = savedId || (await onSave());
-    if (!id || !variant) return;
-    try {
-      await cartAdd({ data: { designId: id, variantId: variant.id } });
-      setNote("In the cart.");
-      void navigate({ to: "/cart" });
-    } catch (error) {
-      setNote(errorText(error));
-    }
+    if (!product || !variant) return;
+    await flight.current(async () => {
+      setBusy(true);
+      try {
+        let id = savedId;
+        if (!id) {
+          const printFile = await exportPrint();
+          const saved = await savePiece({
+            data: {
+              title,
+              collectionId: collectionId || null,
+              productId: product.id,
+              variantId: variant.id,
+              placement,
+              layers,
+              printFile,
+              mockupUrl: mockupUrl || null,
+            },
+          });
+          id = saved.id;
+          setSavedId(id);
+        }
+        await cartAdd({ data: { designId: id, variantId: variant.id } });
+        setNote("In the cart.");
+        void navigate({ to: "/cart" });
+      } catch (error) {
+        setNote(errorText(error));
+      } finally {
+        setBusy(false);
+      }
+    });
   }
 
   const ink = variant && luminance(variant.colorHex) > 0.62 ? "#141018" : "#f6f1ff";

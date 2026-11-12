@@ -70,15 +70,12 @@ export function parseRecipient(input: unknown): Recipient {
     city: String(raw.city ?? "")
       .trim()
       .slice(0, 80),
-    stateCode:
-      String(raw.stateCode ?? "")
-        .trim()
-        .toUpperCase()
-        .slice(0, 8) || undefined,
+    stateCode: String(raw.stateCode ?? "")
+      .trim()
+      .toUpperCase(),
     countryCode: String(raw.countryCode ?? "")
       .trim()
-      .toUpperCase()
-      .slice(0, 2),
+      .toUpperCase(),
     zip: String(raw.zip ?? "")
       .trim()
       .slice(0, 16),
@@ -95,12 +92,16 @@ export function parseRecipient(input: unknown): Recipient {
   if (recipient.address1.length < 3) throw new Error("Add a street address.");
   if (recipient.city.length < 2) throw new Error("Add a city.");
   if (!/^[A-Z]{2}$/.test(recipient.countryCode)) throw new Error("Use a two-letter country code.");
+  if (recipient.stateCode && !/^[A-Z0-9]{2}$/.test(recipient.stateCode)) {
+    throw new Error("Use a two-letter state code.");
+  }
+  if (!recipient.stateCode) recipient.stateCode = undefined;
   if (recipient.zip.length < 3) throw new Error("Add a postal code.");
   if ((recipient.countryCode === "US" || recipient.countryCode === "CA") && !recipient.stateCode) {
     throw new Error("Add a state or province.");
   }
-  if (recipient.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.email)) {
-    throw new Error("That email does not look right.");
+  if (!recipient.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.email)) {
+    throw new Error("Add an email that looks right.");
   }
   return recipient;
 }

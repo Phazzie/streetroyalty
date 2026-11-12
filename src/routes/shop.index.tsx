@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StudioShell } from "@/components/studio/shell";
 import { filterByTerms, searchTerms } from "@/lib/ai/local";
 import { vibeTerms } from "@/lib/ai/api";
+import { createSingleFlight } from "@/lib/ui/single-flight";
 import { formatMoney } from "@/lib/pod/money";
 import { shopList } from "@/lib/studio/api";
 import type { DesignSummary } from "@/lib/studio/models";
@@ -17,6 +18,7 @@ function ShopPage() {
   const [query, setQuery] = useState("");
   const [terms, setTerms] = useState<string[]>([]);
   const [source, setSource] = useState<"local" | "grok" | "">("");
+  const flight = useRef(createSingleFlight());
 
   useEffect(() => {
     void shopList()
@@ -39,15 +41,16 @@ function ShopPage() {
         className="mb-6 flex gap-2"
         onSubmit={(event) => {
           event.preventDefault();
-          void vibeTerms({ data: { query } })
-            .then((result) => {
+          void flight.current(async () => {
+            try {
+              const result = await vibeTerms({ data: { query } });
               setTerms(result.terms);
               setSource(result.source);
-            })
-            .catch(() => {
+            } catch {
               setTerms(searchTerms(query));
               setSource("local");
-            });
+            }
+          });
         }}
       >
         <Input

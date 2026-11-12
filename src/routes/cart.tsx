@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { StudioShell } from "@/components/studio/shell";
 import { formatMoney } from "@/lib/pod/money";
-import { cartList, cartSet } from "@/lib/studio/api";
+import { cartList, cartNudge } from "@/lib/studio/api";
 import type { CartLine } from "@/lib/studio/models";
 
 export const Route = createFileRoute("/cart")({ component: CartPage });
@@ -11,6 +11,8 @@ export const Route = createFileRoute("/cart")({ component: CartPage });
 function CartPage() {
   const [lines, setLines] = useState<CartLine[] | null>(null);
   const [error, setError] = useState("");
+  const [pendingId, setPendingId] = useState("");
+  const pendingRef = useRef("");
 
   function reload() {
     void cartList()
@@ -23,6 +25,19 @@ function CartPage() {
   }, []);
 
   const total = (lines ?? []).reduce((sum, line) => sum + line.unitCents * line.quantity, 0);
+
+  function nudge(cartId: string, delta: -1 | 1) {
+    if (pendingRef.current) return;
+    pendingRef.current = cartId;
+    setPendingId(cartId);
+    void cartNudge({ data: { cartId, delta } })
+      .then(() => reload())
+      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Could not update the cart."))
+      .finally(() => {
+        pendingRef.current = "";
+        setPendingId("");
+      });
+  }
 
   return (
     <StudioShell current="/cart">
@@ -39,11 +54,11 @@ function CartPage() {
               <p>{formatMoney(line.unitCents)}</p>
             </div>
             <div className="col-span-2 flex items-center gap-2 sm:col-span-1">
-              <Button variant="ghost" onClick={() => void cartSet({ data: { cartId: line.id, quantity: line.quantity - 1 } }).then(reload)}>
+              <Button variant="ghost" aria-label={`Fewer ${line.title}`} disabled={pendingId === line.id} onClick={() => nudge(line.id, -1)}>
                 −
               </Button>
               <span className="min-w-6 text-center">{line.quantity}</span>
-              <Button variant="ghost" onClick={() => void cartSet({ data: { cartId: line.id, quantity: line.quantity + 1 } }).then(reload)}>
+              <Button variant="ghost" aria-label={`More ${line.title}`} disabled={pendingId === line.id || line.quantity >= 10} onClick={() => nudge(line.id, 1)}>
                 +
               </Button>
             </div>

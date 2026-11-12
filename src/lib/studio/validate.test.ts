@@ -7,6 +7,7 @@ import {
   imageDimensions,
   isArtworkSrc,
   parseLayers,
+  parseRecipient,
   printQualityWarning,
 } from "./validate.ts";
 
@@ -53,5 +54,26 @@ describe("print file capability", () => {
   it("rounds retail to integer cents", () => {
     assert.equal(applyMarkup(1395, 2.2), 3069);
     assert.equal(Number.isInteger(applyMarkup(1, 2.2)), true);
+  });
+});
+
+const ada = {
+  name: "Ada Lovelace",
+  address1: "1 Main",
+  city: "Austin",
+  stateCode: "TX",
+  countryCode: "US",
+  zip: "78701",
+  email: "ada@shop.test",
+};
+
+describe("parseRecipient", () => {
+  it("keeps a real address and refuses a country name or a spelled-out state", () => {
+    assert.equal(parseRecipient(ada).countryCode, "US");
+    assert.throws(() => parseRecipient({ ...ada, countryCode: "United States" }), /two-letter country/);
+    assert.throws(() => parseRecipient({ ...ada, countryCode: "USA" }), /two-letter country/);
+    assert.throws(() => parseRecipient({ ...ada, stateCode: "Texas" }), /two-letter state/);
+    assert.throws(() => parseRecipient({ ...ada, email: "ada" }), /email/);
+    assert.throws(() => parseRecipient({ ...ada, email: "" }), /email/);
   });
 });

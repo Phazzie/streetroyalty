@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Header, Shell, TextButton } from "@/components/lab/chrome";
 import { Composer } from "@/components/lab/mic";
@@ -7,6 +7,7 @@ import { copy } from "@/lib/copy";
 import { cn } from "@/lib/cn";
 import { critiqueOutfit } from "@/lib/ai/api";
 import { localCritique } from "@/lib/ai/local";
+import { createSingleFlight } from "@/lib/ui/single-flight";
 import { useLab } from "@/lib/store";
 
 const EXAMPLES = ["make it black", "shorter coat"] as const;
@@ -20,6 +21,8 @@ export function LookScreen() {
   const navigate = useNavigate();
   const [crown, setCrown] = useState<{ verdict: string; note: string; next: string; source: string } | null>(null);
   const [asking, setAsking] = useState(false);
+  const flight = useRef(createSingleFlight());
+  const setStatus = useLab((state) => state.setStatus);
 
   return (
     <Shell>
@@ -68,11 +71,16 @@ export function LookScreen() {
             disabled={!draft || asking}
             onClick={() => {
               if (!draft) return;
-              setAsking(true);
-              void critiqueOutfit({ data: { spoken: draft.spoken } })
-                .then(setCrown)
-                .catch(() => setCrown({ ...localCritique(draft.spoken), source: "local" }))
-                .finally(() => setAsking(false));
+              void flight.current(async () => {
+                setAsking(true);
+                try {
+                  setCrown(await critiqueOutfit({ data: { spoken: draft.spoken } }));
+                } catch {
+                  setCrown({ ...localCritique(draft.spoken), source: "local" });
+                } finally {
+                  setAsking(false);
+                }
+              });
             }}
           >
             {copy.crownAsk}
@@ -90,7 +98,12 @@ export function LookScreen() {
             disabled={!draft}
             onClick={() => {
               if (!draft) return;
-              sessionStorage.setItem("sr-print-art", draft.image);
+              try {
+                sessionStorage.setItem("sr-print-art", draft.image);
+              } catch {
+                setStatus("This phone can't hold that picture. Save the look and try a smaller one.");
+                return;
+              }
               void navigate({ to: "/studio" });
             }}
           >

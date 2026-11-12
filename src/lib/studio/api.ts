@@ -141,6 +141,18 @@ export const cartAdd = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const cartNudge = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { cartId?: string; delta?: number }) => ({
+    cartId: String(input?.cartId ?? ""),
+    delta: Number(input?.delta),
+  }))
+  .handler(async ({ data, context }) => {
+    const { nudgeCart } = await import("./repo.server.ts");
+    await nudgeCart(context.userId, data.cartId, data.delta);
+    return { ok: true };
+  });
+
 export const cartSet = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { cartId?: string; quantity?: number }) => ({

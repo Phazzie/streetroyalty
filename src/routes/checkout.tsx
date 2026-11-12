@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Note, StudioShell } from "@/components/studio/shell";
 import { formatMoney } from "@/lib/pod/money";
 import { beginCheckout, paySandbox, shippingQuote } from "@/lib/studio/api";
+import { createSingleFlight } from "@/lib/ui/single-flight";
 
 export const Route = createFileRoute("/checkout")({
   validateSearch: (search: Record<string, unknown>): { canceled?: string } => {
@@ -37,6 +38,7 @@ function CheckoutPage() {
   const [total, setTotal] = useState(0);
   const [note, setNote] = useState(canceled ? "Payment canceled. The print order stayed a draft." : "");
   const [busy, setBusy] = useState(false);
+  const flight = useRef(createSingleFlight());
 
   function setField(key: keyof typeof empty, value: string) {
     setRecipient((current) => ({ ...current, [key]: value }));
@@ -53,16 +55,20 @@ function CheckoutPage() {
         className="grid gap-4 md:grid-cols-2"
         onSubmit={(event) => {
           event.preventDefault();
-          setBusy(true);
-          void shippingQuote({ data: { recipient } })
-            .then((quote) => {
+          void flight.current(async () => {
+            setBusy(true);
+            try {
+              const quote = await shippingQuote({ data: { recipient } });
               setRates(quote.rates);
               setSubtotal(quote.subtotalCents);
               setMethod(quote.rates[0]?.id ?? "");
               setNote("Pick a shipping method, then pay.");
-            })
-            .catch((reason: unknown) => setNote(reason instanceof Error ? reason.message : "No quote."))
-            .finally(() => setBusy(false));
+            } catch (reason: unknown) {
+              setNote(reason instanceof Error ? reason.message : "No quote.");
+            } finally {
+              setBusy(false);
+            }
+          });
         }}
       >
         {(
@@ -106,9 +112,10 @@ function CheckoutPage() {
             className="mt-4"
             disabled={busy || !method}
             onClick={() => {
-              setBusy(true);
-              void beginCheckout({ data: { recipient, shippingMethod: method } })
-                .then((result) => {
+              void flight.current(async () => {
+                setBusy(true);
+                try {
+                  const result = await beginCheckout({ data: { recipient, shippingMethod: method } });
                   if (result.mode === "stripe" && result.url) {
                     window.location.href = result.url;
                     return;
@@ -116,9 +123,12 @@ function CheckoutPage() {
                   setOrderId(result.orderId);
                   setTotal(result.totalCents);
                   setNote("Sandbox payment. This does not charge a card or a live Printful wallet.");
-                })
-                .catch((reason: unknown) => setNote(reason instanceof Error ? reason.message : "Checkout failed."))
-                .finally(() => setBusy(false));
+                } catch (reason: unknown) {
+                  setNote(reason instanceof Error ? reason.message : "Checkout failed.");
+                } finally {
+                  setBusy(false);
+                }
+              });
             }}
           >
             Place order
@@ -133,11 +143,17 @@ function CheckoutPage() {
             className="mt-4"
             disabled={busy}
             onClick={() => {
-              setBusy(true);
-              void paySandbox({ data: { orderId } })
-                .then(() => navigate({ to: "/orders" }))
-                .catch((reason: unknown) => setNote(reason instanceof Error ? reason.message : "Payment failed."))
-                .finally(() => setBusy(false));
+              void flight.current(async () => {
+                setBusy(true);
+                try {
+                  await paySandbox({ data: { orderId } });
+                  void navigate({ to: "/orders" });
+                } catch (reason: unknown) {
+                  setNote(reason instanceof Error ? reason.message : "Payment failed.");
+                } finally {
+                  setBusy(false);
+                }
+              });
             }}
           >
             Confirm test payment

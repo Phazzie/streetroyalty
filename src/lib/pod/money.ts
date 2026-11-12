@@ -28,9 +28,10 @@ export function applyMarkup(wholesaleCents: number, markup: number): number {
 }
 
 export function formatMoney(cents: number, currency = "USD"): string {
+  const value = Number.isFinite(cents) ? cents : 0;
   try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(cents / 100);
+    return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(value / 100);
   } catch {
-    return `$${(cents / 100).toFixed(2)}`;
+    return `$${(value / 100).toFixed(2)}`;
   }
 }

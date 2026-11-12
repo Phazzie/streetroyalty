@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StudioShell } from "@/components/studio/shell";
+import { accountInputError } from "@/lib/auth/account-input";
 import { GROK_PROVIDERS, authClient, authEnabled, signIn } from "@/lib/auth/client";
+import { createSingleFlight } from "@/lib/ui/single-flight";
 
 export const Route = createFileRoute("/login")({ component: LoginPage });
 
@@ -14,6 +16,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const flight = useRef(createSingleFlight());
 
   return (
     <StudioShell current="/login">
@@ -35,22 +38,35 @@ function LoginPage() {
               className="flex flex-col gap-3"
               onSubmit={(event) => {
                 event.preventDefault();
-                setBusy(true);
-                setError("");
-                const run =
-                  mode === "up"
-                    ? authClient.signUp.email({ email, password, name: name || email.split("@")[0] || "Designer", callbackURL: "/studio" })
-                    : authClient.signIn.email({ email, password, callbackURL: "/studio" });
-                void run
-                  .then((result) => {
+                const problem = accountInputError({ mode, email, password, name });
+                if (problem) {
+                  setError(problem);
+                  return;
+                }
+                void flight.current(async () => {
+                  setBusy(true);
+                  setError("");
+                  try {
+                    const result =
+                      mode === "up"
+                        ? await authClient.signUp.email({
+                            email: email.trim(),
+                            password,
+                            name: name.trim() || email.trim().split("@")[0] || "Designer",
+                            callbackURL: "/studio",
+                          })
+                        : await authClient.signIn.email({ email: email.trim(), password, callbackURL: "/studio" });
                     if (result.error) {
                       setError(result.error.message ?? "Could not sign in.");
                       return;
                     }
                     window.location.href = "/studio";
-                  })
-                  .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Could not sign in."))
-                  .finally(() => setBusy(false));
+                  } catch (reason: unknown) {
+                    setError(reason instanceof Error ? reason.message : "Could not sign in.");
+                  } finally {
+                    setBusy(false);
+                  }
+                });
               }}
             >
               {mode === "up" ? (

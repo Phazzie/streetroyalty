@@ -11,6 +11,7 @@ import {
   type OrderStore,
 } from "../pod/order-flow.ts";
 import { isStudioAdmin } from "./admin.ts";
+import { cartDelta, normalizeCartQuantity } from "./cart-qty.ts";
 import { getPodProvider, readPaymentsMode, readPodMode, readMarkup } from "../pod/index.ts";
 import type { CatalogProduct, Recipient } from "../pod/types.ts";
 import { PodError } from "../pod/types.ts";
@@ -480,13 +481,27 @@ export async function addToCart(
 
 export async function updateCart(userId: string, cartId: string, quantity: number): Promise<void> {
   const sql = await getSql();
-  const next = Math.round(quantity);
-  if (!Number.isFinite(next)) throw new Error("Quantity has to be a number.");
-  if (next <= 0) {
+  const next = normalizeCartQuantity(quantity);
+  if (next == null) {
     await sql`delete from cart_items where id = ${cartId} and user_id = ${userId}`;
     return;
   }
-  await sql`update cart_items set quantity = ${Math.min(10, next)} where id = ${cartId} and user_id = ${userId}`;
+  await sql`update cart_items set quantity = ${next} where id = ${cartId} and user_id = ${userId}`;
+}
+
+/** Apply +1 or -1 in the database so two clicks cannot both write the same stale count. */
+export async function nudgeCart(userId: string, cartId: string, delta: number): Promise<void> {
+  const step = cartDelta(delta);
+  const sql = await getSql();
+  const bumped = await sql<{ id: string }>`
+    update cart_items
+    set quantity = least(10, quantity + ${step})
+    where id = ${cartId} and user_id = ${userId} and quantity + ${step} >= 1
+    returning id
+  `;
+  if (bumped.length === 0 && step < 0) {
+    await sql`delete from cart_items where id = ${cartId} and user_id = ${userId} and quantity <= 1`;
+  }
 }
 
 type CartJoin = DesignRow & {
