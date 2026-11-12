@@ -1,6 +1,19 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { filterByTerms, localCritique, localLines, parseCritique, parseLines, parseTerms, searchTerms } from "./local.ts";
+import {
+  filterByTerms,
+  localCritique,
+  localCrowd,
+  localLines,
+  localLookName,
+  localPrintNote,
+  parseCritique,
+  parseCrowd,
+  parseLines,
+  parseLookName,
+  parseTerms,
+  searchTerms,
+} from "./local.ts";
 
 describe("local critique and lines", () => {
   it("asks for shoes when the look has none", () => {
@@ -21,6 +34,23 @@ describe("local critique and lines", () => {
   it("keeps three short lines", () => {
     assert.equal(localLines("night bus").length, 3);
     assert.deepEqual(parseLines("1. CROWN\n- ON\n\"LATE\""), ["CROWN", "ON", "LATE"]);
+  });
+});
+
+describe("names, print notes, and the crowd", () => {
+  it("names a look from the clothes and parses a model title", () => {
+    assert.equal(localLookName("black hoodie and wool trousers"), "Black Hoodie And");
+    assert.equal(parseLookName(' "Night Bus" '), "Night Bus");
+    assert.equal(parseLookName("x"), null);
+  });
+
+  it("gives sleeve, back, and front different print advice", () => {
+    assert.match(localPrintNote("sleeve", "tee"), /Sleeve/);
+    assert.match(localPrintNote("back", "hoodie"), /back/);
+    assert.match(localPrintNote("front", "tee"), /poster/);
+    assert.equal(parseCrowd("They should boo"), "boo");
+    assert.equal(parseCrowd("no opinion"), null);
+    assert.equal(localCrowd(0), "cheer");
   });
 });
 

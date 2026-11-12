@@ -77,6 +77,55 @@ export function parseTerms(raw: string): string[] {
   return searchTerms(raw.replaceAll(",", " "));
 }
 
+export function localLookName(spoken: string): string {
+  const words = spoken
+    .split(/[^A-Za-z0-9]+/)
+    .filter((word) => word.length > 1)
+    .slice(0, 3);
+  if (words.length === 0) return "Untitled look";
+  return words.map((word) => word[0]!.toUpperCase() + word.slice(1).toLowerCase()).join(" ");
+}
+
+export function parseLookName(raw: string): string | null {
+  const line = raw.split("\n")[0]?.replace(/["']/g, "").trim().slice(0, 40) ?? "";
+  if (line.length < 2) return null;
+  return line;
+}
+
+export function localPrintNote(placement: string, product: string): string {
+  const place = placement.toLowerCase();
+  const name = product.trim() || "piece";
+  if (place.includes("back")) {
+    return `A back print on the ${name} is a secret for the people walking behind you. One strong line is enough.`;
+  }
+  if (place.includes("sleeve")) {
+    return `Sleeve type on a ${name} has to be short. One word beats a sentence.`;
+  }
+  return `A front print on the ${name} is the poster. Big type, one idea.`;
+}
+
+export function parsePrintNote(raw: string): string | null {
+  const text = raw.trim().replace(/^["']|["']$/g, "");
+  if (text.length < 8) return null;
+  return text.slice(0, 220);
+}
+
+export type Crowd = "cheer" | "boo" | "both";
+
+export function localCrowd(seed = Date.now()): Crowd {
+  const options: Crowd[] = ["cheer", "boo", "both"];
+  const index = Math.abs(Math.trunc(seed)) % options.length;
+  return options[index] ?? "both";
+}
+
+export function parseCrowd(raw: string): Crowd | null {
+  const text = raw.toLowerCase();
+  if (/\bboth\b/.test(text)) return "both";
+  if (/\bboo/.test(text)) return "boo";
+  if (/\bcheer/.test(text)) return "cheer";
+  return null;
+}
+
 export function filterByTerms<T>(items: readonly T[], terms: readonly string[], textOf: (item: T) => string): T[] {
   if (terms.length === 0) return [...items];
   return items.filter((item) => {

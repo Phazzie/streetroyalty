@@ -3,6 +3,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Note, StudioShell } from "@/components/studio/shell";
 import { formatMoney } from "@/lib/pod/money";
+import { printNote } from "@/lib/ai/api";
+import { localPrintNote } from "@/lib/ai/local";
 import { cartAdd, shopPiece } from "@/lib/studio/api";
 import { createSingleFlight } from "@/lib/ui/single-flight";
 
@@ -15,6 +17,7 @@ function ProductPage() {
   const [variantId, setVariantId] = useState("");
   const [error, setError] = useState("");
   const [adding, setAdding] = useState(false);
+  const [advice, setAdvice] = useState("");
   const flight = useRef(createSingleFlight());
 
   useEffect(() => {
@@ -51,6 +54,25 @@ function ProductPage() {
                 </button>
               ))}
             </div>
+            <Button
+              variant="ghost"
+              className="mt-4 w-full"
+              disabled={adding}
+              onClick={() => {
+                if (!piece) return;
+                void flight.current(async () => {
+                  try {
+                    const result = await printNote({ data: { placement: piece.placement, product: piece.productName } });
+                    setAdvice(result.note);
+                  } catch {
+                    setAdvice(localPrintNote(piece.placement, piece.productName));
+                  }
+                });
+              }}
+            >
+              Will this print?
+            </Button>
+            {advice ? <p className="mt-3 text-sm text-muted">{advice}</p> : null}
             <Button
               className="mt-6 w-full"
               size="lg"

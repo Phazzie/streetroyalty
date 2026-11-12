@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Header, Shell, TextButton } from "@/components/lab/chrome";
+import { pickCrowd } from "@/lib/ai/api";
+import { localCrowd } from "@/lib/ai/local";
 import { copy } from "@/lib/copy";
+import { createSingleFlight } from "@/lib/ui/single-flight";
 import { cn } from "@/lib/cn";
 import { useLab } from "@/lib/store";
 import type { Reaction } from "@/lib/types";
@@ -21,6 +24,8 @@ export function RunwayScreen() {
   const status = useLab((state) => state.status);
   const retryReaction = useLab((state) => state.retryReaction);
   const [broken, setBroken] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const flight = useRef(createSingleFlight());
   const videoUrl = draft?.videoUrl;
 
   useEffect(() => {
@@ -111,6 +116,25 @@ export function RunwayScreen() {
             })}
           </div>
         </div>
+        <Button
+          variant="ghost"
+          disabled={picking || !draft}
+          onClick={() => {
+            void flight.current(async () => {
+              setPicking(true);
+              try {
+                const result = await pickCrowd({ data: { spoken: draft?.spoken ?? "" } });
+                setReaction(result.crowd);
+              } catch {
+                setReaction(localCrowd());
+              } finally {
+                setPicking(false);
+              }
+            });
+          }}
+        >
+          Crown picks the crowd
+        </Button>
         <Button variant={mismatch || broken ? "primary" : "ghost"} disabled={busy || !draft} onClick={retryReaction}>
           {copy.tryReaction}
         </Button>

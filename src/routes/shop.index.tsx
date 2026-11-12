@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StudioShell } from "@/components/studio/shell";
@@ -13,6 +13,7 @@ import type { DesignSummary } from "@/lib/studio/models";
 export const Route = createFileRoute("/shop/")({ component: ShopPage });
 
 function ShopPage() {
+  const navigate = useNavigate();
   const [pieces, setPieces] = useState<DesignSummary[] | null>(null);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
@@ -65,6 +66,18 @@ function ShopPage() {
         />
         <Button type="submit" variant="ghost">
           Find
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={!pieces || pieces.length === 0}
+          onClick={() => {
+            if (!pieces || pieces.length === 0) return;
+            const pick = pieces[Math.floor(Math.random() * pieces.length)];
+            if (pick) void navigate({ to: "/shop/$slug", params: { slug: pick.slug } });
+          }}
+        >
+          Surprise me
         </Button>
       </form>
       {source ? <p className="mb-4 text-sm text-muted">Matched with {source === "grok" ? "the crown" : "the words you typed"}.</p> : null}

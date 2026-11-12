@@ -6,7 +6,7 @@ Street Royalty is an outfit lab and a print shop. The lab still locks a face, bu
 
 - **Studio** (`/studio`) — product, color, size, placement (front, back, sleeve when the blank allows it), text, upload, drag, scale, rotate, mockup, save, publish, cart. **Write a line** drafts print copy.
 - **Shop search** — type a product word, or **Find** to turn a vibe into catalog words.
-- **Crown** — on a look, **Ask the crown** critiques the outfit and names one thing to add.
+- **Crown** — on a look, **Ask the crown** critiques the outfit and **Name it** titles it. On the runway, **Crown picks the crowd**. On a shop piece, **Will this print?** gives placement advice. **Surprise me** opens a random piece on the rack. All of the crown buttons use Grok when `XAI_API_KEY` is set and a local answer when it is not.
 - **Board** — rebuild one piece after a confirm. Dropped pieces and saved looks can be undone for a few seconds. Tickets from each build sit on the hub.
 - **Gallery** — your saved pieces, grouped by collection.
 - **Shop** — published pieces, size picker, add to cart.

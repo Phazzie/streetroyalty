@@ -5,8 +5,8 @@ import { Composer } from "@/components/lab/mic";
 import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
 import { cn } from "@/lib/cn";
-import { critiqueOutfit } from "@/lib/ai/api";
-import { localCritique } from "@/lib/ai/local";
+import { critiqueOutfit, nameLook } from "@/lib/ai/api";
+import { localCritique, localLookName } from "@/lib/ai/local";
 import { createSingleFlight } from "@/lib/ui/single-flight";
 import { useLab } from "@/lib/store";
 
@@ -20,6 +20,7 @@ export function LookScreen() {
   const requestRunway = useLab((state) => state.requestRunway);
   const navigate = useNavigate();
   const [crown, setCrown] = useState<{ verdict: string; note: string; next: string; source: string } | null>(null);
+  const [lookName, setLookName] = useState("");
   const [asking, setAsking] = useState(false);
   const flight = useRef(createSingleFlight());
   const setStatus = useLab((state) => state.setStatus);
@@ -45,7 +46,10 @@ export function LookScreen() {
                 className={cn("absolute inset-0 h-full w-full object-contain", busy && "pending-pulse")}
               />
             </div>
-            <figcaption className="line-clamp-2 shrink-0 py-2 text-center text-sm">{draft.spoken}</figcaption>
+            <figcaption className="line-clamp-2 shrink-0 py-2 text-center text-sm">
+              {lookName ? <span className="block font-display uppercase">{lookName}</span> : null}
+              {draft.spoken}
+            </figcaption>
           </figure>
         ) : busy ? (
           <p className="pending-pulse flex flex-1 items-center justify-center text-center text-lg">{copy.puttingOn}</p>
@@ -67,7 +71,26 @@ export function LookScreen() {
           </Button>
           <Button
             variant="ghost"
-            className="col-span-2"
+            disabled={!draft || asking}
+            onClick={() => {
+              if (!draft) return;
+              void flight.current(async () => {
+                setAsking(true);
+                try {
+                  const result = await nameLook({ data: { spoken: draft.spoken } });
+                  setLookName(result.name);
+                } catch {
+                  setLookName(localLookName(draft.spoken));
+                } finally {
+                  setAsking(false);
+                }
+              });
+            }}
+          >
+            Name it
+          </Button>
+          <Button
+            variant="ghost"
             disabled={!draft || asking}
             onClick={() => {
               if (!draft) return;

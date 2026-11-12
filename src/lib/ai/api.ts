@@ -1,5 +1,18 @@
 import { createServerFn } from "@tanstack/react-start";
-import { localCritique, localLines, parseCritique, parseLines, parseTerms, searchTerms } from "@/lib/ai/local";
+import {
+  localCritique,
+  localCrowd,
+  localLines,
+  localLookName,
+  localPrintNote,
+  parseCritique,
+  parseCrowd,
+  parseLines,
+  parseLookName,
+  parsePrintNote,
+  parseTerms,
+  searchTerms,
+} from "@/lib/ai/local";
 
 export const critiqueOutfit = createServerFn({ method: "POST" })
   .validator((input: { spoken?: string } | undefined) => ({
@@ -32,6 +45,51 @@ export const suggestLines = createServerFn({ method: "POST" })
       lines: parsed.length > 0 ? parsed : fallback,
       source: parsed.length > 0 ? ("grok" as const) : ("local" as const),
     };
+  });
+
+export const nameLook = createServerFn({ method: "POST" })
+  .validator((input: { spoken?: string } | undefined) => ({
+    spoken: String(input?.spoken ?? "").slice(0, 240),
+  }))
+  .handler(async ({ data }) => {
+    const fallback = localLookName(data.spoken);
+    const { completeText } = await import("./grok.server.ts");
+    const raw = await completeText(
+      `Name this outfit in 2 or 3 words, no quotes, no punctuation. Outfit: ${data.spoken || "empty"}`,
+      24,
+    );
+    const name = raw ? parseLookName(raw) : null;
+    return { name: name ?? fallback, source: name ? ("grok" as const) : ("local" as const) };
+  });
+
+export const printNote = createServerFn({ method: "POST" })
+  .validator((input: { placement?: string; product?: string } | undefined) => ({
+    placement: String(input?.placement ?? "front").slice(0, 40),
+    product: String(input?.product ?? "piece").slice(0, 80),
+  }))
+  .handler(async ({ data }) => {
+    const fallback = localPrintNote(data.placement, data.product);
+    const { completeText } = await import("./grok.server.ts");
+    const raw = await completeText(
+      `One sentence of practical print advice for a ${data.placement} graphic on a ${data.product}. No hashtags.`,
+      80,
+    );
+    const note = raw ? parsePrintNote(raw) : null;
+    return { note: note ?? fallback, source: note ? ("grok" as const) : ("local" as const) };
+  });
+
+export const pickCrowd = createServerFn({ method: "POST" })
+  .validator((input: { spoken?: string } | undefined) => ({
+    spoken: String(input?.spoken ?? "").slice(0, 240),
+  }))
+  .handler(async ({ data }) => {
+    const { completeText } = await import("./grok.server.ts");
+    const raw = await completeText(
+      `Should the runway crowd cheer, boo, or both for this outfit? Reply with one word: cheer, boo, or both. Outfit: ${data.spoken || "unknown"}`,
+      8,
+    );
+    const crowd = raw ? parseCrowd(raw) : null;
+    return { crowd: crowd ?? localCrowd(), source: crowd ? ("grok" as const) : ("local" as const) };
   });
 
 export const vibeTerms = createServerFn({ method: "POST" })
