@@ -1,3 +1,4 @@
+import { CLIP_BYTE_CAP, declaredByteLength, readCappedBytes } from "@/lib/bounded-bytes";
 import { isCategory } from "@/lib/split-pieces";
 import { lookPrompt, piecePrompt, tweakPrompt, videoPrompt } from "@/lib/tickets";
 import type { Reaction } from "@/lib/types";
@@ -52,6 +53,30 @@ function bytesToDataUrl(bytes: Uint8Array, mime: string): string {
     binary += String.fromCharCode(...bytes.subarray(i, i + size));
   }
   return `data:${mime};base64,${btoa(binary)}`;
+}
+
+async function inlineClip(url: string): Promise<string | null> {
+  if (!url.startsWith("https://")) return null;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => undefined);
+      return null;
+    }
+    const declared = declaredByteLength(res.headers.get("content-length"));
+    if (declared === 0 || (declared !== null && declared > CLIP_BYTE_CAP)) {
+      await res.body?.cancel().catch(() => undefined);
+      return null;
+    }
+    const bytes = await readCappedBytes(res.body, CLIP_BYTE_CAP);
+    if (!bytes) return null;
+    const mime = res.headers.get("content-type")?.split(";")[0]?.trim() || "video/mp4";
+    if (!mime.startsWith("video/")) return null;
+    return bytesToDataUrl(bytes, mime);
+  } catch (error) {
+    console.error("xai clip", error);
+    return null;
+  }
 }
 
 async function imageFromPayload(json: unknown): Promise<string | null> {
@@ -201,7 +226,10 @@ export async function runPoll(requestId: string): Promise<PollOk | Fail> {
       console.error("xai poll", res.status);
       return { ok: false, kind: "missed" };
     }
-    if (json.status === "done" && json.video?.url) return { ok: true, status: "done", url: json.video.url };
+    if (json.status === "done" && json.video?.url) {
+      const inline = await inlineClip(json.video.url);
+      return { ok: true, status: "done", url: inline ?? json.video.url };
+    }
     if (json.status === "failed" || json.status === "expired") return { ok: true, status: "failed" };
     return { ok: true, status: "pending" };
   } catch (error) {

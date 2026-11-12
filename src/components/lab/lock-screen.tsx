@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Header, Shell, Status } from "@/components/lab/chrome";
 import { copy } from "@/lib/copy";
+import { cn } from "@/lib/cn";
 import { compressDataUrl, frameToDataUrl, readFileAsDataUrl } from "@/lib/images";
 import { useLab } from "@/lib/store";
-import { REQUIRED_SLOTS, SLOTS, type Slot } from "@/lib/types";
-import { cn } from "@/lib/cn";
+import { REQUIRED_SLOTS, type Slot } from "@/lib/types";
+
+const SLOT_ORDER: Slot[] = ["front", "side", "threequarter", "extra"];
 
 export function LockScreen() {
   const refs = useLab((state) => state.refs);
@@ -27,6 +29,8 @@ export function LockScreen() {
 
   const ready = REQUIRED_SLOTS.every((id) => refs.some((ref) => ref.id === id));
   const got = REQUIRED_SLOTS.filter((id) => refs.some((ref) => ref.id === id)).length;
+  const missing = REQUIRED_SLOTS.filter((id) => !refs.some((ref) => ref.id === id)).map((id) => copy.slots[id]);
+  const active = refs.find((ref) => ref.id === slot);
 
   async function openCamera() {
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -55,21 +59,27 @@ export function LockScreen() {
   async function savePhoto(dataUrl: string, target: Slot) {
     const image = await compressDataUrl(dataUrl);
     setRef({ id: target, dataUrl: image, createdAt: Date.now() });
-    const next = SLOTS.find((id) => id !== target && !useLab.getState().refs.some((ref) => ref.id === id));
+    const next = REQUIRED_SLOTS.find(
+      (id) => id !== target && !useLab.getState().refs.some((ref) => ref.id === id),
+    );
     if (next) setSlot(next);
   }
 
   function shoot() {
     const video = videoRef.current;
     if (!video) return;
-    const frame = frameToDataUrl(video);
-    if (!frame) return;
+    const frame = frameToDataUrl(video, 800, 0.72, true);
+    if (!frame) {
+      setNote(copy.cameraWait);
+      return;
+    }
+    setNote("");
     void savePhoto(frame, slot);
   }
 
   async function onFile(file: File | undefined) {
     if (!file || !file.type.startsWith("image/")) {
-      setNote(copy.missed);
+      setNote(copy.notPhoto);
       return;
     }
     try {
@@ -77,60 +87,82 @@ export function LockScreen() {
       await savePhoto(raw, slot);
       setNote("");
     } catch {
-      setNote(copy.missed);
+      setNote(copy.notPhoto);
     }
   }
 
   return (
     <Shell>
-      <Header />
-      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 py-5">
-        <p className="text-base">{copy.lockLead}</p>
-        <p className="text-sm text-muted">{copy.lockCount}</p>
-        <div className="seam overflow-hidden bg-lilac">
+      <Header title={copy.yourFace} />
+      <div className="flex min-h-0 flex-1 flex-col px-4 pt-3">
+        <p className="shrink-0 pb-2 text-sm text-muted">{copy.lockLead}</p>
+        <div className="seam relative min-h-0 flex-1 overflow-hidden bg-lilac">
           {live ? (
-            <video ref={videoRef} className="aspect-square w-full object-cover" playsInline muted autoPlay />
+            <video
+              ref={videoRef}
+              className="absolute inset-0 h-full w-full -scale-x-100 object-cover"
+              playsInline
+              muted
+              autoPlay
+              aria-label={`${copy.takePhoto}, ${copy.slots[slot]}`}
+            />
+          ) : active ? (
+            <img src={active.dataUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
           ) : (
-            <div className="flex aspect-square flex-col items-center justify-end p-3">
-              <Button className="w-full" size="lg" onClick={() => void openCamera()}>
-                {copy.openCamera}
-              </Button>
+            <div className="absolute inset-0 flex items-center justify-center px-4">
+              <p className="text-center text-muted">{copy.slots[slot]}</p>
             </div>
           )}
         </div>
-        <div className="grid grid-cols-4 gap-2">
-          {SLOTS.map((id) => {
+        <div className="grid shrink-0 grid-cols-4 gap-2 py-3">
+          {SLOT_ORDER.map((id) => {
             const photo = refs.find((ref) => ref.id === id);
+            const label = copy.slots[id];
             return (
               <button
                 key={id}
                 type="button"
                 onClick={() => setSlot(id)}
+                aria-pressed={slot === id}
+                aria-label={`${label}${id === "extra" ? `, ${copy.optional}` : ""}${photo ? ", photo added" : ", empty"}`}
                 className={cn(
-                  "overflow-hidden rounded-md border-2 text-left",
-                  slot === id ? "border-2 border-pipe" : "border-2 border-line",
+                  "overflow-hidden rounded-md border-2 bg-cream text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ink",
+                  slot === id ? "border-pipe" : "border-line",
                 )}
               >
                 {photo ? (
-                  <img src={photo.dataUrl} alt={copy.slots[id]} className="aspect-square w-full object-cover" />
+                  <img src={photo.dataUrl} alt="" className="aspect-square w-full object-cover" />
                 ) : (
-                  <span className="flex aspect-square items-end p-1.5 text-xs text-subtle">{copy.slots[id]}</span>
+                  <span className="block aspect-square bg-lilac" />
                 )}
+                <span className="block px-1 py-1 text-center text-xs font-bold text-ink">
+                  {label}
+                  {id === "extra" ? <span className="block font-medium text-muted">{copy.optional}</span> : null}
+                </span>
               </button>
             );
           })}
         </div>
+      </div>
+      <div className="safe-bottom shrink-0 border-t border-line px-4 pt-3">
         {live ? (
-          <div className="flex justify-center">
+          <div className="mb-2 flex items-center justify-center gap-3">
             <button
               type="button"
               onClick={shoot}
-              aria-label={copy.slots[slot]}
-              className="size-20 rounded-full border-4 border-fg bg-accent transition-[opacity,transform] duration-150 active:scale-[0.98]"
+              aria-label={`${copy.takePhoto}, ${copy.slots[slot]}`}
+              className="size-14 shrink-0 rounded-full border-4 border-fg bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ink"
             />
+            <p className="font-display text-sm font-bold">
+              {copy.takePhoto}: {copy.slots[slot]}
+            </p>
           </div>
-        ) : null}
-        <Button className="w-full" size="lg" variant="ghost" onClick={() => fileRef.current?.click()}>
+        ) : (
+          <Button className="mb-2 w-full" onClick={() => void openCamera()}>
+            {copy.openCamera}
+          </Button>
+        )}
+        <Button className="mb-2 w-full" variant="ghost" onClick={() => fileRef.current?.click()}>
           {copy.usePhoto}
         </Button>
         <input
@@ -138,19 +170,20 @@ export function LockScreen() {
           ref={fileRef}
           type="file"
           accept="image/*"
+          tabIndex={-1}
+          aria-hidden="true"
           className="sr-only"
           onChange={(event) => {
             void onFile(event.target.files?.[0]);
             event.target.value = "";
           }}
         />
-        <Status text={note || status} />
-        <p className="text-sm text-subtle">{copy.stay}</p>
-      </div>
-      <div className="safe-bottom border-t border-line px-3 pt-3">
-        <p className="mb-2 text-center text-sm">{got} of 3</p>
-        <Button className="w-full" size="lg" disabled={!ready} onClick={lockIn}>
-          {copy.lockedIn}
+        {note || status ? <Status text={note || status} /> : null}
+        <p className="mb-2 text-center text-sm">
+          {ready ? copy.lockCount : `${got} of 3. Still need ${missing.join(", ")}.`}
+        </p>
+        <Button className="w-full" disabled={!ready} onClick={lockIn}>
+          {copy.usePhotos}
         </Button>
       </div>
     </Shell>

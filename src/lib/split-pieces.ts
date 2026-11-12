@@ -1,4 +1,4 @@
-import { CATEGORIES, type Category, type PieceDraft, type Reaction } from "@/lib/types";
+import { CATEGORIES, type Category, type PieceDraft, type Reaction, type View } from "./types.ts";
 
 const LEX: { category: Category; words: string[] }[] = [
   {
@@ -28,7 +28,20 @@ const LEX: { category: Category; words: string[] }[] = [
   },
   {
     category: "Outer",
-    words: ["overcoat", "trench", "bomber", "parka", "blazer", "puffer", "jacket", "coat"],
+    words: [
+      "jean jacket",
+      "denim jacket",
+      "leather jacket",
+      "overcoat",
+      "cardigan",
+      "trench",
+      "bomber",
+      "parka",
+      "blazer",
+      "puffer",
+      "jacket",
+      "coat",
+    ],
   },
   {
     category: "Bottoms",
@@ -43,7 +56,8 @@ const LEX: { category: Category; words: string[] }[] = [
       "cargo",
       "slacks",
       "shorts",
-      "short",
+      "skirt",
+      "skirts",
       "jean",
       "slack",
     ],
@@ -51,10 +65,15 @@ const LEX: { category: Category; words: string[] }[] = [
   {
     category: "Tops",
     words: [
+      "tank top",
+      "crop top",
+      "tube top",
+      "polo shirt",
       "t-shirt",
       "tshirt",
       "hoodie",
       "sweater",
+      "jumper",
       "jersey",
       "blouse",
       "shirt",
@@ -111,6 +130,13 @@ function findHits(text: string): Hit[] {
     entry.words.map((word) => ({ word, category: entry.category })),
   ).sort((a, b) => b.word.length - a.word.length);
   const taken = new Array<boolean>(text.length).fill(false);
+  for (const phrase of SKIP_PHRASES) {
+    const re = new RegExp(`\\b${escapeRegExp(phrase)}\\b`, "gi");
+    for (const match of text.matchAll(re)) {
+      const index = match.index ?? 0;
+      for (let i = index; i < index + match[0].length; i += 1) taken[i] = true;
+    }
+  }
   const hits: Hit[] = [];
   for (const entry of entries) {
     const re = new RegExp(`\\b${escapeRegExp(entry.word)}\\b`, "gi");
@@ -125,6 +151,8 @@ function findHits(text: string): Hit[] {
   hits.sort((a, b) => a.index - b.index);
   return hits;
 }
+
+const SKIP_PHRASES = ["short sleeve", "short-sleeve", "boot cut", "boot-cut", "bootcut"];
 
 const SEPARATORS = [",", ";", " and ", " plus ", " tucked into ", " paired with "];
 
@@ -154,12 +182,13 @@ function boundaryBefore(text: string, matchIndex: number, prevStart: number, pre
 
 function cleanEdge(value: string): string {
   let next = value.trim();
-  for (let pass = 0; pass < 3; pass += 1) {
+  for (let pass = 0; pass < 4; pass += 1) {
     next = next
       .replace(/^[\s,;]+/, "")
       .replace(/[\s,;]+$/, "")
-      .replace(/^(and|plus|tucked into|paired with)\s+/i, "")
+      .replace(/^(and|plus|tucked into|paired with|add|also)\s+/i, "")
       .replace(/\s+(and|plus|tucked into|paired with)$/i, "")
+      .replace(/^(a|an|the)\s+/i, "")
       .trim();
   }
   return next;
@@ -191,7 +220,71 @@ export function splitPieces(transcript: string): PieceDraft[] {
     if (!text.toLowerCase().includes(spoken.toLowerCase())) continue;
     pieces.push({ category: limited[i].category, spoken });
   }
-  return pieces;
+  return mergeCompounds(text, pieces);
+}
+
+function separated(text: string, left: string, right: string): boolean {
+  const lower = text.toLowerCase();
+  const leftAt = lower.indexOf(left.toLowerCase());
+  if (leftAt < 0) return true;
+  const rightAt = lower.indexOf(right.toLowerCase(), leftAt + left.length);
+  if (rightAt < 0) return true;
+  const between = lower.slice(leftAt + left.length, rightAt);
+  return /[,;]|\band\b|\bplus\b|\bwith\b|\bpaired\b|\btucked\b/.test(between);
+}
+
+function mergeCompounds(text: string, pieces: PieceDraft[]): PieceDraft[] {
+  const merged: PieceDraft[] = [];
+  for (const piece of pieces) {
+    const prev = merged[merged.length - 1];
+    const compound = prev && prev.category === piece.category && !separated(text, prev.spoken, piece.spoken);
+    if (prev && compound) {
+      if (!prev.spoken.toLowerCase().includes(piece.spoken.toLowerCase())) {
+        prev.spoken = cleanEdge(`${prev.spoken} ${piece.spoken}`);
+      }
+      continue;
+    }
+    merged.push({ ...piece });
+  }
+  return merged;
+}
+
+const EDIT_WORDS =
+  /\b(make|shorter|longer|darker|lighter|looser|tighter|bigger|smaller|change|without|lose|less|more|tweak)\b/i;
+
+const CHATTER =
+  /^(y(es|eah|ep)|no|nah|ok(ay)?|nice|cool|wow|fire|dope|sick|good|great|perfect|thanks|thank you|slay|bet|word|lit|hard|clean|sharp|beautiful|gorgeous|love it|love this|love that|looks good|looks great|so good|so fire|i like it|i love it|hell yeah|hello|hi|hey)[.!?\s]*$/i;
+
+/** A look-screen line is a paid edit only when it asks for a change. */
+export function isLookChange(transcript: string): boolean {
+  const text = transcript.trim();
+  if (!text || CHATTER.test(text)) return false;
+  if (EDIT_WORDS.test(text)) return true;
+  return text.length >= 12;
+}
+
+export type PaidPlan =
+  | { kind: "pieces"; pieces: PieceDraft[] }
+  | { kind: "tweak" }
+  | { kind: "wear" }
+  | { kind: "runway"; reaction?: Reaction }
+  | { kind: "again" }
+  | { kind: "free" };
+
+export function paidPlan(transcript: string, view: View): PaidPlan {
+  const intent = interpret(transcript);
+  if (intent.type === "again") return { kind: "again" };
+  if (intent.type === "runway") return { kind: "runway", reaction: intent.reaction };
+  if (intent.type === "wear") return { kind: "wear" };
+  if (view === "look" && intent.type === "pieces") {
+    if (!EDIT_WORDS.test(transcript)) return { kind: "pieces", pieces: intent.pieces };
+    return { kind: "tweak" };
+  }
+  if (view === "look" && intent.type === "unclear") {
+    return isLookChange(transcript) ? { kind: "tweak" } : { kind: "free" };
+  }
+  if (intent.type === "pieces") return { kind: "pieces", pieces: intent.pieces };
+  return { kind: "free" };
 }
 
 function reactionIn(text: string): Reaction | undefined {

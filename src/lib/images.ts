@@ -1,4 +1,4 @@
-export function compressDataUrl(dataUrl: string, maxEdge = 800, quality = 0.72): Promise<string> {
+function drawDataUrl(dataUrl: string, maxEdge: number, quality: number): Promise<string> {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => {
@@ -21,6 +21,18 @@ export function compressDataUrl(dataUrl: string, maxEdge = 800, quality = 0.72):
   });
 }
 
+export async function compressDataUrl(dataUrl: string, maxEdge = 800, quality = 0.72): Promise<string> {
+  let edge = maxEdge;
+  let q = quality;
+  let result = await drawDataUrl(dataUrl, edge, q);
+  while (result.length > 1_200_000 && edge > 360) {
+    edge = Math.round(edge * 0.75);
+    q = Math.max(0.5, q - 0.1);
+    result = await drawDataUrl(dataUrl, edge, q);
+  }
+  return result;
+}
+
 export function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -30,7 +42,12 @@ export function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
-export function frameToDataUrl(video: HTMLVideoElement, maxEdge = 800, quality = 0.72): string | null {
+export function frameToDataUrl(
+  video: HTMLVideoElement,
+  maxEdge = 800,
+  quality = 0.72,
+  mirror = false,
+): string | null {
   const width = video.videoWidth;
   const height = video.videoHeight;
   if (!width || !height) return null;
@@ -40,6 +57,10 @@ export function frameToDataUrl(video: HTMLVideoElement, maxEdge = 800, quality =
   canvas.height = Math.max(1, Math.round(height * scale));
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
+  if (mirror) {
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+  }
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
   return canvas.toDataURL("image/jpeg", quality);
 }

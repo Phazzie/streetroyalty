@@ -25,6 +25,8 @@ const SCENES = [
   },
 ] as const;
 
+const STEPS = [copy.stepFace, copy.stepPieces, copy.stepWalk];
+
 function Clip({
   src,
   poster,
@@ -41,7 +43,12 @@ function Clip({
   useEffect(() => {
     const video = ref.current;
     if (!video) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     video.muted = true;
+    if (reduce) {
+      video.pause();
+      return;
+    }
     void video.play().catch(() => undefined);
   }, []);
 
@@ -55,7 +62,7 @@ function Clip({
       playsInline
       autoPlay
       loop
-      preload="auto"
+      preload="metadata"
       aria-label={label}
     />
   );
@@ -64,48 +71,18 @@ function Clip({
 export function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="mess-field flex min-h-dvh justify-center">
-      <div className="phone-frame relative flex h-dvh w-full max-w-md flex-col overflow-hidden bg-cream text-fg">
-        <div className="edge-gutter relative z-10 flex min-h-0 min-w-0 flex-1 flex-col">
-          <Marquee />
-          {children}
-        </div>
-        <Edges />
+      <div className="phone-frame safe-top relative flex h-dvh w-full max-w-lg flex-col overflow-hidden bg-cream text-fg">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
       </div>
     </div>
   );
 }
 
-function Edges() {
+export function Header({ title, action }: { title: string; action?: ReactNode }) {
   return (
-    <div className="pointer-events-none absolute inset-0 z-30" aria-hidden="true">
-      <Clip {...SCENES[0]} className="edge-clip edge-still-left" />
-      <Clip {...SCENES[1]} className="edge-clip edge-still-right" />
-    </div>
-  );
-}
-
-function Marquee() {
-  const line = "On the beam  ·  On the moon  ·  In the boat  ·  At the flyer  ·  ";
-  return (
-    <div className="mash-bar edge-b overflow-hidden text-cream">
-      <div className="marquee-track py-1.5 font-display text-xs font-bold tracking-widest uppercase">
-        <span className="px-3">{line}</span>
-        <span className="px-3" aria-hidden="true">
-          {line}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-export function Header({ action }: { action?: ReactNode }) {
-  return (
-    <header className="banner-head safe-top flex flex-col gap-2 px-4 pb-3">
-      <div>
-        <p className="font-display text-xs font-bold tracking-widest text-ink uppercase">{copy.lab}</p>
-        <p className="font-display text-2xl font-extrabold leading-none tracking-tight text-ink">{copy.title}</p>
-      </div>
-      {action ? <div className="flex flex-wrap gap-1">{action}</div> : null}
+    <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-line bg-cream px-4 py-2.5">
+      <h1 className="font-display text-2xl font-extrabold leading-none tracking-tight text-ink">{title}</h1>
+      {action ? <div className="flex flex-wrap justify-end gap-2">{action}</div> : null}
     </header>
   );
 }
@@ -121,7 +98,7 @@ export function TextButton({
     <button
       type="button"
       onClick={onClick}
-      className="h-11 rounded-full bg-cream px-3 text-sm font-bold text-ink transition-opacity duration-150 hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+      className="h-11 rounded-full border-2 border-ink bg-cream px-4 text-sm font-bold text-ink transition-opacity duration-150 hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ink"
     >
       {children}
     </button>
@@ -131,18 +108,22 @@ export function TextButton({
 export function Splash({ onEnter }: { onEnter?: () => void }) {
   return (
     <main className="mess-field flex min-h-dvh items-center justify-center text-fg">
-      <div className="phone-frame flex h-dvh w-full max-w-md flex-col overflow-hidden bg-cream">
+      <div className="phone-frame safe-top flex h-dvh w-full max-w-lg flex-col overflow-hidden bg-cream">
         <div className="grid shrink-0 grid-cols-2">
           {SCENES.map((scene) => (
-            <Clip key={scene.src} {...scene} className="h-44 w-full object-cover object-top" />
+            <Clip key={scene.src} {...scene} className="h-36 w-full object-cover object-top sm:h-44" />
           ))}
         </div>
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">
-          <p className="font-display text-3xl font-extrabold leading-none tracking-tight">{copy.title}</p>
-          <p className="italic">{copy.splashLead}</p>
-          <p>{copy.splashSteps}</p>
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-5 *:shrink-0">
+          <h1 className="font-display text-4xl font-extrabold leading-none tracking-tight">{copy.title}</h1>
+          <p className="text-lg italic">{copy.splashLead}</p>
+          <ol className="flex list-decimal flex-col gap-2 pl-5">
+            {STEPS.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
         </div>
-        <div className="safe-bottom border-t border-line px-5 pt-3">
+        <div className="safe-bottom shrink-0 border-t border-line px-5 pt-3">
           {onEnter ? (
             <Button className="w-full" size="lg" onClick={onEnter}>
               {copy.openIt}
@@ -158,7 +139,7 @@ export function Splash({ onEnter }: { onEnter?: () => void }) {
 
 export function Status({ text }: { text: string }) {
   return (
-    <p aria-live="polite" className="min-h-6 px-4 text-center text-base text-muted">
+    <p aria-live="polite" className="text-sm text-muted">
       {text}
     </p>
   );

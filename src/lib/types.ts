@@ -43,6 +43,7 @@ export type Look = {
   pieceIds: string[];
   ticketId?: string;
   videoUrl?: string;
+  videoReaction?: Reaction;
   createdAt: number;
 };
 
@@ -70,7 +71,7 @@ export type PieceDraft = {
 };
 
 export type LastJob =
-  | { kind: "pieces"; drafts: PieceDraft[]; transcript: string }
+  | { kind: "pieces"; drafts: PieceDraft[]; transcript: string; thenWear?: boolean; pieceIds?: (string | null)[] }
   | { kind: "look" }
   | { kind: "tweak"; change: string }
   | { kind: "video" };
