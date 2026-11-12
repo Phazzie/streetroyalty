@@ -66,6 +66,10 @@ Catalog, files, mockups, shipping rates, draft orders, confirmation, and webhook
 
 Orders are created with v2 `POST /v2/orders`, which leaves them in `draft`. `POST /v2/orders/{id}/confirmation` runs only after Stripe reports a paid Checkout session, or after the sandbox test payment. A bad webhook signature is rejected. Replays are ignored.
 
+## Checks
+
+`npm run ci` runs lint, typecheck, tests, and the production build. GitHub Actions calls that same script on every pull request and on `main`. A second job, `node scripts/ai-review.mjs`, asks Grok to review the diff when the repository secret `XAI_API_KEY` is set, and skips without failing when it is not. The same script is what a later Depot or Buildkite pipeline should call.
+
 ## Develop
 
 ```bash
