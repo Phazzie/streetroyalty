@@ -24,6 +24,12 @@ export function StudioShell({ current, children }: { current: string; children: 
 
   return (
     <div className="min-h-dvh overflow-x-clip bg-bg text-fg">
+      <a
+        href="#studio-main"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-accent focus:px-3 focus:py-2 focus:text-accent-fg"
+      >
+        Skip to the work
+      </a>
       <header className="sticky top-0 z-30 border-b-2 border-pipe bg-bg/95 backdrop-blur-sm">
         <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-wrap items-center gap-3 px-4 py-3">
           <Link to="/" className="font-display text-xl leading-none tracking-tight text-fg">
@@ -52,7 +58,9 @@ export function StudioShell({ current, children }: { current: string; children: 
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full min-w-0 max-w-6xl overflow-x-clip px-4 py-6">{children}</main>
+      <main id="studio-main" className="mx-auto w-full min-w-0 max-w-6xl overflow-x-clip px-4 py-6">
+        {children}
+      </main>
     </div>
   );
 }

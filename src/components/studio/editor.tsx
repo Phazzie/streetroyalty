@@ -146,6 +146,32 @@ export function Editor({ designId }: { designId: string }) {
   const atLayerLimit = layers.length >= MAX_LAYERS;
 
   useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (!active) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT")) {
+        return;
+      }
+      const step = event.shiftKey ? 0.04 : 0.015;
+      const move =
+        event.key === "ArrowLeft"
+          ? { x: Math.max(0.08, active.x - step) }
+          : event.key === "ArrowRight"
+            ? { x: Math.min(0.92, active.x + step) }
+            : event.key === "ArrowUp"
+              ? { y: Math.max(0.08, active.y - step) }
+              : event.key === "ArrowDown"
+                ? { y: Math.min(0.92, active.y + step) }
+                : null;
+      if (!move) return;
+      event.preventDefault();
+      patchLayer(active.id, move);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [active]);
+
+  useEffect(() => {
     if (!mockupUrl) return;
     const key = designVisualKey({
       productId: product?.id ?? "",
@@ -364,6 +390,8 @@ export function Editor({ designId }: { designId: string }) {
                 <img
                   src={item.imageUrl}
                   alt=""
+                  loading="lazy"
+                  decoding="async"
                   className="mb-2 aspect-square w-full object-cover"
                 />
               ) : null}
@@ -413,7 +441,7 @@ export function Editor({ designId }: { designId: string }) {
               </div>
             </div>
             <p className="mt-2 text-center text-sm text-muted">
-              Print area {area.widthIn}" × {area.heightIn}". Drag a layer. It stays inside the
+              Print area {area.widthIn}" × {area.heightIn}". Drag a layer, or use the arrow keys. It stays inside the
               dashed box.
             </p>
           </div>
@@ -553,6 +581,7 @@ export function Editor({ designId }: { designId: string }) {
                 <button
                   type="button"
                   onClick={() => setSelected(layer.id)}
+                  aria-pressed={selected === layer.id}
                   className={`chip w-full justify-start ${selected === layer.id ? "chip-on" : ""}`}
                 >
                   {layer.type === "text" ? layer.text : "Artwork"}

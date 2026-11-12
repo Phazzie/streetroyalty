@@ -78,7 +78,11 @@ function ShopPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {shown.map((piece) => (
           <Link key={piece.id} to="/shop/$slug" params={{ slug: piece.slug }} className="studio-card border-2 border-ink bg-surface p-2">
-            {piece.mockupUrl ? <img src={piece.mockupUrl} alt="" className="aspect-[4/5] w-full object-cover" /> : <div className="aspect-[4/5] bg-bg" />}
+            {piece.mockupUrl ? (
+              <img src={piece.mockupUrl} alt="" loading="lazy" decoding="async" className="aspect-[4/5] w-full object-cover" />
+            ) : (
+              <div className="aspect-[4/5] bg-bg" />
+            )}
             <p className="mt-2 font-display uppercase">{piece.title}</p>
             <p className="text-sm text-muted">{piece.productName}</p>
             <p className="font-display text-lg">{formatMoney(piece.retailCents)}</p>

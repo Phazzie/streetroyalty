@@ -74,7 +74,7 @@ export function HubScreen() {
             {looks.map((look) => (
               <div key={look.id} className="w-24 shrink-0">
                 <button type="button" onClick={() => openSaved(look.id)} className="w-full text-left" aria-label={look.spoken}>
-                  <img src={look.image} alt="" className="aspect-3/4 w-full rounded-md object-cover" />
+                  <img src={look.image} alt="" loading="lazy" decoding="async" className="aspect-3/4 w-full rounded-md object-cover" />
                 </button>
                 <button
                   type="button"

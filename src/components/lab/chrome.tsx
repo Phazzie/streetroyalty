@@ -73,7 +73,15 @@ export function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="mess-field flex min-h-dvh justify-center">
       <div className="phone-frame safe-top relative flex h-dvh w-full max-w-lg flex-col overflow-hidden bg-cream text-fg">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
+        <a
+          href="#lab-main"
+          className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-accent focus:px-3 focus:py-2 focus:text-accent-fg"
+        >
+          Skip to the work
+        </a>
+        <main id="lab-main" className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {children}
+        </main>
       </div>
     </div>
   );

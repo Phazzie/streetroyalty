@@ -50,7 +50,7 @@ function GalleryPage() {
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {pieces.map((design) => (
                 <Link key={design.id} to="/studio" search={{ design: design.id }} className="studio-card border-2 border-ink bg-surface p-2">
-                  {design.mockupUrl ? <img src={design.mockupUrl} alt="" className="aspect-square w-full object-cover" /> : <div className="aspect-square bg-bg" />}
+                  {design.mockupUrl ? <img src={design.mockupUrl} alt="" loading="lazy" decoding="async" className="aspect-square w-full object-cover" /> : <div className="aspect-square bg-bg" />}
                   <p className="mt-2 font-display text-sm uppercase">{design.title}</p>
                   <p className="text-sm text-muted">{design.status === "published" ? "On the shop" : "Draft"} · {formatMoney(design.retailCents)}</p>
                 </Link>

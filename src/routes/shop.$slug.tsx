@@ -34,7 +34,7 @@ function ProductPage() {
       {piece ? (
         <div className="grid gap-6 md:grid-cols-2">
           {piece.mockupUrl ? (
-            <img src={piece.mockupUrl} alt={piece.title} className="w-full border-2 border-ink object-contain" />
+            <img src={piece.mockupUrl} alt={piece.title} decoding="async" className="w-full border-2 border-ink object-contain" />
           ) : (
             <div className="aspect-[4/5] border-2 border-ink bg-surface" />
           )}

@@ -47,7 +47,7 @@ function CartPage() {
       <ul className="flex flex-col gap-3">
         {(lines ?? []).map((line) => (
           <li key={line.id} className="grid grid-cols-[5rem_1fr] gap-3 border-2 border-ink bg-surface p-3 sm:grid-cols-[6rem_1fr_auto]">
-            {line.mockupUrl ? <img src={line.mockupUrl} alt="" className="aspect-square w-full object-cover" /> : <div className="aspect-square bg-bg" />}
+            {line.mockupUrl ? <img src={line.mockupUrl} alt="" loading="lazy" decoding="async" className="aspect-square w-full object-cover" /> : <div className="aspect-square bg-bg" />}
             <div>
               <p className="font-display uppercase">{line.title}</p>
               <p className="text-sm text-muted">{line.variantLabel}</p>

@@ -28,7 +28,7 @@ function LoginPage() {
           <>
             <div className="mb-4 flex gap-2">
               <button type="button" className={`chip ${mode === "up" ? "chip-on" : ""}`} onClick={() => setMode("up")}>
-                Create account
+                New account
               </button>
               <button type="button" className={`chip ${mode === "in" ? "chip-on" : ""}`} onClick={() => setMode("in")}>
                 Sign in
