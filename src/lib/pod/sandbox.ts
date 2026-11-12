@@ -1,3 +1,4 @@
+import { luminance } from "../color.ts";
 import { applyMarkup } from "./money.ts";
 import type {
   CatalogPage,
@@ -278,14 +279,6 @@ export function buildMockupSvg(input: {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-function luminance(hex: string): number {
-  const raw = hex.replace("#", "");
-  if (raw.length !== 6) return 0;
-  const r = Number.parseInt(raw.slice(0, 2), 16) / 255;
-  const g = Number.parseInt(raw.slice(2, 4), 16) / 255;
-  const b = Number.parseInt(raw.slice(4, 6), 16) / 255;
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
 
 function blankImage(blank: Blank): string {
   return buildMockupSvg({

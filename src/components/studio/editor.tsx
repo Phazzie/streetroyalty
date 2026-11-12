@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Note, Panel } from "@/components/studio/shell";
 import { renderPrintFile } from "@/components/studio/print-file";
+import { luminance } from "@/lib/color";
 import { copy } from "@/lib/copy";
 import { compressDataUrl, readFileAsDataUrl } from "@/lib/images";
 import type { CatalogProduct, DesignLayer, PrintArea } from "@/lib/pod/types";
@@ -718,12 +719,6 @@ export function Editor({ designId }: { designId: string }) {
   );
 }
 
-function luminance(hex: string): number {
-  const raw = hex.replace("#", "");
-  if (raw.length !== 6) return 0;
-  const channel = (start: number) => Number.parseInt(raw.slice(start, start + 2), 16) / 255;
-  return 0.2126 * channel(0) + 0.7152 * channel(2) + 0.0722 * channel(4);
-}
 
 function GarmentHint({ type }: { type: string }) {
   const label = type.toLowerCase().includes("hat")
