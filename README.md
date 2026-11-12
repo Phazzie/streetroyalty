@@ -72,7 +72,7 @@ Orders are created with v2 `POST /v2/orders`, which leaves them in `draft`. `POS
 
 ## Checks
 
-`npm run ci` runs lint, typecheck, tests, and the production build. GitHub Actions calls that same script on every pull request and on `main`. A second job, `node scripts/ai-review.mjs`, asks Grok to review the diff when the repository secret `XAI_API_KEY` is set, and skips without failing when it is not. The same script is what a later Depot or Buildkite pipeline should call.
+`npm run ci` runs lint, typecheck, tests, and the production build. Origin runs those checks through Depot: the workflow is `.depot/workflows/ci.yml`, on the Depot runner. Connect the Depot app from the Origin codebase Apps page, then put `XAI_API_KEY` in Depot if you want the review job. That job skips when the key is missing. It comments on the Origin pull request when `PR_NUMBER` is set and the Origin CLI is signed in, and otherwise leaves the review in the log.
 
 ## Develop
 

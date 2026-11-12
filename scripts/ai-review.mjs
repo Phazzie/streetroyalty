@@ -5,7 +5,7 @@
  * adds the secret. Posts or updates one comment when GITHUB_TOKEN is present.
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 const MARKER = "<!-- street-royalty-ai-review -->";
@@ -81,15 +81,51 @@ async function askGrok(apiKey, diff) {
   return text;
 }
 
-async function publish(env, body) {
-  const token = env.GITHUB_TOKEN?.trim();
-  const repo = env.GITHUB_REPOSITORY?.trim();
+export function commentDestination(env) {
   const number = pullRequestNumber(env);
-  if (!token || !repo || !number) {
+  if (env.GITHUB_TOKEN?.trim() && env.GITHUB_REPOSITORY?.trim() && number) return "github";
+  if (number) return "origin";
+  return "stdout";
+}
+
+function publishOnOrigin(number, body) {
+  const file = execFileSync("mktemp", { encoding: "utf8" }).trim();
+  try {
+    writeFileSync(file, body);
+    execFileSync(
+      "origin",
+      ["pr", "comment", String(number), "--body-file", file, "--edit-last", "--create-if-none"],
+      { stdio: "inherit" },
+    );
+  } finally {
+    try {
+      execFileSync("rm", ["-f", file]);
+    } catch {
+      /* the temp file is only the review text */
+    }
+  }
+}
+
+async function publish(env, body) {
+  const number = pullRequestNumber(env);
+  const destination = commentDestination(env);
+  if (destination === "stdout") {
     console.log(body);
-    console.log("AI review printed locally. Set GITHUB_TOKEN, GITHUB_REPOSITORY, and PR_NUMBER to comment.");
+    console.log("AI review printed locally. Set PR_NUMBER to comment on the Origin pull request.");
     return;
   }
+  if (destination === "origin") {
+    try {
+      publishOnOrigin(number, body);
+    } catch (error) {
+      console.log(body);
+      console.error(error instanceof Error ? error.message : error);
+      console.log("Origin comment failed. The review is in the log above.");
+    }
+    return;
+  }
+  const token = env.GITHUB_TOKEN.trim();
+  const repo = env.GITHUB_REPOSITORY.trim();
   const headers = {
     Authorization: `Bearer ${token}`,
     Accept: "application/vnd.github+json",
