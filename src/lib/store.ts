@@ -106,6 +106,7 @@ function sameScreen(stage: View, next: View): View {
 }
 
 function failLine(result: { ok: boolean; kind?: string } | null): string {
+  if (result && !result.ok && result.kind === "limit") return copy.limit;
   return result && !result.ok && result.kind === "unavailable" ? copy.cantBuild : copy.missed;
 }
 

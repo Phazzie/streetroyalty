@@ -1,3 +1,4 @@
+import { artPrompt, type ArtStyleId } from "@/lib/ai/art-styles";
 import { CLIP_BYTE_CAP, declaredByteLength, readCappedBytes } from "@/lib/bounded-bytes";
 import { isCategory } from "@/lib/split-pieces";
 import { lookPrompt, piecePrompt, tweakPrompt, videoPrompt } from "@/lib/tickets";
@@ -122,6 +123,19 @@ export async function runPiece(input: { spoken: string; category: string }): Pro
   return generateImage("/v1/images/generations", {
     model: IMAGE_MODEL,
     prompt,
+    n: 1,
+    aspect_ratio: "1:1",
+    resolution: "1k",
+    quality: "low",
+    response_format: "b64_json",
+  });
+}
+
+export async function runArt(input: { idea: string; style: ArtStyleId }): Promise<ImageResult> {
+  if (!input.idea) return { ok: false, kind: "missed" };
+  return generateImage("/v1/images/generations", {
+    model: IMAGE_MODEL,
+    prompt: artPrompt(input.idea, input.style),
     n: 1,
     aspect_ratio: "1:1",
     resolution: "1k",

@@ -1,7 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { Reaction } from "@/lib/types";
 
-type Fail = { ok: false; kind: "unavailable" | "missed" };
+type Fail = { ok: false; kind: "unavailable" | "missed" | "limit" };
+
+async function overLimit(kind: "image" | "video"): Promise<boolean> {
+  const { spend } = await import("./ai/guard.server.ts");
+  return !(await spend(kind)).ok;
+}
+
+const LIMIT: Fail = { ok: false, kind: "limit" };
 
 function asDataImage(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -32,6 +39,7 @@ export const generatePiece = createServerFn({ method: "POST" })
     category: String(input?.category ?? ""),
   }))
   .handler(async ({ data }) => {
+    if (await overLimit("image")) return LIMIT;
     const { runPiece } = await import("./imagine.server.ts");
     return runPiece(data);
   });
@@ -55,6 +63,7 @@ export const generateLook = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }) => {
+    if (await overLimit("image")) return LIMIT;
     const { runLook } = await import("./imagine.server.ts");
     return runLook(data);
   });
@@ -69,6 +78,7 @@ export const startRunway = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<
     { ok: true; requestId: string; prompt: string } | Fail
   > => {
+    if (await overLimit("video")) return LIMIT;
     const { runStart } = await import("./imagine.server.ts");
     return runStart(data);
   });

@@ -2,9 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ArtEffects, ArtMaker, WornPreview } from "@/components/studio/art-tools";
 import { Note, Panel } from "@/components/studio/shell";
 import { renderPrintFile } from "@/components/studio/print-file";
 import { luminance } from "@/lib/color";
+import { fitPng, loadPixels } from "@/lib/gfx/canvas";
 import { copy } from "@/lib/copy";
 import { compressDataUrl, readFileAsDataUrl } from "@/lib/images";
 import type { CatalogProduct, DesignLayer, PrintArea } from "@/lib/pod/types";
@@ -67,6 +69,16 @@ export function Editor({ designId }: { designId: string }) {
   const [busy, setBusy] = useState(false);
   const [lines, setLines] = useState<string[]>([]);
   const flight = useRef(createSingleFlight());
+  // The untouched picture behind each image layer, so a print effect can always start over.
+  const originals = useRef(new Map<string, string>());
+
+  useEffect(() => {
+    for (const layer of layers) {
+      if (layer.type === "image" && !originals.current.has(layer.id)) {
+        originals.current.set(layer.id, layer.src);
+      }
+    }
+  }, [layers]);
 
   const chooseProduct = useCallback(async (productId: string, nextVariant?: string) => {
     const detail = await getCatalogProduct({ data: { productId } });
@@ -217,16 +229,27 @@ export function Editor({ designId }: { designId: string }) {
     }
     try {
       const raw = await readFileAsDataUrl(file);
-      const src = await compressDataUrl(raw, 1200, 0.85);
-      const id = `img-${Date.now()}`;
-      setLayers((current) => {
-        if (current.length >= MAX_LAYERS) return current;
-        return [...current, { id, type: "image" as const, src, x: 0.5, y: 0.42, scale: 0.85, rotation: 0 }];
-      });
-      setSelected(id);
+      // A PNG, WebP or GIF can carry a transparent backdrop. Keeping it as a PNG keeps that; a JPEG would fill it in.
+      const keepsAlpha = /^image\/(png|webp|gif)$/.test(file.type);
+      const src = keepsAlpha ? fitPng(await loadPixels(raw, 1000)) : await compressDataUrl(raw, 1200, 0.85);
+      addArt(src, src);
     } catch (error) {
       setNote(errorText(error));
     }
+  }
+
+  function addArt(src: string, original: string) {
+    if (layers.length >= MAX_LAYERS) {
+      setNote("Eight layers is the limit.");
+      return;
+    }
+    const id = `img-${Date.now()}`;
+    originals.current.set(id, original);
+    setLayers((current) => {
+      if (current.length >= MAX_LAYERS) return current;
+      return [...current, { id, type: "image" as const, src, x: 0.5, y: 0.42, scale: 0.85, rotation: 0 }];
+    });
+    setSelected(id);
   }
 
   async function exportPrint() {
@@ -460,6 +483,17 @@ export function Editor({ designId }: { designId: string }) {
             />
           </Panel>
         ) : null}
+        <Panel title="On a person">
+          <WornPreview
+            ready={Boolean(product && variant) && layers.length > 0 && !busy}
+            exportPrint={exportPrint}
+            colorHex={variant?.colorHex ?? "#141414"}
+            colorName={variant?.color ?? "black"}
+            productType={product?.type ?? "T-Shirt"}
+            placement={placement}
+            onNote={setNote}
+          />
+        </Panel>
       </div>
 
       <div className="flex flex-col gap-4">
@@ -575,6 +609,9 @@ export function Editor({ designId }: { designId: string }) {
               />
             </label>
           </div>
+          <div className="mb-3">
+            <ArtMaker full={atLayerLimit} onArt={addArt} onNote={setNote} />
+          </div>
           <ul className="flex flex-col gap-2">
             {layers.map((layer) => (
               <li key={layer.id}>
@@ -655,7 +692,14 @@ export function Editor({ designId }: { designId: string }) {
                     className="h-12 w-full border-2 border-ink bg-cream"
                   />
                 </>
-              ) : null}
+              ) : (
+                <ArtEffects
+                  key={active.id}
+                  original={originals.current.get(active.id) ?? active.src}
+                  onResult={(src) => patchLayer(active.id, { src })}
+                  onNote={setNote}
+                />
+              )}
               <label className="text-sm text-muted" htmlFor="layer-scale">
                 Scale
               </label>
@@ -685,6 +729,7 @@ export function Editor({ designId }: { designId: string }) {
               <Button
                 variant="ghost"
                 onClick={() => {
+                  originals.current.delete(active.id);
                   setLayers((current) => current.filter((layer) => layer.id !== active.id));
                   setSelected("");
                 }}
