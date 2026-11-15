@@ -245,3 +245,23 @@ export function darkBackdrop(source: Pixels): boolean {
   const [r, g, b] = cornerColor(source);
   return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 < 0.35;
 }
+
+/**
+ * Whether the light marks should take the ink. On a solid backdrop that is
+ * decided by the backdrop: dark ground, light drawing. On a clear backdrop there
+ * is only the drawing to go by, so pale art (a white logo) prints as itself.
+ */
+export function inkLightMarks(source: Pixels): boolean {
+  if (!clearCorners(source)) return darkBackdrop(source);
+  const { data } = source;
+  let dark = 0;
+  let weight = 0;
+  for (let at = 0; at < data.length; at += 4) {
+    const alpha = data[at + 3] / 255;
+    if (alpha < 0.1) continue;
+    const light = (0.2126 * data[at] + 0.7152 * data[at + 1] + 0.0722 * data[at + 2]) / 255;
+    dark += (1 - light) * alpha;
+    weight += alpha;
+  }
+  return weight > 0 && dark / weight < 0.35;
+}

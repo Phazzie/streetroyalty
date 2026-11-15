@@ -37,7 +37,13 @@ export const startStoreCheckout = createServerFn({ method: "POST" })
     return { lines };
   })
   .handler(async ({ data }) => {
-    const { startCheckout } = await import("./fourthwall.server.ts");
+    const { startCheckout, storefrontLive } = await import("./fourthwall.server.ts");
+    if (storefrontLive() && data.lines.length > 0) {
+      // Each live checkout creates a cart at Fourthwall, so one visitor cannot start them without end.
+      const { count } = await import("../ai/guard.server.ts");
+      const verdict = await count("checkout", { visitor: 40, global: 5000 });
+      if (!verdict.ok) throw new Error("Too many checkouts started today. Try again tomorrow.");
+    }
     return startCheckout(data.lines);
   });
 

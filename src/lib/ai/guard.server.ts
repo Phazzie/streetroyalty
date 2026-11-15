@@ -41,7 +41,7 @@ function visitorBucket(day: string): string {
   return `v:${createHash("sha256").update(`${salt}|${day}|${address}`).digest("hex").slice(0, 24)}`;
 }
 
-async function bump(day: string, bucket: string, kind: AiKind): Promise<number> {
+async function bump(day: string, bucket: string, kind: string): Promise<number> {
   const sql = await getSql();
   const rows = await sql<{ count: number }>`
     insert into ai_usage (day, bucket, kind, count) values (${day}, ${bucket}, ${kind}, 1)
@@ -51,7 +51,7 @@ async function bump(day: string, bucket: string, kind: AiKind): Promise<number> 
   return Number(rows[0]?.count ?? 1);
 }
 
-function bumpMemory(day: string, bucket: string, kind: AiKind): number {
+function bumpMemory(day: string, bucket: string, kind: string): number {
   const store = memory(day);
   const key = `${bucket}|${kind}`;
   const next = (store.counts.get(key) ?? 0) + 1;
@@ -74,7 +74,14 @@ async function sweep(day: string) {
 
 /** Records one generation. A refusal means the request must not be sent to xAI. */
 export async function spend(kind: AiKind): Promise<SpendVerdict> {
-  const cap = readLimits(process.env)[kind];
+  return count(kind, readLimits(process.env)[kind]);
+}
+
+/** The same daily counting for anything else worth bounding, such as starting a checkout. */
+export async function count(
+  kind: string,
+  cap: { visitor: number; global: number },
+): Promise<SpendVerdict> {
   const day = usageDay(new Date());
   const bucket = visitorBucket(day);
   try {

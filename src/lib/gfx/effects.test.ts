@@ -5,6 +5,7 @@ import {
   coverage,
   halftone,
   hexToRgb,
+  inkLightMarks,
   knockout,
   darkBackdrop,
   oneColor,
@@ -159,5 +160,34 @@ describe("darkBackdrop", () => {
     for (let y = 6; y < 14; y += 1)
       for (let x = 6; x < 14; x += 1) logo.data[(y * 20 + x) * 4 + 3] = 255;
     assert.equal(darkBackdrop(logo), false);
+  });
+});
+
+describe("inkLightMarks", () => {
+  function logo(color: Rgb): Pixels {
+    const art = canvas(24, 24, color);
+    for (let at = 3; at < art.data.length; at += 4) art.data[at] = 0;
+    for (let y = 6; y < 18; y += 1)
+      for (let x = 6; x < 18; x += 1) art.data[(y * 24 + x) * 4 + 3] = 255;
+    return art;
+  }
+  it("prints a white logo on a clear backdrop instead of blanking it", () => {
+    const white = logo(WHITE);
+    assert.equal(inkLightMarks(white), true);
+    assert.ok(coverage(oneColor(white, LIME, { invert: inkLightMarks(white) })) > 0.2);
+    assert.ok(coverage(halftone(white, LIME, { cell: 4, invert: inkLightMarks(white) })) > 0.15);
+  });
+  it("prints a black logo on a clear backdrop the usual way", () => {
+    const black = logo(BLACK);
+    assert.equal(inkLightMarks(black), false);
+    assert.ok(coverage(oneColor(black, LIME, { invert: inkLightMarks(black) })) > 0.2);
+  });
+  it("follows the backdrop when there is one", () => {
+    const onDark = canvas(20, 20, BLACK);
+    paint(onDark, 8, 8, 12, 12, WHITE);
+    assert.equal(inkLightMarks(onDark), true);
+    const onLight = canvas(20, 20, WHITE);
+    paint(onLight, 8, 8, 12, 12, BLACK);
+    assert.equal(inkLightMarks(onLight), false);
   });
 });

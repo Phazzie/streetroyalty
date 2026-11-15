@@ -17,27 +17,27 @@ export const CARD_HEIGHT = 1350;
 export function wrapTitle(text: string, maxChars: number, maxLines: number): string[] {
   const words = text.replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
   const lines: string[] = [];
-  let line = "";
-  let used = 0;
-  for (const word of words) {
-    const piece = word.length > maxChars ? `${word.slice(0, maxChars - 1)}…` : word;
-    const next = line ? `${line} ${piece}` : piece;
-    if (next.length <= maxChars) {
-      line = next;
-      used += 1;
+  let cut = false;
+  for (const raw of words) {
+    const word = raw.length > maxChars ? `${raw.slice(0, maxChars - 1)}…` : raw;
+    const last = lines.length - 1;
+    if (last >= 0 && `${lines[last]} ${word}`.length <= maxChars) {
+      lines[last] = `${lines[last]} ${word}`;
       continue;
     }
-    lines.push(line);
-    line = piece;
-    used += 1;
-    if (lines.length === maxLines) break;
+    if (lines.length < maxLines) {
+      lines.push(word);
+      continue;
+    }
+    cut = true;
+    break;
   }
-  if (lines.length < maxLines && line) lines.push(line);
-  if (used < words.length || lines.length > maxLines) {
-    const last = lines[Math.min(lines.length, maxLines) - 1] ?? "";
-    lines.length = Math.min(lines.length, maxLines);
-    lines[lines.length - 1] =
-      last.length >= maxChars ? `${last.slice(0, maxChars - 1)}…` : `${last}…`;
+  if (cut) {
+    const last = lines[lines.length - 1] ?? "";
+    if (!last.endsWith("…")) {
+      lines[lines.length - 1] =
+        last.length >= maxChars ? `${last.slice(0, maxChars - 1)}…` : `${last}…`;
+    }
   }
   return lines;
 }

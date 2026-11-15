@@ -60,9 +60,15 @@ export function usageDay(now: Date): string {
   return now.toISOString().slice(0, 10);
 }
 
-/** The first hop of a forwarded-for chain is the visitor; the rest are proxies. */
+/**
+ * The visitor's address. Vercel reports it in its own headers and overwrites
+ * forwarded-for, so those are trusted in that order. Behind a proxy that only
+ * appends to forwarded-for a client could vary this, which weakens the
+ * per-visitor cap; the site-wide cap still holds. With no address at all,
+ * every visitor shares one bucket, which errs toward spending less.
+ */
 export function clientAddress(headers: { get(name: string): string | null }): string {
-  const forwarded = headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const address = forwarded || headers.get("x-real-ip")?.trim() || "";
+  const first = (name: string) => headers.get(name)?.split(",")[0]?.trim() ?? "";
+  const address = first("x-vercel-forwarded-for") || first("x-real-ip") || first("x-forwarded-for");
   return /^[0-9a-f:.]{3,45}$/i.test(address) ? address.toLowerCase() : "unknown";
 }

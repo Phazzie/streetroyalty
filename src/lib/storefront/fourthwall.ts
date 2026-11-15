@@ -135,7 +135,10 @@ function kindFromName(name: string): string {
     ["sticker", "Sticker"],
     ["poster", "Poster"],
   ];
-  return words.find(([word]) => lower.includes(word))?.[1] ?? "Piece";
+  // Whole words only: "steel mug" is not a tee and "landscape poster" is not a cap.
+  const has = (word: string) =>
+    new RegExp(`(^|[^a-z])${word.replace("-", "[- ]?")}s?([^a-z]|$)`).test(lower);
+  return words.find(([word]) => has(word))?.[1] ?? "Piece";
 }
 
 export function mapFourthwallProduct(raw: unknown): StoreProduct | null {

@@ -20,6 +20,9 @@ describe("drop card text", () => {
     assert.equal(lines.length, 1);
     assert.ok(lines[0].length <= 8 && lines[0].endsWith("…"));
   });
+  it("marks the cut when the last word is the one that does not fit", () => {
+    assert.deepEqual(wrapTitle("BLACK HEAVYWEIGHT HOODIE", 16, 2), ["BLACK", "HEAVYWEIGHT…"]);
+  });
   it("returns nothing for an empty title", () => {
     assert.deepEqual(wrapTitle("   ", 10, 2), []);
   });

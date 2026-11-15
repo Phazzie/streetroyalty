@@ -5,9 +5,9 @@ import { generateArt } from "@/lib/ai/art";
 import { ART_STYLES, type ArtStyleId } from "@/lib/ai/art-styles";
 import { fitPng, garmentPreview, loadPixels, urlToDataUrl } from "@/lib/gfx/canvas";
 import {
-  darkBackdrop,
   halftone,
   hexToRgb,
+  inkLightMarks,
   knockout,
   oneColor,
   type Pixels,
@@ -139,7 +139,7 @@ export function ArtEffects({
       const cut: Pixels = knockout(pixels);
       let out = cut;
       if (effect !== "cut") {
-        const invert = darkBackdrop(pixels);
+        const invert = inkLightMarks(pixels);
         out =
           effect === "ink"
             ? oneColor(cut, hexToRgb(hex), { invert })

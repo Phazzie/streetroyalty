@@ -72,6 +72,8 @@ export function Hero() {
   const [tall, setTall] = useState<boolean | null>(null);
   const indexRef = useRef(0);
   const hover = useRef(false);
+  // True once every photo has either loaded into the stage or failed to.
+  const settled = useRef(false);
 
   useEffect(() => {
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -130,6 +132,7 @@ export function Hero() {
         ...SLIDES.map((_, at) => at).filter((at) => at !== indexRef.current),
       ];
       let started = false;
+      settled.current = false;
       for (const at of order) {
         const loaded = await stage.load(at, source(SLIDES[at]));
         if (!alive || !stage.ok) return;
@@ -146,6 +149,7 @@ export function Hero() {
           setStageSlide(at);
         }
       }
+      settled.current = true;
     })();
 
     window.addEventListener("resize", onResize);
@@ -178,8 +182,9 @@ export function Hero() {
       if (hover.current || document.hidden) return;
       const target = (indexRef.current + 1) % SLIDES.length;
       const stage = stageRef.current;
-      // Wait a beat rather than advance to a photo the stage cannot sweep to yet.
-      if (stage?.ok && !stage.has(target)) return;
+      // Wait a beat rather than advance to a photo the stage is still loading. A photo that
+      // failed to load is not waited for: the plain image shows that slide instead.
+      if (stage?.ok && !stage.has(target) && !settled.current) return;
       go(target);
     }, HOLD_MS);
     return () => window.clearInterval(timer);

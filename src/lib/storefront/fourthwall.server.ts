@@ -1,3 +1,4 @@
+import { declaredByteLength, readCappedBytes } from "../bounded-bytes.ts";
 import { demoCatalog } from "./demo.ts";
 import {
   checkoutHost,
@@ -213,11 +214,26 @@ export async function startCheckout(lines: CheckoutLine[]): Promise<CheckoutStar
 
 export type ProductPhoto = { name: string; kind: string; image?: string; path?: string };
 
+// Small enough that the data image fits in one server response.
+const PHOTO_BYTE_CAP = 3_000_000;
+const PHOTO_FRESH_MS = 10 * 60_000;
+const PHOTO_KEEP = 12;
+
+type PhotoCache = Map<string, { at: number; photo: ProductPhoto }>;
+
+function photoCache(): PhotoCache {
+  const ref = globalThis as typeof globalThis & { __srProductPhotos__?: PhotoCache };
+  ref.__srProductPhotos__ ??= new Map();
+  return ref.__srProductPhotos__;
+}
+
 /**
  * The first photo of a product, for sending a shop piece to the lab. A photo on
  * another host comes back as a data image, fetched here because the browser may
  * not read it. A photo served by this app comes back as its path for the page
- * to fetch itself. Only URLs from the catalog are ever used.
+ * to fetch itself. Only URLs from the catalog are ever used, the download stops
+ * at the size cap, and a fetched photo is kept for a while so repeat requests
+ * do not download it again.
  */
 export async function productPhoto(slug: string): Promise<ProductPhoto | null> {
   const found = await loadProduct(slug);
@@ -226,14 +242,31 @@ export async function productPhoto(slug: string): Promise<ProductPhoto | null> {
   const about = { name: found.product.name, kind: found.product.kind };
   if (url.startsWith("/") && !url.startsWith("//")) return { ...about, path: url };
   if (!url.startsWith("https://")) return null;
+  const cache = photoCache();
+  const kept = cache.get(url);
+  if (kept && Date.now() - kept.at < PHOTO_FRESH_MS) return { ...kept.photo, ...about };
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
-    if (!res.ok) return null;
     const mime = res.headers.get("content-type")?.split(";")[0]?.trim() ?? "";
-    if (!mime.startsWith("image/")) return null;
-    const bytes = new Uint8Array(await res.arrayBuffer());
-    if (bytes.byteLength === 0 || bytes.byteLength > 6_000_000) return null;
-    return { ...about, image: `data:${mime};base64,${Buffer.from(bytes).toString("base64")}` };
+    const declared = declaredByteLength(res.headers.get("content-length"));
+    if (
+      !res.ok ||
+      !mime.startsWith("image/") ||
+      declared === 0 ||
+      (declared !== null && declared > PHOTO_BYTE_CAP)
+    ) {
+      await res.body?.cancel().catch(() => undefined);
+      return null;
+    }
+    const bytes = await readCappedBytes(res.body, PHOTO_BYTE_CAP);
+    if (!bytes) return null;
+    const photo = {
+      ...about,
+      image: `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`,
+    };
+    if (cache.size >= PHOTO_KEEP) cache.delete(cache.keys().next().value ?? "");
+    cache.set(url, { at: Date.now(), photo });
+    return photo;
   } catch (error) {
     console.error("fourthwall photo", error);
     return null;

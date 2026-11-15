@@ -18,16 +18,20 @@ export function Stylist() {
   const [plan, setPlan] = useState<(OutfitPlan & { source: string }) | null>(null);
   const [thinking, setThinking] = useState(false);
   const flight = useRef(createSingleFlight());
+  const latest = useRef("");
 
   function ask() {
     const words = occasion.trim();
     if (!words) return;
+    latest.current = words;
     void flight.current(async () => {
       setThinking(true);
       try {
-        setPlan(await planOutfit({ data: { occasion: words } }));
+        const answer = await planOutfit({ data: { occasion: words } });
+        // The occasion may have been retyped while the stylist was thinking.
+        if (latest.current === words) setPlan(answer);
       } catch {
-        setPlan({ ...localPlan(words), source: "local" });
+        if (latest.current === words) setPlan({ ...localPlan(words), source: "local" });
       } finally {
         setThinking(false);
       }
@@ -56,6 +60,7 @@ export function Stylist() {
           maxLength={160}
           onChange={(event) => {
             setOccasion(event.target.value);
+            latest.current = "";
             setPlan(null);
           }}
           placeholder="A wedding in June, a first date"

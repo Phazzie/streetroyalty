@@ -25,6 +25,7 @@ export function LookScreen() {
   const [asking, setAsking] = useState(false);
   const [carding, setCarding] = useState(false);
   const flight = useRef(createSingleFlight());
+  const cardFlight = useRef(createSingleFlight());
   const setStatus = useLab((state) => state.setStatus);
 
   return (
@@ -122,7 +123,7 @@ export function LookScreen() {
             disabled={!draft || carding}
             onClick={() => {
               if (!draft) return;
-              void flight.current(async () => {
+              void cardFlight.current(async () => {
                 setCarding(true);
                 try {
                   const name = lookName || fallbackName(draft.spoken);

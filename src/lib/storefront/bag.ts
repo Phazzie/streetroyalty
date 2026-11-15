@@ -73,11 +73,15 @@ export function parseStoredBag(raw: string | null): BagLine[] {
 }
 
 const KEY = "sr-bag-v1";
+const SENT_KEY = "sr-bag-sent";
 
 type BagState = {
   lines: BagLine[];
   open: boolean;
   hydrated: boolean;
+  /** True after these lines were handed to the hosted checkout. The bag cannot know if the order went through. */
+  sent: boolean;
+  markSent: () => void;
   hydrate: () => void;
   add: (line: BagLine) => void;
   setQuantity: (variantId: string, quantity: number) => void;
@@ -94,24 +98,44 @@ function save(lines: BagLine[]) {
   }
 }
 
+function clearSent() {
+  try {
+    localStorage.removeItem(SENT_KEY);
+  } catch {
+    // Nothing to clear.
+  }
+}
+
 export const useBag = create<BagState>((set, get) => ({
   lines: [],
   open: false,
   hydrated: false,
+  sent: false,
+  markSent: () => {
+    try {
+      localStorage.setItem(SENT_KEY, "1");
+    } catch {
+      // Without storage the note simply will not be there after the trip to checkout.
+    }
+    set({ sent: true });
+  },
   hydrate: () => {
     if (get().hydrated) return;
     let lines: BagLine[] = [];
+    let sent = false;
     try {
       lines = parseStoredBag(localStorage.getItem(KEY));
+      sent = localStorage.getItem(SENT_KEY) === "1";
     } catch {
       lines = [];
     }
-    set({ lines, hydrated: true });
+    set({ lines, sent: sent && lines.length > 0, hydrated: true });
   },
   add: (line) => {
     const lines = addLine(get().lines, line);
     save(lines);
-    set({ lines, open: true });
+    clearSent();
+    set({ lines, open: true, sent: false });
   },
   setQuantity: (variantId, quantity) => {
     const lines = setLineQuantity(get().lines, variantId, quantity);
@@ -125,7 +149,8 @@ export const useBag = create<BagState>((set, get) => ({
   },
   clear: () => {
     save([]);
-    set({ lines: [] });
+    clearSent();
+    set({ lines: [], sent: false });
   },
   setOpen: (open) => set({ open }),
 }));

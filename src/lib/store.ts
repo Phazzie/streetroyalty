@@ -199,8 +199,15 @@ async function buildPieces(drafts: PieceDraft[], transcript: string, thenWear: b
   patch({ lastJob: { kind: "pieces", drafts, transcript, thenWear, pieceIds: previousIds } });
   const outcomes: (string | null)[] = [];
   let missed = 0;
+  let lastFail: { ok: boolean; kind?: string } | null = null;
   for (const draft of drafts) {
     if (!alive(my)) return;
+    // Past the daily limit every further piece would be refused too, so stop asking.
+    if (lastFail?.kind === "limit") {
+      missed += 1;
+      outcomes.push(null);
+      continue;
+    }
     const ticketId = nextId("GEN");
     let result: Awaited<ReturnType<typeof generatePiece>> | null = null;
     try {
@@ -211,6 +218,7 @@ async function buildPieces(drafts: PieceDraft[], transcript: string, thenWear: b
     }
     if (!alive(my)) return;
     if (!result || !result.ok) {
+      lastFail = result;
       missed += 1;
       outcomes.push(null);
       continue;
@@ -254,12 +262,13 @@ async function buildPieces(drafts: PieceDraft[], transcript: string, thenWear: b
   }
   patch({ lastJob: { kind: "pieces", drafts, transcript, thenWear, pieceIds: settled.nextIds } });
   if (!settled.nextIds.some(Boolean)) {
-    noteStatus(copy.missed, copy.missed);
+    const line = failLine(lastFail);
+    noteStatus(line, line);
     finish(my);
     return;
   }
   if (!thenWear) {
-    const done = missed ? copy.partial : copy.onBoard;
+    const done = lastFail?.kind === "limit" ? copy.limit : missed ? copy.partial : copy.onBoard;
     noteStatus(done, done);
     patch({ view: sameScreen(started, "board") });
     finish(my);

@@ -45,6 +45,10 @@ describe("generation limits", () => {
       "203.0.113.9",
     );
     assert.equal(clientAddress(headers({ "x-real-ip": "2001:DB8::1" })), "2001:db8::1");
+    assert.equal(
+      clientAddress(headers({ "x-forwarded-for": "198.51.100.7", "x-real-ip": "203.0.113.9" })),
+      "203.0.113.9",
+    );
     assert.equal(clientAddress(headers({ "x-forwarded-for": "<script>" })), "unknown");
     assert.equal(clientAddress(headers({})), "unknown");
   });

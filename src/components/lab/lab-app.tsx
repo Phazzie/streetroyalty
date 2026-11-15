@@ -20,6 +20,14 @@ export function LabApp({ wear }: { wear?: string }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const worn = useRef("");
+  const here = useRef(true);
+
+  useEffect(() => {
+    here.current = true;
+    return () => {
+      here.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     void hydrate();
@@ -42,7 +50,10 @@ export function LabApp({ wear }: { wear?: string }) {
         else useLab.getState().setStatus("That piece did not come over from the shop.");
       })
       .catch(() => useLab.getState().setStatus("That piece did not come over from the shop."))
-      .finally(() => void navigate({ to: "/lab", search: {}, replace: true }));
+      .finally(() => {
+        // Tidy the address only if the visitor is still in the lab.
+        if (here.current) void navigate({ to: "/lab", search: {}, replace: true });
+      });
   }, [wear, ready, locked, navigate]);
 
   useEffect(() => {

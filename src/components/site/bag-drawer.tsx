@@ -15,6 +15,9 @@ export function BagDrawer() {
   const lines = useBag((state) => state.lines);
   const setQuantity = useBag((state) => state.setQuantity);
   const remove = useBag((state) => state.remove);
+  const clear = useBag((state) => state.clear);
+  const sent = useBag((state) => state.sent);
+  const markSent = useBag((state) => state.markSent);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const flight = useRef(createSingleFlight());
@@ -31,6 +34,8 @@ export function BagDrawer() {
           },
         });
         if (result.mode === "fourthwall") {
+          // The bag is kept in case checkout is abandoned, and marked so it can offer to clear itself.
+          markSent();
           window.location.href = result.url;
           return;
         }
@@ -156,6 +161,18 @@ export function BagDrawer() {
                 ))}
               </ul>
               <div className="safe-bottom border-t border-line px-5 pt-4">
+                {sent ? (
+                  <p className="mb-3 flex flex-wrap items-center justify-between gap-2 border-2 border-ink bg-surface px-3 py-2 text-sm">
+                    <span>You took these to checkout. Already bought them?</span>
+                    <button
+                      type="button"
+                      className="min-h-10 font-semibold underline underline-offset-4"
+                      onClick={clear}
+                    >
+                      Clear the bag
+                    </button>
+                  </p>
+                ) : null}
                 <div className="flex items-baseline justify-between">
                   <p className="eyebrow text-muted">Subtotal</p>
                   <p className="font-display text-2xl">{formatMoney(bagSubtotalCents(lines))}</p>

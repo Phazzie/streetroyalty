@@ -119,6 +119,15 @@ describe("mapFourthwallProduct", () => {
     assert.equal(product.images[0].url, "https://cdn.example/a-t.png");
     assert.deepEqual(product.description, ["Heavy fleece.", "Runs big & warm."]);
   });
+  it("names the kind from whole words in the title", () => {
+    const kind = (name: string) => mapFourthwallProduct(rawProduct({ name }))?.kind;
+    assert.equal(kind("Steel Mug"), "Cup");
+    assert.equal(kind("Landscape Poster"), "Poster");
+    assert.equal(kind("Crown T-Shirt"), "Tee");
+    assert.equal(kind("Night Tees"), "Tee");
+    assert.equal(kind("Heavy Sweatpants"), "Jogger");
+    assert.equal(kind("Mystery Box"), "Piece");
+  });
   it("marks a product sold out when the shop says so or nothing is in stock", () => {
     assert.equal(mapFourthwallProduct(rawProduct({ state: { type: "SOLD_OUT" } }))?.soldOut, true);
     const none = rawProduct();
