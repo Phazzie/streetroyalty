@@ -92,9 +92,12 @@ export function Header({ title, action }: { title: string; action?: ReactNode })
     <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-line bg-cream px-4 py-2.5">
       <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
         <h1 className="font-display text-2xl font-extrabold leading-none tracking-tight text-ink">{title}</h1>
-        <nav className="flex gap-3 text-sm font-bold" aria-label="Site">
-          <Link to="/" className="text-ink">
-            Home
+        <nav className="flex items-center gap-3 text-sm font-bold" aria-label="Site">
+          <Link to="/" aria-label="Home" className="grid h-8 w-8 place-items-center text-accent">
+            <svg viewBox="0 0 32 22" className="h-4 w-auto" aria-hidden="true" fill="currentColor">
+              <path d="M2 18.5 5.4 5.2l5.2 6.3L16 1l5.4 10.5 5.2-6.3L30 18.5Z" />
+              <rect x="2" y="19.6" width="28" height="2.4" rx="0.5" />
+            </svg>
           </Link>
           <Link to="/studio" className="text-accent">
             Studio
