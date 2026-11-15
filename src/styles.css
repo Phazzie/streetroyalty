@@ -373,19 +373,19 @@
   box-shadow: 6px 6px 0 var(--color-pipe);
 }
 
-/* Scroll reveal. Elements start settled when motion is reduced or script is off. */
-.reveal {
+/* Scroll reveal. A block is only hidden once script has marked it as waiting below the fold. */
+.reveal[data-shown="false"] {
   opacity: 0;
   transform: translateY(1.75rem);
-  transition:
-    opacity 700ms var(--ease-out-expo),
-    transform 900ms var(--ease-out-expo);
-  transition-delay: var(--reveal-delay, 0ms);
 }
 
 .reveal[data-shown="true"] {
   opacity: 1;
   transform: none;
+  transition:
+    opacity 700ms var(--ease-out-expo),
+    transform 900ms var(--ease-out-expo);
+  transition-delay: var(--reveal-delay, 0ms);
 }
 
 /* The padding keeps the italic overhang inside the clip box; the margin gives the space back. */
@@ -490,7 +490,7 @@ input[type="range"] {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .reveal {
+  .reveal[data-shown] {
     opacity: 1;
     transform: none;
     transition: none;

@@ -23,9 +23,15 @@ const PAGE_SIZE = 50;
 const MAX_PAGES = 4;
 const MAX_COLLECTIONS = 8;
 
-type Cached = { at: number; catalog: StoreCatalog; shop: unknown };
+const RETRY_MS = 20_000;
 
-const globalRef = globalThis as typeof globalThis & { __srStorefront__?: Cached };
+type Cached = { at: number; catalog: StoreCatalog; shop: unknown };
+type Failure = { at: number; refused: boolean };
+
+const globalRef = globalThis as typeof globalThis & {
+  __srStorefront__?: Cached;
+  __srStorefrontDown__?: Failure;
+};
 
 function token(): string | undefined {
   const value = process.env.FOURTHWALL_STOREFRONT_TOKEN?.trim();
@@ -66,7 +72,8 @@ async function call(
   }
 }
 
-async function allProducts(collection: string, currency: string): Promise<StoreProduct[] | null> {
+/** The products of a collection, or the HTTP status that stopped the first page from loading. */
+async function allProducts(collection: string, currency: string): Promise<StoreProduct[] | number> {
   const products: StoreProduct[] = [];
   for (let page = 0; page < MAX_PAGES; page += 1) {
     const res = await call(`/collections/${encodeURIComponent(collection)}/products`, {
@@ -74,7 +81,7 @@ async function allProducts(collection: string, currency: string): Promise<StoreP
       page: String(page),
       size: String(PAGE_SIZE),
     });
-    if (res.status !== 200) return page === 0 ? null : products;
+    if (res.status !== 200) return page === 0 ? res.status : products;
     const mapped = mapFourthwallProducts(res.json);
     products.push(...mapped.products);
     if (!mapped.hasNextPage) break;
@@ -82,14 +89,16 @@ async function allProducts(collection: string, currency: string): Promise<StoreP
   return products;
 }
 
-async function fetchLive(): Promise<Cached | null> {
+async function fetchLive(): Promise<Cached | Failure> {
   const currency = "USD";
   const [shop, collections, products] = await Promise.all([
     call("/shop", {}),
     call("/collections", { size: "50" }),
     allProducts("all", currency),
   ]);
-  if (products === null) return null;
+  if (typeof products === "number") {
+    return { at: Date.now(), refused: products === 401 || products === 403 };
+  }
   const named =
     collections.status === 200
       ? mapFourthwallCollections(collections.json).slice(0, MAX_COLLECTIONS)
@@ -98,7 +107,9 @@ async function fetchLive(): Promise<Cached | null> {
     named.map((collection) => allProducts(collection.slug, currency)),
   );
   const tagged = products.map((product) => {
-    const index = members.findIndex((list) => list?.some((item) => item.slug === product.slug));
+    const index = members.findIndex(
+      (list) => Array.isArray(list) && list.some((item) => item.slug === product.slug),
+    );
     return index >= 0 ? { ...product, collection: named[index].slug } : product;
   });
   const used = named.filter((collection) =>
@@ -127,11 +138,16 @@ async function fetchLive(): Promise<Cached | null> {
 async function live(): Promise<Cached | null> {
   const cached = globalRef.__srStorefront__;
   if (cached && Date.now() - cached.at < FRESH_MS) return cached;
+  // After a failure, wait a little before asking again, so a broken shop is not hit on every page view.
+  const down = globalRef.__srStorefrontDown__;
+  if (down && Date.now() - down.at < RETRY_MS) return cached ?? null;
   const fresh = await fetchLive();
-  if (fresh) {
+  if ("catalog" in fresh) {
     globalRef.__srStorefront__ = fresh;
+    globalRef.__srStorefrontDown__ = undefined;
     return fresh;
   }
+  globalRef.__srStorefrontDown__ = fresh;
   // A failed refresh keeps serving the last good shelf rather than an empty shop.
   return cached ?? null;
 }
@@ -146,7 +162,9 @@ export async function loadCatalog(): Promise<StoreCatalog> {
     currency: "USD",
     collections: [],
     products: [],
-    notice: "The shop did not answer. Try again in a minute.",
+    notice: globalRef.__srStorefrontDown__?.refused
+      ? "The shop's Fourthwall token was refused. Check FOURTHWALL_STOREFRONT_TOKEN."
+      : "The shop did not answer. Try again in a minute.",
   };
 }
 

@@ -10,6 +10,7 @@ import { formatMoney } from "@/lib/pod/money";
 import { getStoreProduct } from "@/lib/storefront/api";
 import { useBag } from "@/lib/storefront/bag";
 import { defaultColor, pickVariant, sizeAvailable } from "@/lib/storefront/browse";
+import type { StoreProduct, StoreSource } from "@/lib/storefront/types";
 import { shopPiece } from "@/lib/studio/api";
 
 export const Route = createFileRoute("/shop/$slug")({
@@ -49,7 +50,20 @@ function MissingProduct() {
 }
 
 function ProductPage() {
-  const { product, pairs, source } = Route.useLoaderData();
+  const data = Route.useLoaderData();
+  // Keyed by product, so the size and photo picked on one piece do not carry over to the next.
+  return <ProductView key={data.product.id} {...data} />;
+}
+
+function ProductView({
+  product,
+  pairs,
+  source,
+}: {
+  product: StoreProduct;
+  pairs: StoreProduct[];
+  source: StoreSource;
+}) {
   const add = useBag((state) => state.add);
   const [shot, setShot] = useState(0);
   const [color, setColor] = useState(() => defaultColor(product));
