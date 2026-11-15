@@ -1,8 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { LabApp } from "@/components/lab/lab-app";
+import { HomePage } from "@/components/site/home";
+import { getStorefront } from "@/lib/storefront/api";
 
-export const Route = createFileRoute("/")({ component: Home });
+export const Route = createFileRoute("/")({
+  loader: () => getStorefront(),
+  component: Home,
+});
 
 function Home() {
-  return <LabApp />;
+  const catalog = Route.useLoaderData();
+  return <HomePage catalog={catalog} />;
 }

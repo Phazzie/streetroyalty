@@ -328,7 +328,7 @@ export function Editor({ designId }: { designId: string }) {
       setSavedId(saved.id);
       await publishPiece({ data: { designId: saved.id } });
       setNote("On the shop rack.");
-      void navigate({ to: "/shop" });
+      void navigate({ to: "/rack" });
     } catch (error) {
       setNote(errorText(error));
     } finally {

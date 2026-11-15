@@ -1,14 +1,15 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { BagDrawer } from "@/components/site/bag-drawer";
+import { SiteFooter, SiteHeader } from "@/components/site/shell";
 import { SignedOut, UserButton } from "@/lib/auth/gates";
 import { getStudioConfig } from "@/lib/studio/api";
 
 const LINKS = [
-  { to: "/", label: "Lab", tone: "" },
   { to: "/studio", label: "Studio", tone: "chip-pink" },
   { to: "/gallery", label: "Gallery", tone: "chip-violet" },
-  { to: "/shop", label: "Shop", tone: "chip-orange" },
+  { to: "/rack", label: "Rack", tone: "chip-orange" },
   { to: "/cart", label: "Cart", tone: "chip-blue" },
   { to: "/orders", label: "Orders", tone: "" },
 ] as const;
@@ -23,18 +24,16 @@ export function StudioShell({ current, children }: { current: string; children: 
   }, []);
 
   return (
-    <div className="min-h-dvh overflow-x-clip bg-bg text-fg">
+    <div className="night flex min-h-dvh flex-col overflow-x-clip">
       <a
         href="#studio-main"
-        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-accent focus:px-3 focus:py-2 focus:text-accent-fg"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-accent focus:px-3 focus:py-2 focus:text-accent-fg"
       >
         Skip to the work
       </a>
-      <header className="sticky top-0 z-30 border-b-2 border-pipe bg-bg/95 backdrop-blur-sm">
+      <SiteHeader />
+      <div className="border-b-2 border-pipe bg-bg">
         <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-wrap items-center gap-3 px-4 py-3">
-          <Link to="/" className="font-display text-xl leading-none tracking-tight text-fg">
-            STREET ROYALTY
-          </Link>
           <span className="tag">{mode === "live" ? "Live print" : "Sandbox"}</span>
           <nav className="flex flex-wrap gap-2" aria-label="Studio">
             {LINKS.map((link) => (
@@ -57,15 +56,28 @@ export function StudioShell({ current, children }: { current: string; children: 
             </SignedOut>
           </div>
         </div>
-      </header>
-      <main id="studio-main" className="mx-auto w-full min-w-0 max-w-6xl overflow-x-clip px-4 py-6">
+      </div>
+      <main
+        id="studio-main"
+        className="mx-auto w-full min-w-0 max-w-6xl flex-1 overflow-x-clip px-4 py-6"
+      >
         {children}
       </main>
+      <SiteFooter />
+      <BagDrawer />
     </div>
   );
 }
 
-export function Panel({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
+export function Panel({
+  title,
+  children,
+  action,
+}: {
+  title: string;
+  children: ReactNode;
+  action?: ReactNode;
+}) {
   return (
     <section className="studio-card border-2 border-ink bg-surface p-4">
       <div className="mb-3 flex items-center justify-between gap-3">

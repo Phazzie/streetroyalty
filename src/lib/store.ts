@@ -581,6 +581,44 @@ function runIntent(intent: Intent, view: View, text: string) {
   useLab.setState({ status: copy.unclear });
 }
 
+const SHOP_KINDS: Record<string, Category> = {
+  hoodie: "Tops",
+  tee: "Tops",
+  crewneck: "Tops",
+  "long sleeve": "Tops",
+  jogger: "Bottoms",
+  cap: "Hats",
+  beanie: "Hats",
+};
+
+/** Puts a shop piece on the board, selected, so it can be worn like any built piece. */
+export async function wearShopPiece(input: { slug: string; name: string; kind: string; image: string }) {
+  const source = `shop:${input.slug}`;
+  const state = useLab.getState();
+  const existing = state.pieces.find((piece) => piece.sourceTranscript === source);
+  if (existing) {
+    patch({
+      pieces: state.pieces.map((piece) => (piece.id === existing.id ? { ...piece, selected: true } : piece)),
+      view: "board",
+    });
+    useLab.setState({ status: `${input.name} is on the board. Put it on you.` });
+    return;
+  }
+  const image = await shrink(input.image);
+  const piece: Piece = {
+    id: nextId("piece"),
+    category: SHOP_KINDS[input.kind.toLowerCase()] ?? "Accessories",
+    spoken: input.name,
+    sourceTranscript: source,
+    image,
+    selected: true,
+    ticketId: "",
+    createdAt: Date.now(),
+  };
+  patch({ pieces: [piece, ...useLab.getState().pieces].slice(0, 30), view: "board" });
+  useLab.setState({ status: `${input.name} is on the board. Put it on you.` });
+}
+
 export async function hydrate() {
   if (hydrated) return;
   hydrated = true;

@@ -13,10 +13,14 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as GalleryRouteImport } from './routes/gallery'
+import { Route as LabRouteImport } from './routes/lab'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OrdersRouteImport } from './routes/orders'
+import { Route as RackRouteImport } from './routes/rack'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as StudioRouteImport } from './routes/studio'
+import { Route as RackIndexRouteImport } from './routes/rack.index'
+import { Route as RackSlugRouteImport } from './routes/rack.$slug'
 import { Route as ShopIndexRouteImport } from './routes/shop.index'
 import { Route as ShopSlugRouteImport } from './routes/shop.$slug'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -44,6 +48,11 @@ const GalleryRoute = GalleryRouteImport.update({
   path: '/gallery',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LabRoute = LabRouteImport.update({
+  id: '/lab',
+  path: '/lab',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -52,6 +61,11 @@ const LoginRoute = LoginRouteImport.update({
 const OrdersRoute = OrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RackRoute = RackRouteImport.update({
+  id: '/rack',
+  path: '/rack',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShopRoute = ShopRouteImport.update({
@@ -63,6 +77,16 @@ const StudioRoute = StudioRouteImport.update({
   id: '/studio',
   path: '/studio',
   getParentRoute: () => rootRouteImport,
+} as any)
+const RackIndexRoute = RackIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => RackRoute,
+} as any)
+const RackSlugRoute = RackSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => RackRoute,
 } as any)
 const ShopIndexRoute = ShopIndexRouteImport.update({
   id: '/',
@@ -100,11 +124,15 @@ export interface FileRoutesByFullPath {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/gallery': typeof GalleryRoute
+  '/lab': typeof LabRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
+  '/rack': typeof RackRouteWithChildren
   '/shop': typeof ShopRouteWithChildren
   '/studio': typeof StudioRoute
+  '/rack/$slug': typeof RackSlugRoute
   '/shop/$slug': typeof ShopSlugRoute
+  '/rack/': typeof RackIndexRoute
   '/shop/': typeof ShopIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/print-files/$id': typeof ApiPrintFilesIdRoute
@@ -116,10 +144,13 @@ export interface FileRoutesByTo {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/gallery': typeof GalleryRoute
+  '/lab': typeof LabRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
   '/studio': typeof StudioRoute
+  '/rack/$slug': typeof RackSlugRoute
   '/shop/$slug': typeof ShopSlugRoute
+  '/rack': typeof RackIndexRoute
   '/shop': typeof ShopIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/print-files/$id': typeof ApiPrintFilesIdRoute
@@ -132,11 +163,15 @@ export interface FileRoutesById {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/gallery': typeof GalleryRoute
+  '/lab': typeof LabRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
+  '/rack': typeof RackRouteWithChildren
   '/shop': typeof ShopRouteWithChildren
   '/studio': typeof StudioRoute
+  '/rack/$slug': typeof RackSlugRoute
   '/shop/$slug': typeof ShopSlugRoute
+  '/rack/': typeof RackIndexRoute
   '/shop/': typeof ShopIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/print-files/$id': typeof ApiPrintFilesIdRoute
@@ -150,11 +185,15 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/gallery'
+    | '/lab'
     | '/login'
     | '/orders'
+    | '/rack'
     | '/shop'
     | '/studio'
+    | '/rack/$slug'
     | '/shop/$slug'
+    | '/rack/'
     | '/shop/'
     | '/api/auth/$'
     | '/api/print-files/$id'
@@ -166,10 +205,13 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/gallery'
+    | '/lab'
     | '/login'
     | '/orders'
     | '/studio'
+    | '/rack/$slug'
     | '/shop/$slug'
+    | '/rack'
     | '/shop'
     | '/api/auth/$'
     | '/api/print-files/$id'
@@ -181,11 +223,15 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/gallery'
+    | '/lab'
     | '/login'
     | '/orders'
+    | '/rack'
     | '/shop'
     | '/studio'
+    | '/rack/$slug'
     | '/shop/$slug'
+    | '/rack/'
     | '/shop/'
     | '/api/auth/$'
     | '/api/print-files/$id'
@@ -198,8 +244,10 @@ export interface RootRouteChildren {
   CartRoute: typeof CartRoute
   CheckoutRoute: typeof CheckoutRoute
   GalleryRoute: typeof GalleryRoute
+  LabRoute: typeof LabRoute
   LoginRoute: typeof LoginRoute
   OrdersRoute: typeof OrdersRoute
+  RackRoute: typeof RackRouteWithChildren
   ShopRoute: typeof ShopRouteWithChildren
   StudioRoute: typeof StudioRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -238,6 +286,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GalleryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lab': {
+      id: '/lab'
+      path: '/lab'
+      fullPath: '/lab'
+      preLoaderRoute: typeof LabRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -250,6 +305,13 @@ declare module '@tanstack/react-router' {
       path: '/orders'
       fullPath: '/orders'
       preLoaderRoute: typeof OrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rack': {
+      id: '/rack'
+      path: '/rack'
+      fullPath: '/rack'
+      preLoaderRoute: typeof RackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/shop': {
@@ -265,6 +327,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/studio'
       preLoaderRoute: typeof StudioRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/rack/': {
+      id: '/rack/'
+      path: '/'
+      fullPath: '/rack/'
+      preLoaderRoute: typeof RackIndexRouteImport
+      parentRoute: typeof RackRoute
+    }
+    '/rack/$slug': {
+      id: '/rack/$slug'
+      path: '/$slug'
+      fullPath: '/rack/$slug'
+      preLoaderRoute: typeof RackSlugRouteImport
+      parentRoute: typeof RackRoute
     }
     '/shop/': {
       id: '/shop/'
@@ -311,6 +387,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface RackRouteChildren {
+  RackSlugRoute: typeof RackSlugRoute
+  RackIndexRoute: typeof RackIndexRoute
+}
+
+const RackRouteChildren: RackRouteChildren = {
+  RackSlugRoute: RackSlugRoute,
+  RackIndexRoute: RackIndexRoute,
+}
+
+const RackRouteWithChildren = RackRoute._addFileChildren(RackRouteChildren)
+
 interface ShopRouteChildren {
   ShopSlugRoute: typeof ShopSlugRoute
   ShopIndexRoute: typeof ShopIndexRoute
@@ -328,8 +416,10 @@ const rootRouteChildren: RootRouteChildren = {
   CartRoute: CartRoute,
   CheckoutRoute: CheckoutRoute,
   GalleryRoute: GalleryRoute,
+  LabRoute: LabRoute,
   LoginRoute: LoginRoute,
   OrdersRoute: OrdersRoute,
+  RackRoute: RackRouteWithChildren,
   ShopRoute: ShopRouteWithChildren,
   StudioRoute: StudioRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
