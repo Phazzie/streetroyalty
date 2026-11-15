@@ -13,6 +13,7 @@ import {
   parseTerms,
   searchTerms,
 } from "@/lib/ai/local";
+import { localPlan, parsePlan, planPrompt } from "@/lib/ai/stylist";
 
 export const critiqueOutfit = createServerFn({ method: "POST" })
   .validator((input: { spoken?: string } | undefined) => ({
@@ -109,4 +110,20 @@ export const vibeTerms = createServerFn({ method: "POST" })
       terms: parsed.length > 0 ? parsed : fallback,
       source: parsed.length > 0 ? ("grok" as const) : ("local" as const),
     };
+  });
+
+/** One outfit for an occasion: a few named pieces and a line on why. Builds nothing by itself. */
+export const planOutfit = createServerFn({ method: "POST" })
+  .validator((input: { occasion?: string } | undefined) => ({
+    occasion: String(input?.occasion ?? "")
+      .trim()
+      .slice(0, 160),
+  }))
+  .handler(async ({ data }) => {
+    const fallback = localPlan(data.occasion);
+    if (!data.occasion) return { ...fallback, source: "local" as const };
+    const { guardedText } = await import("./grok.server.ts");
+    const raw = await guardedText(planPrompt(data.occasion), 260);
+    const parsed = raw ? parsePlan(raw) : null;
+    return { ...(parsed ?? fallback), source: parsed ? ("grok" as const) : ("local" as const) };
   });

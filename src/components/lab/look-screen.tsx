@@ -7,6 +7,7 @@ import { copy } from "@/lib/copy";
 import { cn } from "@/lib/cn";
 import { critiqueOutfit, nameLook } from "@/lib/ai/api";
 import { localCritique, localLookName } from "@/lib/ai/local";
+import { fallbackName, renderDropCard, shareDropCard } from "@/lib/lab/drop-card";
 import { createSingleFlight } from "@/lib/ui/single-flight";
 import { useLab } from "@/lib/store";
 
@@ -22,6 +23,7 @@ export function LookScreen() {
   const [crown, setCrown] = useState<{ verdict: string; note: string; next: string; source: string } | null>(null);
   const [lookName, setLookName] = useState("");
   const [asking, setAsking] = useState(false);
+  const [carding, setCarding] = useState(false);
   const flight = useRef(createSingleFlight());
   const setStatus = useLab((state) => state.setStatus);
 
@@ -117,7 +119,33 @@ export function LookScreen() {
           ) : null}
           <Button
             variant="ghost"
-            className="col-span-2"
+            disabled={!draft || carding}
+            onClick={() => {
+              if (!draft) return;
+              void flight.current(async () => {
+                setCarding(true);
+                try {
+                  const name = lookName || fallbackName(draft.spoken);
+                  const blob = await renderDropCard({
+                    image: draft.image,
+                    name,
+                    pieces: draft.spoken,
+                    verdict: crown?.verdict,
+                  });
+                  const how = await shareDropCard(blob, name);
+                  setStatus(how === "shared" ? "Card's out." : "Card saved to your downloads.");
+                } catch (reason: unknown) {
+                  setStatus(reason instanceof Error ? reason.message : "The card could not be made.");
+                } finally {
+                  setCarding(false);
+                }
+              });
+            }}
+          >
+            {carding ? "Making it" : "Drop card"}
+          </Button>
+          <Button
+            variant="ghost"
             disabled={!draft}
             onClick={() => {
               if (!draft) return;

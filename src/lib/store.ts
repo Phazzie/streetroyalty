@@ -15,11 +15,12 @@ import type {
   Piece,
   PieceDraft,
   Reaction,
+  Scene,
   Slot,
   Ticket,
   View,
 } from "@/lib/types";
-import { REQUIRED_SLOTS } from "@/lib/types";
+import { REQUIRED_SLOTS, SCENES } from "@/lib/types";
 import { hush, speak } from "@/lib/voice";
 
 type Persisted = {
@@ -31,6 +32,7 @@ type Persisted = {
   view: View;
   draft: Look | null;
   reaction: Reaction;
+  scene: Scene;
   lastJob: LastJob | null;
 };
 
@@ -46,6 +48,8 @@ type LabState = Persisted & {
   setStatus: (status: string) => void;
   setView: (view: View) => void;
   setReaction: (reaction: Reaction) => void;
+  setScene: (scene: Scene) => void;
+  buildPlan: (drafts: PieceDraft[], occasion: string) => void;
   setRef: (ref: CharacterRef) => void;
   togglePiece: (id: string) => void;
   dropPiece: (id: string) => void;
@@ -87,6 +91,7 @@ function snapshot(state: LabState): Persisted {
     view: state.view,
     draft: state.draft,
     reaction: state.reaction,
+    scene: state.scene,
     lastJob: state.lastJob,
   };
 }
@@ -392,6 +397,7 @@ async function walk(my = begin(), again = false) {
     return;
   }
   const reaction = useLab.getState().reaction;
+  const scene = useLab.getState().scene;
   noteStatus(copy.walking, copy.walking);
   patch({ lastJob: { kind: "video" }, view: "runway" });
   const stage: View = "runway";
@@ -404,6 +410,7 @@ async function walk(my = begin(), again = false) {
         faceImage: faces()[0],
         spoken: draft.spoken,
         reaction,
+        scene,
       },
     });
   } catch (error) {
@@ -640,6 +647,7 @@ export async function hydrate() {
       seq: data.seq ?? 0,
       draft: data.draft ?? null,
       reaction: data.reaction ?? "both",
+      scene: SCENES.includes(data.scene) ? data.scene : "runway",
       lastJob: data.lastJob ?? null,
       view,
       ready: true,
@@ -661,6 +669,7 @@ export const useLab = create<LabState>((set, get) => ({
   view: "lock",
   draft: null,
   reaction: "both",
+  scene: "runway",
   lastJob: null,
   ready: false,
   busy: false,
@@ -670,6 +679,14 @@ export const useLab = create<LabState>((set, get) => ({
   setView: (view) => {
     set({ view, status: "" });
     persist();
+  },
+  setScene: (scene) => {
+    set({ scene });
+    persist();
+  },
+  buildPlan: (drafts, occasion) => {
+    if (get().busy || drafts.length === 0) return;
+    void buildPieces(drafts.slice(0, 4), `stylist: ${occasion}`.slice(0, 200), false, false);
   },
   setReaction: (reaction) => {
     set({ reaction });

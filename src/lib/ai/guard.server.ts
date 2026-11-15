@@ -92,3 +92,15 @@ export async function spend(kind: AiKind): Promise<SpendVerdict> {
     return judgeSpend({ visitor, global: bumpMemory(day, "global", kind) }, cap);
   }
 }
+
+export type Admission = "ok" | "limit" | "unavailable";
+
+/**
+ * The gate in front of a paid call. Call it only after the request itself has
+ * been checked, so a malformed request cannot use up the day's allowance.
+ * With no key nothing is counted, because nothing will be spent.
+ */
+export async function admit(kind: AiKind): Promise<Admission> {
+  if (!process.env.XAI_API_KEY?.trim()) return "unavailable";
+  return (await spend(kind)).ok ? "ok" : "limit";
+}

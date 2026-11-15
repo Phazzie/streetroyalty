@@ -81,6 +81,13 @@ export const copy = {
   back: "Back",
   listening: "Listening.",
   judges: "Judges",
+  scene: "Scene",
+  scenes: {
+    runway: "Runway",
+    street: "Street",
+    rooftop: "Rooftop",
+    subway: "Subway",
+  },
   cheer: "Cheer",
   boo: "Boo",
   both: "Both",

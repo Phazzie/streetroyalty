@@ -15,8 +15,9 @@ export const generateArt = createServerFn({ method: "POST" })
   }))
   .handler(async ({ data }): Promise<ArtResult> => {
     if (!data.idea) return { ok: false, kind: "missed" };
-    const { spend } = await import("./guard.server.ts");
-    if (!(await spend("image")).ok) return { ok: false, kind: "limit" };
+    const { admit } = await import("./guard.server.ts");
+    const verdict = await admit("image");
+    if (verdict !== "ok") return { ok: false, kind: verdict };
     const { runArt } = await import("../imagine.server.ts");
     return runArt(data);
   });

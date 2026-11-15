@@ -8,6 +8,7 @@ import { LookScreen } from "@/components/lab/look-screen";
 import { RunwayScreen } from "@/components/lab/runway-screen";
 import { copy } from "@/lib/copy";
 import { hydrate, useLab, wearShopPiece } from "@/lib/store";
+import { urlToDataUrl } from "@/lib/gfx/canvas";
 import { getProductPhoto } from "@/lib/storefront/api";
 import { REQUIRED_SLOTS } from "@/lib/types";
 
@@ -36,7 +37,8 @@ export function LabApp({ wear }: { wear?: string }) {
     setOpen(true);
     void getProductPhoto({ data: { slug: wear } })
       .then(async (photo) => {
-        if (photo) await wearShopPiece({ slug: wear, name: photo.name, kind: photo.kind, image: photo.image });
+        const image = photo?.image ?? (photo?.path ? await urlToDataUrl(photo.path) : "");
+        if (photo && image) await wearShopPiece({ slug: wear, name: photo.name, kind: photo.kind, image });
         else useLab.getState().setStatus("That piece did not come over from the shop.");
       })
       .catch(() => useLab.getState().setStatus("That piece did not come over from the shop."))

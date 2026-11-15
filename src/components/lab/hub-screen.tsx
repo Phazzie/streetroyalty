@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Header, Shell, TextButton } from "@/components/lab/chrome";
 import { Composer } from "@/components/lab/mic";
+import { Stylist } from "@/components/lab/stylist";
 import { UndoBar } from "@/components/lab/undo-bar";
 import { copy } from "@/lib/copy";
 import { useLab } from "@/lib/store";
@@ -64,7 +65,7 @@ export function HubScreen() {
             <p>{copy.hubJob}</p>
             {pieces.length > 0 ? (
               <p className="text-sm text-muted">
-                {pieces.length} pieces on the board. {wearing} selected.
+                {pieces.length} {pieces.length === 1 ? "piece" : "pieces"} on the board. {wearing} selected.
               </p>
             ) : null}
           </div>
@@ -91,6 +92,7 @@ export function HubScreen() {
       </div>
       <div className="safe-bottom shrink-0 border-t border-line px-4 pt-3">
         <Composer suggestions={draft ? [] : EXAMPLES} />
+        <Stylist />
         <details className="mt-2 border-t border-line pt-2">
           <summary className="font-display text-xs font-bold tracking-widest text-muted uppercase">{copy.keepIt}</summary>
           <p className="mt-2 text-sm">{copy.pinned}</p>

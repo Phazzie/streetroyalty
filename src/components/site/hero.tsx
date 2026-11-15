@@ -64,28 +64,43 @@ export function Hero() {
   const stageRef = useRef<SlideStage | null>(null);
   const rootRef = useRef<HTMLElement>(null);
   const [index, setIndex] = useState(0);
-  const [glReady, setGlReady] = useState(false);
+  // The slide the WebGL stage is showing, or -1 while only the plain photos can be trusted.
+  const [stageSlide, setStageSlide] = useState(-1);
   const [paused, setPaused] = useState(false);
   const [reduced, setReduced] = useState(false);
+  // Unknown until the browser is asked, so a phone never loads the wide crops first.
+  const [tall, setTall] = useState<boolean | null>(null);
+  const indexRef = useRef(0);
   const hover = useRef(false);
 
   useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => setReduced(query.matches);
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const shape = window.matchMedia("(max-aspect-ratio: 4/5)");
+    const sync = () => {
+      setReduced(motion.matches);
+      setTall(shape.matches);
+    };
     sync();
-    query.addEventListener("change", sync);
-    return () => query.removeEventListener("change", sync);
+    motion.addEventListener("change", sync);
+    shape.addEventListener("change", sync);
+    return () => {
+      motion.removeEventListener("change", sync);
+      shape.removeEventListener("change", sync);
+    };
   }, []);
 
   // WebGL stage. The plain photos underneath stay as the fallback and the first paint.
+  // It is rebuilt when the screen flips between tall and wide, because each has its own crops.
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || reduced) return;
-    const stage = new SlideStage(canvas);
+    if (!canvas || reduced || tall === null) return;
+    const stage = new SlideStage(canvas, {
+      // A lost context leaves a stale frame on the canvas, so hand the hero back to the photos.
+      onLost: () => setStageSlide(-1),
+    });
     if (!stage.ok) return;
     stageRef.current = stage;
     let alive = true;
-    const tall = window.matchMedia("(max-aspect-ratio: 4/5)").matches;
     const source = (slide: Slide) =>
       tall
         ? { src: slide.tall, focus: [0.5, 0.5] as [number, number] }
@@ -109,16 +124,27 @@ export function Hero() {
     };
 
     void (async () => {
-      const first = await stage.load(0, source(SLIDES[0]));
-      if (!alive || !first) return;
-      stage.resize();
-      stage.cut(0);
-      stage.start();
-      setGlReady(true);
-      visible.observe(canvas);
-      for (let i = 1; i < SLIDES.length; i += 1) {
-        await stage.load(i, source(SLIDES[i]));
-        if (!alive) return;
+      // Load the slide on screen first, then the rest in order.
+      const order = [
+        indexRef.current,
+        ...SLIDES.map((_, at) => at).filter((at) => at !== indexRef.current),
+      ];
+      let started = false;
+      for (const at of order) {
+        const loaded = await stage.load(at, source(SLIDES[at]));
+        if (!alive || !stage.ok) return;
+        if (!loaded) continue;
+        if (!started) {
+          stage.resize();
+          stage.start();
+          visible.observe(canvas);
+          started = true;
+        }
+        // If the visitor is looking at this slide and the stage is not, catch the stage up.
+        if (at === indexRef.current && stage.showing() !== at) {
+          stage.cut(at);
+          setStageSlide(at);
+        }
       }
     })();
 
@@ -133,34 +159,34 @@ export function Hero() {
       document.removeEventListener("visibilitychange", onVisibility);
       stage.destroy();
       stageRef.current = null;
-      setGlReady(false);
+      setStageSlide(-1);
     };
-  }, [reduced]);
+  }, [reduced, tall]);
 
   const go = useCallback((next: number) => {
     const target = (next + SLIDES.length) % SLIDES.length;
     const stage = stageRef.current;
-    // If the stage has not loaded that photo yet, the plain image underneath shows it.
-    if (stage?.ok && !stage.show(target)) stage.cut(stage.has(target) ? target : 0);
+    indexRef.current = target;
     setIndex(target);
+    // A photo the stage has not loaded yet is shown by the plain image until the loader catches up.
+    setStageSlide(stage?.ok && stage.show(target) ? target : -1);
   }, []);
 
   useEffect(() => {
     if (paused || reduced) return;
     const timer = window.setInterval(() => {
       if (hover.current || document.hidden) return;
-      setIndex((current) => {
-        const target = (current + 1) % SLIDES.length;
-        const stage = stageRef.current;
-        if (stage?.ok && !stage.show(target)) return current;
-        return target;
-      });
+      const target = (indexRef.current + 1) % SLIDES.length;
+      const stage = stageRef.current;
+      // Wait a beat rather than advance to a photo the stage cannot sweep to yet.
+      if (stage?.ok && !stage.has(target)) return;
+      go(target);
     }, HOLD_MS);
     return () => window.clearInterval(timer);
-  }, [paused, reduced]);
+  }, [go, paused, reduced]);
 
   const slide = SLIDES[index];
-  const stageShows = glReady && (stageRef.current?.has(index) ?? false);
+  const stageShows = stageSlide === index;
 
   return (
     <section

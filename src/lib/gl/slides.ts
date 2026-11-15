@@ -128,8 +128,8 @@ export class SlideStage {
   private program: WebGLProgram | null = null;
   private uniforms: Record<string, WebGLUniformLocation | null> = {};
   private slides: (Loaded | null)[] = [];
-  private from = 0;
-  private to = 0;
+  private from = -1;
+  private to = -1;
   private startedAt = 0;
   private settledAt = 0;
   private moving = false;
@@ -138,14 +138,17 @@ export class SlideStage {
   private pointer: [number, number] = [0, 0];
   private aim: [number, number] = [0, 0];
   private readonly canvas: HTMLCanvasElement;
+  private readonly lost: (() => void) | undefined;
   private readonly onLost = (event: Event) => {
     event.preventDefault();
     this.ok = false;
     this.stop();
+    this.lost?.();
   };
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, options: { onLost?: () => void } = {}) {
     this.canvas = canvas;
+    this.lost = options.onLost;
     const gl = canvas.getContext("webgl", {
       antialias: false,
       alpha: false,
@@ -229,6 +232,11 @@ export class SlideStage {
     return Boolean(this.slides[index]);
   }
 
+  /** The slide on stage, or the one being swept to. -1 before anything is shown. */
+  showing(): number {
+    return this.slides[this.to] ? this.to : -1;
+  }
+
   /** Cut straight to a slide with no sweep. */
   cut(index: number) {
     if (!this.slides[index]) return;
@@ -242,6 +250,10 @@ export class SlideStage {
   show(index: number): boolean {
     if (!this.slides[index]) return false;
     if (index === this.to && !this.moving) return true;
+    if (this.to < 0) {
+      this.cut(index);
+      return true;
+    }
     if (this.moving) this.from = this.to;
     this.to = index;
     this.startedAt = performance.now();

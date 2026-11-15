@@ -193,13 +193,21 @@ export async function startCheckout(lines: CheckoutLine[]): Promise<CheckoutStar
   return { mode: "fourthwall", url: checkoutUrl(host, cartId, currency) };
 }
 
-/** A product photo as a data image, for sending a shop piece to the lab. Only URLs from the catalog are fetched. */
-export async function productPhoto(
-  slug: string,
-): Promise<{ image: string; name: string; kind: string } | null> {
+export type ProductPhoto = { name: string; kind: string; image?: string; path?: string };
+
+/**
+ * The first photo of a product, for sending a shop piece to the lab. A photo on
+ * another host comes back as a data image, fetched here because the browser may
+ * not read it. A photo served by this app comes back as its path for the page
+ * to fetch itself. Only URLs from the catalog are ever used.
+ */
+export async function productPhoto(slug: string): Promise<ProductPhoto | null> {
   const found = await loadProduct(slug);
   const url = found?.product.images[0]?.url;
-  if (!found || !url || !url.startsWith("https://")) return null;
+  if (!found || !url) return null;
+  const about = { name: found.product.name, kind: found.product.kind };
+  if (url.startsWith("/") && !url.startsWith("//")) return { ...about, path: url };
+  if (!url.startsWith("https://")) return null;
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
     if (!res.ok) return null;
@@ -207,11 +215,7 @@ export async function productPhoto(
     if (!mime.startsWith("image/")) return null;
     const bytes = new Uint8Array(await res.arrayBuffer());
     if (bytes.byteLength === 0 || bytes.byteLength > 6_000_000) return null;
-    return {
-      image: `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`,
-      name: found.product.name,
-      kind: found.product.kind,
-    };
+    return { ...about, image: `data:${mime};base64,${Buffer.from(bytes).toString("base64")}` };
   } catch (error) {
     console.error("fourthwall photo", error);
     return null;
