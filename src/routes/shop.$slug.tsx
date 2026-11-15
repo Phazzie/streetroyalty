@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, redirect } from "@tanstack/react-router";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { ProductCard } from "@/components/site/product-card";
 import { Reveal } from "@/components/site/reveal";
@@ -10,12 +10,16 @@ import { formatMoney } from "@/lib/pod/money";
 import { getStoreProduct } from "@/lib/storefront/api";
 import { useBag } from "@/lib/storefront/bag";
 import { defaultColor, pickVariant, sizeAvailable } from "@/lib/storefront/browse";
+import { shopPiece } from "@/lib/studio/api";
 
 export const Route = createFileRoute("/shop/$slug")({
   loader: async ({ params }) => {
     const found = await getStoreProduct({ data: { slug: params.slug } });
-    if (!found) throw notFound();
-    return found;
+    if (found) return found;
+    // Published customs used to live at this address. An old link to one is sent on to the rack.
+    const custom = await shopPiece({ data: { slug: params.slug } }).catch(() => null);
+    if (custom) throw redirect({ to: "/rack/$slug", params: { slug: params.slug } });
+    throw notFound();
   },
   head: ({ loaderData }) => ({
     meta: [

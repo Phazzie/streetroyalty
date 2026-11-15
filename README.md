@@ -1,15 +1,38 @@
 # Street Royalty
 
-Street Royalty is an outfit lab and a print shop. The lab still locks a face, builds pieces by voice, and walks a look. The studio turns a design into a real garment: pick a blank, place art and type, preview a mockup, publish it, and check out. Paid orders are sent to print. Unpaid orders stay drafts.
+Street Royalty is a streetwear site with four parts: a home page, a shop, an outfit lab, and a design studio.
+
+- **Home** (`/`) — the drop, the lab, and the studio in one scroll. The opening carousel is drawn in WebGL and falls back to plain photos when WebGL or motion is off.
+- **Shop** (`/shop`) — the official drop. It reads products from a Fourthwall shop and hands the bag to Fourthwall's checkout. With no Fourthwall token it shows a preview drop that cannot be bought.
+- **Outfit Lab** (`/lab`) — lock a face, build pieces by voice, put them on, and walk the look.
+- **Studio** (`/studio`) — turn a design into a real garment: pick a blank, place art and type, preview a mockup, publish it, and check out. Published customs sit on **the rack** (`/rack`).
+
+## Shop
+
+The shop has two modes. Which one runs depends on one variable.
+
+- **Preview drop.** With `FOURTHWALL_STOREFRONT_TOKEN` unset, the shop shows eight built-in pieces from `src/lib/storefront/demo.ts`. Every page says it is a preview, and Checkout explains that nothing can be bought yet.
+- **Fourthwall.** With the token set, products, collections, prices, sizes, and stock come from the [Fourthwall Storefront API](https://docs.fourthwall.com/storefront/overview). Checkout creates a Fourthwall cart and sends the shopper to Fourthwall's hosted checkout. Fourthwall takes the payment, prints, and ships.
+
+The bag lives in the browser. A shop piece can be sent to the lab with **Try it on in the lab**, which puts its photo on the board as a piece to wear.
+
+## Outfit Lab
+
+- **Stylist** — on the hub, **Dress me for an occasion** plans three or four pieces. Nothing is built until you confirm, because each piece is a paid picture.
+- **Drop card** — on a look, **Drop card** makes a 4:5 poster with the look, its name, and the crown's verdict. Phones get the share sheet; everything else gets a download.
+- **Scenes** — the walk can be shot on the runway, a night street, a rooftop, or a subway platform.
 
 ## Studio
 
 - **Studio** (`/studio`) — product, color, size, placement (front, back, sleeve when the blank allows it), text, upload, drag, scale, rotate, mockup, save, publish, cart. **Write a line** drafts print copy.
-- **Shop search** — type a product word, or **Find** to turn a vibe into catalog words.
+- **Make art** — type an idea, pick a style, and the studio draws print art and cuts the white backdrop away.
+- **Print it as** — any picture layer can be cut out, turned into one ink, or rebuilt as a halftone. **Original** undoes it. An uploaded PNG keeps its transparency.
+- **On a person** — **See it worn** shows the piece on you if your face is locked in the lab, and on the house model if it is not. It is a generated picture, not a print proof.
+- **Rack search** (`/rack`) — type a product word, or **Find** to turn a vibe into catalog words.
 - **Crown** — on a look, **Ask the crown** critiques the outfit and **Name it** titles it. On the runway, **Crown picks the crowd**. On a shop piece, **Will this print?** gives placement advice. **Surprise me** opens a random piece on the rack. All of the crown buttons use Grok when `XAI_API_KEY` is set and a local answer when it is not.
 - **Board** — rebuild one piece after a confirm. Dropped pieces and saved looks can be undone for a few seconds. Tickets from each build sit on the hub.
 - **Gallery** — your saved pieces, grouped by collection.
-- **Shop** — published pieces, size picker, add to cart.
+- **Rack** (`/rack`) — published customs, size picker, add to cart. An old `/shop/<slug>` link to a custom is forwarded here.
 - **Checkout** — shipping quote, then payment. The print order is created as a draft and confirmed only after payment.
 - **Orders** — status, tracking when the printer sends it.
 
@@ -47,7 +70,25 @@ Copy `.env.example` to the host’s secret store. Do not commit real keys. This 
 | `PRINT_FILE_SIGNING_SECRET` | Live print files | HMAC key for print-file URLs. Sandbox uses a built-in secret. Live mode will not publish a file URL without it. |
 | `STUDIO_ADMIN_EMAILS` | Webhook setup | Comma-separated sign-in emails allowed to press **Connect webhooks**. Empty means nobody can. |
 | `DATABASE_URL` | Deploy | Postgres connection. Injected on deploy. Unset in local preview. |
-| `XAI_API_KEY` | AI | Server-only key for image, video, the crown critic, print lines, shop search, and pull-request review. When it is missing, the critic, lines, and search use a built-in fallback and review skips. |
+| `XAI_API_KEY` | AI | Server-only key for image, video, the crown critic, the stylist, print art, print lines, rack search, and pull-request review. When it is missing, the text features use a built-in fallback, pictures and video say they are unavailable, and review skips. |
+| `FOURTHWALL_STOREFRONT_TOKEN` | Live shop | Public storefront token from the Fourthwall dashboard, under Settings, For developers. Unset means the preview drop. |
+| `FOURTHWALL_CHECKOUT_DOMAIN` | No | Host for Fourthwall checkout, for example `your-shop.fourthwall.com`. Defaults to the domain the Storefront API reports for the shop. |
+| `BETTER_AUTH_URL` | Hosting outside Grok | The site's public https origin. Sign-in refuses requests from any other origin. |
+| `BETTER_AUTH_SECRET` | Hosting outside Grok | Long random string that signs sessions. Without it every server instance invents its own and sign-ins do not stick. |
+| `AI_VISITOR_IMAGE`, `AI_VISITOR_VIDEO`, `AI_VISITOR_TEXT` | No | Most generations one visitor gets per day. Defaults 30, 5, 80. |
+| `AI_DAILY_IMAGE`, `AI_DAILY_VIDEO`, `AI_DAILY_TEXT` | No | Most generations the whole site makes per day. Defaults 600, 60, 4000. Zero turns a kind off. |
+
+## Spending caps
+
+Every picture, video, and text call is counted before it reaches xAI: once against the visitor and once against the whole site, per day. A request that could never produce anything is turned away before it is counted, and nothing is counted when the key is missing. Over the cap, the lab says it hit today's limit and the text features fall back to their built-in answers. Counters live in the `ai_usage` table, keyed by a one-day hash of the visitor's address, and rows older than a week are deleted.
+
+## Hosting on Vercel
+
+The build writes Vercel's output format, so a Vercel project linked to this repository deploys with no settings. Three things make it more than a demo:
+
+1. **A database.** Without `DATABASE_URL` the app runs on an in-memory database inside each server instance, so accounts, designs, carts, orders, and the spending counters do not last. Add a Postgres store from the Vercel project's Storage tab and it sets `DATABASE_URL`. Migrations run during the build.
+2. **Sign-in.** Set `BETTER_AUTH_URL` to the production origin and `BETTER_AUTH_SECRET` to a long random string. Email and password sign-in then works. The Google and X buttons go through Grok's sign-in broker and only work when the app is published through Grok.
+3. **Keys.** `XAI_API_KEY` for the lab and the studio's art tools, and `FOURTHWALL_STOREFRONT_TOKEN` for the real shop.
 
 ## Accounts to create
 

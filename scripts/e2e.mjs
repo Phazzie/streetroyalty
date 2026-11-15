@@ -36,7 +36,8 @@ try {
     }
     const status = response?.status() ?? 0;
     if (status >= 400) throw new Error(`${path} returned ${status}`);
-    await page.getByText(text, { exact: false }).first().waitFor({ timeout: 20_000 });
+    // Match the page heading. Plain text would also match nav links that are hidden at this width.
+    await page.getByRole("heading", { name: text, exact: false }).first().waitFor({ timeout: 20_000 });
     console.log(`ok ${path}`);
   }
   await page.goto(`${base}/studio`, { waitUntil: "domcontentloaded" });
