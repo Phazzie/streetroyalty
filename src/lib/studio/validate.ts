@@ -41,7 +41,20 @@ export function parseLayers(input: unknown): DesignLayer[] {
       .trim()
       .slice(0, 80);
     if (!text) throw new Error("Text layers need words.");
-    return { ...shared, type: "text" as const, text, font, color };
+    const arcRaw = Number(layer.arc ?? 0);
+    const trackingRaw = Number(layer.tracking ?? 0);
+    const arc = clamp(Number.isFinite(arcRaw) ? arcRaw : 0, -120, 120);
+    const tracking = clamp(Number.isFinite(trackingRaw) ? trackingRaw : 0, -0.05, 0.6);
+    return {
+      ...shared,
+      type: "text" as const,
+      text,
+      font,
+      color,
+      ...(arc !== 0 ? { arc } : {}),
+      ...(layer.outline === true ? { outline: true } : {}),
+      ...(tracking !== 0 ? { tracking } : {}),
+    };
   });
 }
 

@@ -30,6 +30,7 @@ export type DesignRow = {
   retail_cents: number;
   currency: string;
   provider_product_id: string | null;
+  forked_from_title?: string | null;
   updated_at: string;
 };
 
@@ -55,6 +56,7 @@ export function summary(row: DesignRow): DesignSummary {
     retailCents: Number(row.retail_cents),
     currency: row.currency,
     updatedAt: String(row.updated_at),
+    forkedFromTitle: row.forked_from_title ?? null,
   };
 }
 
