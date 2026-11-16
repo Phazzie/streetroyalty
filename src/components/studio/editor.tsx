@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,11 +8,11 @@ import { luminance } from "@/lib/color";
 import { copy } from "@/lib/copy";
 import { compressDataUrl, readFileAsDataUrl } from "@/lib/images";
 import type { CatalogProduct, DesignLayer, PrintArea } from "@/lib/pod/types";
-import { formatMoney } from "@/lib/pod/money";
 import {
   addCollection,
   cartAdd,
   getCatalogProduct,
+  getStudioConfig,
   listCatalog,
   makeMockup,
   myCollections,
@@ -20,6 +20,15 @@ import {
   publishPiece,
   savePiece,
 } from "@/lib/studio/api";
+import { PriceTicker } from "@/components/moon/price-ticker";
+import { PreflightPanel } from "@/components/moon/preflight-panel";
+import { CurvedText } from "@/components/moon/curved-text";
+import { priceTicker, type Finish } from "@/lib/moon/pricing";
+import { canPublish, preflightVerdict, runPrintChecks, type ImageFacts } from "@/lib/moon/preflight";
+import { colorwaysFromPalette, extractPalette, nearestColor, CURATED_COLORWAYS, type Colorway } from "@/lib/moon/colorway";
+import { clampFx, TEXT_PRESETS } from "@/lib/moon/textfx";
+import { RemixDice } from "@/components/moon/remix-dice";
+import { dnaFrom, type Dna } from "@/lib/moon/dna";
 import { suggestLines } from "@/lib/ai/api";
 import { createSingleFlight } from "@/lib/ui/single-flight";
 import { designVisualKey } from "@/lib/studio/design-key";
@@ -67,6 +76,17 @@ export function Editor({ designId }: { designId: string }) {
   const [busy, setBusy] = useState(false);
   const [lines, setLines] = useState<string[]>([]);
   const flight = useRef(createSingleFlight());
+  const [markup, setMarkup] = useState(2.2);
+  const [finish, setFinish] = useState<Finish>("print");
+  const [override, setOverride] = useState(false);
+  const [artPalette, setArtPalette] = useState<string[]>([]);
+  const [imageFacts, setImageFacts] = useState<ImageFacts[]>([]);
+
+  useEffect(() => {
+    void getStudioConfig()
+      .then((config) => setMarkup(config.markup))
+      .catch(() => setMarkup(2.2));
+  }, []);
 
   const chooseProduct = useCallback(async (productId: string, nextVariant?: string) => {
     const detail = await getCatalogProduct({ data: { productId } });
@@ -145,6 +165,47 @@ export function Editor({ designId }: { designId: string }) {
   const active = layers.find((layer) => layer.id === selected) ?? null;
   const atLayerLimit = layers.length >= MAX_LAYERS;
 
+  const checks = useMemo(
+    () =>
+      runPrintChecks({
+        layers,
+        area: variant?.printAreas.find((item) => item.placement === placement) ??
+          variant?.printAreas[0] ?? { placement, widthIn: 12, heightIn: 16, dpi: 150 },
+        garmentHex: variant?.colorHex ?? "#141414",
+        images: imageFacts,
+      }),
+    [layers, placement, variant, imageFacts],
+  );
+  const verdict = preflightVerdict(checks);
+  const ticker = useMemo(
+    () =>
+      priceTicker({
+        wholesaleCents: variant?.wholesaleCents ?? null,
+        markup,
+        layerCount: layers.length,
+        finish,
+        oversize: checks.some((check) => check.key === "bounds" && check.level === "warn"),
+      }),
+    [variant, markup, layers.length, finish, checks],
+  );
+  const artColorways = useMemo(() => colorwaysFromPalette(artPalette), [artPalette]);
+
+  function applyColorway(way: Colorway) {
+    if (!product || !variant) return;
+    const target = nearestColor(way.garmentHex, product.colors.map((color) => ({ hex: color.hex, name: color.name })));
+    if (target) {
+      const match =
+        product.variants.find((entry) => entry.color === target.name && entry.size === variant.size) ??
+        product.variants.find((entry) => entry.color === target.name);
+      if (match) setVariantId(match.id);
+    }
+    setLayers((current) =>
+      current.map((layer) => (layer.type === "text" ? { ...layer, color: way.inkHex } : layer)),
+    );
+    setNote(`Colorway on: ${way.name}. Garment and ink moved together.`);
+  }
+
+
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (!active) return;
@@ -219,6 +280,28 @@ export function Editor({ designId }: { designId: string }) {
       const raw = await readFileAsDataUrl(file);
       const src = await compressDataUrl(raw, 1200, 0.85);
       const id = `img-${Date.now()}`;
+      // Measure the art once: Print Check needs real pixels, the colorway
+      // engine needs its palette. Both read the same loaded image.
+      const probe = new Image();
+      probe.onload = () => {
+        setImageFacts((current) => [
+          ...current.filter((facts) => facts.layerId !== id),
+          { layerId: id, widthPx: probe.naturalWidth, heightPx: probe.naturalHeight },
+        ]);
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = 48;
+          canvas.height = 48;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(probe, 0, 0, 48, 48);
+            setArtPalette(extractPalette(ctx.getImageData(0, 0, 48, 48).data, 5));
+          }
+        } catch {
+          // Palette is a bonus; the design does not depend on it.
+        }
+      };
+      probe.src = src;
       setLayers((current) => {
         if (current.length >= MAX_LAYERS) return current;
         return [...current, { id, type: "image" as const, src, x: 0.5, y: 0.42, scale: 0.85, rotation: 0 }];
@@ -293,6 +376,10 @@ export function Editor({ designId }: { designId: string }) {
 
   async function onPublish() {
     if (!product || !variant) return;
+    if (!canPublish(verdict, override)) {
+      setNote("Print Check failed. Fix the red, or tick the override in Print Check and publish loud.");
+      return;
+    }
     await flight.current(async () => {
     setBusy(true);
     try {
@@ -407,7 +494,11 @@ export function Editor({ designId }: { designId: string }) {
           <div className="mx-auto w-full max-w-md">
             <div
               className="relative mx-auto aspect-[4/5] w-full border-2 border-ink"
-              style={{ background: variant?.colorHex ?? "#141414", color: ink }}
+              style={{
+                background: variant?.colorHex ?? "#141414",
+                color: ink,
+                filter: finish === "vintage" ? "sepia(0.35) contrast(0.92) brightness(1.06)" : undefined,
+              }}
             >
               <GarmentHint type={product?.type ?? "T-Shirt"} />
               <div
@@ -430,9 +521,18 @@ export function Editor({ designId }: { designId: string }) {
                     }}
                   >
                     {layer.type === "text" ? (
-                      <span className="block max-w-full text-center font-display text-sm leading-tight">
-                        {layer.text}
-                      </span>
+                      layer.arc || layer.outline || layer.tracking ? (
+                        <CurvedText
+                          text={layer.text}
+                          fx={clampFx(layer)}
+                          color={layer.color}
+                          fontFamily={layer.font}
+                        />
+                      ) : (
+                        <span className="block max-w-full text-center font-display text-sm leading-tight">
+                          {layer.text}
+                        </span>
+                      )
                     ) : (
                       <img src={layer.src} alt="" className="h-24 w-24 object-contain" />
                     )}
@@ -519,14 +619,113 @@ export function Editor({ designId }: { designId: string }) {
               </button>
             ))}
           </div>
-          <p className="mt-4 font-display text-2xl">
-            {variant?.retailCents != null ? formatMoney(variant.retailCents) : "—"}
+          <div className="mt-4">
+            <PriceTicker breakdown={ticker} />
+          </div>
+          <p className="mt-4 text-sm text-muted">Finish</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {(
+              [
+                { id: "print", label: "Print" },
+                { id: "embroidery", label: "Embroidery" },
+                { id: "vintage", label: "Vintage wash" },
+              ] as { id: Finish; label: string }[]
+            ).map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={finish === option.id}
+                onClick={() => setFinish(option.id)}
+                className={`chip ${finish === option.id ? "chip-on" : ""}`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-subtle">
+            Finish is a studio preview + meter estimate today; the catalog technique on the blank is
+            what prints.
           </p>
-          <p className="text-sm text-muted">
-            {variant?.wholesaleCents != null
-              ? `Print cost ${formatMoney(variant.wholesaleCents)}`
-              : "Price lands with the catalog."}
+        </Panel>
+
+        <Panel title="Colorways">
+          <p className="mb-2 text-sm text-muted">
+            One click moves the garment and the ink together. Nothing pairs that cannot be read.
           </p>
+          {artColorways.length > 0 ? (
+            <>
+              <p className="mb-1 font-display text-xs tracking-wide uppercase">From your art</p>
+              <div className="mb-3 flex flex-wrap gap-2">
+                {artColorways.map((way) => (
+                  <button
+                    key={way.name}
+                    type="button"
+                    onClick={() => applyColorway(way)}
+                    className="chip"
+                    title={`${way.name} — contrast ${Math.round(way.contrast * 10) / 10}:1`}
+                  >
+                    <span className="mr-2 inline-block size-3 border border-ink" style={{ background: way.garmentHex }} />
+                    <span className="mr-1 inline-block size-3 border border-ink" style={{ background: way.inkHex }} />
+                    {way.name}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : null}
+          <p className="mb-1 font-display text-xs tracking-wide uppercase">House palettes</p>
+          <div className="flex flex-wrap gap-2">
+            {CURATED_COLORWAYS.map((way) => (
+              <button
+                key={way.name}
+                type="button"
+                onClick={() => applyColorway(way)}
+                className="chip"
+                title={`${way.name} — contrast ${Math.round(way.contrast * 10) / 10}:1`}
+              >
+                <span className="mr-2 inline-block size-3 border border-ink" style={{ background: way.garmentHex }} />
+                <span className="mr-1 inline-block size-3 border border-ink" style={{ background: way.inkHex }} />
+                {way.name}
+              </button>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel title="Print Check">
+          <PreflightPanel checks={checks} verdict={verdict} override={override} onOverride={setOverride} />
+        </Panel>
+
+        <Panel title="Remix Dice">
+          <RemixDice
+            base={dnaFrom({
+              garment: product?.type ?? "T-Shirt",
+              garmentHex: variant?.colorHex,
+              inkHex: (() => {
+                const text = layers.find((layer) => layer.type === "text");
+                return text && text.type === "text" ? text.color : undefined;
+              })(),
+              placement,
+              finish,
+            })}
+            onLoad={(dna: Dna) => {
+              const way = CURATED_COLORWAYS.find((entry) => entry.name === dna.colorwayName);
+              if (way) applyColorway(way);
+              const preset = TEXT_PRESETS.find((entry) => entry.name === dna.textStyle);
+              if (preset) {
+                setLayers((current) =>
+                  current.map((layer) =>
+                    layer.type === "text"
+                      ? { ...layer, arc: preset.fx.arc, outline: preset.fx.outline, tracking: preset.fx.tracking }
+                      : layer,
+                  ),
+                );
+              }
+              if (product?.placements.some((entry) => entry.placement === dna.placement)) {
+                setPlacement(dna.placement);
+              }
+              setFinish(dna.finish);
+              setNote(`Loaded: ${dna.colorwayName} · ${dna.textStyle} · ${dna.placement} · ${dna.finish}.`);
+            }}
+          />
         </Panel>
 
         <Panel title="Layers">
@@ -654,6 +853,60 @@ export function Editor({ designId }: { designId: string }) {
                     onChange={(event) => patchLayer(active.id, { color: event.target.value })}
                     className="h-12 w-full border-2 border-ink bg-cream"
                   />
+                  <p className="text-sm text-muted">Text power</p>
+                  <div className="flex flex-wrap gap-2">
+                    {TEXT_PRESETS.map((preset) => (
+                      <button
+                        key={preset.name}
+                        type="button"
+                        title={preset.note}
+                        onClick={() =>
+                          patchLayer(active.id, {
+                            arc: preset.fx.arc,
+                            outline: preset.fx.outline,
+                            tracking: preset.fx.tracking,
+                          })
+                        }
+                        className="chip"
+                      >
+                        {preset.name}
+                      </button>
+                    ))}
+                  </div>
+                  <label className="text-sm text-muted" htmlFor="layer-arc">
+                    Curve {Math.round(clampFx(active).arc)}°
+                  </label>
+                  <input
+                    id="layer-arc"
+                    type="range"
+                    min={-120}
+                    max={120}
+                    step={2}
+                    value={clampFx(active).arc}
+                    onChange={(event) => patchLayer(active.id, { arc: Number(event.target.value) })}
+                  />
+                  <label className="text-sm text-muted" htmlFor="layer-tracking">
+                    Letter spacing
+                  </label>
+                  <input
+                    id="layer-tracking"
+                    type="range"
+                    min={-0.05}
+                    max={0.6}
+                    step={0.01}
+                    value={clampFx(active).tracking}
+                    onChange={(event) =>
+                      patchLayer(active.id, { tracking: Number(event.target.value) })
+                    }
+                  />
+                  <button
+                    type="button"
+                    aria-pressed={Boolean(active.outline)}
+                    onClick={() => patchLayer(active.id, { outline: !active.outline })}
+                    className={`chip ${active.outline ? "chip-on" : ""}`}
+                  >
+                    Hollow (outline only)
+                  </button>
                 </>
               ) : null}
               <label className="text-sm text-muted" htmlFor="layer-scale">
@@ -750,11 +1003,18 @@ export function Editor({ designId }: { designId: string }) {
 
 
 function GarmentHint({ type }: { type: string }) {
-  const label = type.toLowerCase().includes("hat")
+  const lower = type.toLowerCase();
+  const label = lower.includes("hat")
     ? "cap"
-    : type.toLowerCase().includes("hood")
+    : lower.includes("hood")
       ? "hoodie"
-      : "tee";
+      : lower.includes("tote")
+        ? "tote"
+        : lower.includes("jogger")
+          ? "joggers"
+          : lower.includes("long")
+            ? "long-sleeve"
+            : "tee";
   return (
     <span className="pointer-events-none absolute top-3 left-3 font-display text-xs tracking-widest uppercase opacity-70">
       {label}
