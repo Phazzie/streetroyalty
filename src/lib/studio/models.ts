@@ -28,6 +28,8 @@ export type DesignSummary = {
   retailCents: number;
   currency: string;
   updatedAt: string;
+  /** Title of the published piece this one was forked from, when it was. */
+  forkedFromTitle?: string | null;
 };
 
 export type DesignRecord = DesignSummary & {
@@ -39,6 +41,8 @@ export type CollectionRecord = {
   id: string;
   name: string;
   count: number;
+  /** ISO date when set: this collection is a Drop that opens then. */
+  dropAt?: string | null;
 };
 
 export type CartLine = {

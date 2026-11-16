@@ -10,20 +10,26 @@ import {
   printQualityWarning,
   slugify,
 } from "./validate.ts";
+import { canForkDesign, forkTitle } from "../moon/fork.ts";
 import type { CollectionRecord, DesignRecord, DesignSummary } from "./models.ts";
 import { fileUrl, ownedDesign, readStudioConfig, record, summary, type DesignRow } from "./shared.server.ts";
 
 export async function listCollections(userId: string): Promise<CollectionRecord[]> {
   const sql = await getSql();
-  const rows = await sql<{ id: string; name: string; count: number }>`
-    select c.id, c.name, count(d.id)::int as count
+  const rows = await sql<{ id: string; name: string; count: number; drop_at: string | null }>`
+    select c.id, c.name, c.drop_at, count(d.id)::int as count
     from collections c
     left join designs d on d.collection_id = c.id
     where c.user_id = ${userId}
-    group by c.id, c.name
+    group by c.id, c.name, c.drop_at
     order by c.created_at asc
   `;
-  return rows.map((row) => ({ id: row.id, name: row.name, count: Number(row.count) }));
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    count: Number(row.count),
+    dropAt: row.drop_at ? String(row.drop_at) : null,
+  }));
 }
 
 export async function createCollection(userId: string, name: string): Promise<CollectionRecord> {
@@ -32,7 +38,90 @@ export async function createCollection(userId: string, name: string): Promise<Co
   const sql = await getSql();
   const id = crypto.randomUUID();
   await sql`insert into collections (id, user_id, name) values (${id}, ${userId}, ${trimmed})`;
-  return { id, name: trimmed, count: 0 };
+  return { id, name: trimmed, count: 0, dropAt: null };
+}
+
+/** Set (or clear) a collection's drop date. A dated collection is a Drop. */
+export async function setCollectionDrop(
+  userId: string,
+  collectionId: string,
+  dropAt: string | null,
+): Promise<CollectionRecord> {
+  const sql = await getSql();
+  const owned = await sql<{ id: string }>`
+    select id from collections where id = ${collectionId} and user_id = ${userId}
+  `;
+  if (!owned[0]) throw new Error("That collection is not yours.");
+  let when: Date | null = null;
+  if (dropAt) {
+    when = new Date(dropAt);
+    if (Number.isNaN(when.getTime())) throw new Error("That drop date does not parse.");
+  }
+  await sql`update collections set drop_at = ${when} where id = ${collectionId} and user_id = ${userId}`;
+  const collections = await listCollections(userId);
+  const updated = collections.find((collection) => collection.id === collectionId);
+  if (!updated) throw new Error("Drop did not land.");
+  return updated;
+}
+
+/** Public drop shelves: collections carrying a drop date and published pieces. */
+export async function listShopDrops(): Promise<{ id: string; name: string; dropAt: string | null }[]> {
+  const sql = await getSql();
+  const rows = await sql<{ id: string; name: string; drop_at: string | null }>`
+    select distinct c.id, c.name, c.drop_at
+    from collections c
+    join designs d on d.collection_id = c.id and d.status = 'published'
+    where c.drop_at is not null
+    order by c.drop_at asc
+  `;
+  return rows.map((row) => ({ id: row.id, name: row.name, dropAt: row.drop_at ? String(row.drop_at) : null }));
+}
+
+/**
+ * Fork a design onto the forker's rack as a draft, credit attached.
+ * The eligibility rule is canForkDesign: published pieces fork for anyone
+ * signed in, your own drafts fork for you, and another user's private
+ * draft never forks. The print file is duplicated under the forker's
+ * account — nobody reads the originator's file row.
+ */
+export async function forkDesign(userId: string, sourceId: string): Promise<DesignRecord> {
+  const sql = await getSql();
+  const rows = await sql<DesignRow>`select * from designs where id = ${sourceId}`;
+  const source = rows[0];
+  if (!source) throw new Error("That piece is not on the rack.");
+  if (!canForkDesign({ ownerId: source.user_id, status: source.status, title: source.title }, userId)) {
+    throw new Error("That draft is private. Forks ride on published pieces.");
+  }
+  const id = crypto.randomUUID();
+  let printFileId: string | null = null;
+  if (source.print_file_id) {
+    const files = await sql<{ mime: string; data_base64: string }>`
+      select mime, data_base64 from print_files where id = ${source.print_file_id}
+    `;
+    if (files[0]) {
+      printFileId = crypto.randomUUID();
+      await sql`
+        insert into print_files (id, user_id, mime, data_base64)
+        values (${printFileId}, ${userId}, ${files[0].mime}, ${files[0].data_base64})
+      `;
+    }
+  }
+  const title = forkTitle({ ownerId: source.user_id, status: source.status, title: source.title });
+  const slug = slugify(`${title} fork`, id);
+  await sql`
+    insert into designs (
+      id, user_id, collection_id, title, slug, status, product_id, product_name, product_type,
+      variant_id, variant_label, color_name, color_hex, size_label, placement, technique,
+      layers_json, print_file_id, mockup_url, retail_cents, currency, forked_from_title
+    ) values (
+      ${id}, ${userId}, null, ${title}, ${slug}, 'draft', ${source.product_id}, ${source.product_name}, ${source.product_type},
+      ${source.variant_id}, ${source.variant_label}, ${source.color_name}, ${source.color_hex}, ${source.size_label}, ${source.placement}, ${source.technique},
+      ${source.layers_json}, ${printFileId}, ${source.mockup_url}, ${source.retail_cents}, ${source.currency}, ${source.title}
+    )
+  `;
+  const saved = await ownedDesign(sql, userId, id);
+  if (!saved) throw new Error("Fork did not land.");
+  return record(saved);
 }
 
 export async function listDesigns(userId: string): Promise<DesignSummary[]> {

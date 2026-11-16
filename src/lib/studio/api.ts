@@ -87,6 +87,30 @@ export const publishPiece = createServerFn({ method: "POST" })
     return publishDesign(context.userId, data.designId);
   });
 
+export const forkPiece = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { designId?: string }) => ({ designId: String(input?.designId ?? "") }))
+  .handler(async ({ data, context }) => {
+    const { forkDesign } = await import("./repo.server.ts");
+    return forkDesign(context.userId, data.designId);
+  });
+
+export const setDrop = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { collectionId?: string; dropAt?: string | null }) => ({
+    collectionId: String(input?.collectionId ?? ""),
+    dropAt: input?.dropAt ? String(input.dropAt) : null,
+  }))
+  .handler(async ({ data, context }) => {
+    const { setCollectionDrop } = await import("./repo.server.ts");
+    return setCollectionDrop(context.userId, data.collectionId, data.dropAt);
+  });
+
+export const shopDrops = createServerFn({ method: "GET" }).handler(async () => {
+  const { listShopDrops } = await import("./repo.server.ts");
+  return listShopDrops();
+});
+
 export const myDesigns = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context }) => {
