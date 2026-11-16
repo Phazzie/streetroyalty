@@ -2,8 +2,8 @@
 
 <!-- impeccable:product-schema 1 -->
 
-> Drafted from the repository on 2026-11-16 at the owner's request, without an interview.
-> Lines marked **(unconfirmed)** are read from the code and copy, not stated by the owner.
+> Recorded from the owner's answers on 2026-11-16. Lines marked **(derived)** follow from
+> those answers but were not said in so many words. Open decisions are labelled.
 
 ## Platform
 
@@ -11,40 +11,51 @@ web
 
 ## Users
 
-- People shopping a streetwear drop, mostly on a phone. The site installs to a home screen
-  and the installed app opens on the Outfit Lab. **(unconfirmed that phone is the main case)**
-- People who want to play with an outfit on their own face before they buy.
-- People who want their own art on a real garment.
-- **Open decision:** who the core customer is and where they come from. Not established.
+- People who have lived the street life or done time and are trying to do better, and who
+  still want to look fly.
+- People who go against both what society expects and what the street expects, and do
+  their own thing.
+- Many of them are not good with technology. Someone who is not techy has to be able to
+  make their own gear here and express themselves.
 
 ## Product Purpose
 
-Street Royalty is a streetwear label's own site. It sells the label's drop, lets a visitor
-wear pieces on themselves and walk the look, and lets them design and order a custom piece.
+Street Royalty is a clothing label and a make-your-own-clothes shop. The owner is building
+it for a friend who wants to do clothes, and it has to be uniquely his.
 
-Success means a visitor leaves with something: a bag taken to checkout, a look worth
-sharing, or a custom they made.
+The heart of it is a high-powered, deeply customizable print-on-demand studio. Not
+graphics on a shirt: actual clothes that are eclectic, weird and fashionable. If someone
+wants to clash, they can.
+
+Success means two things. A person with no design or tech skill leaves with a piece that
+is theirs and looks like nobody else's. And the label's own pieces exist as real garments.
 
 ## Positioning
 
-A brand shop where the fitting room and the print shop are part of the store. A visitor
-can try the drop on their own face, see it walk, and print their own piece, all before
-paying. **(unconfirmed wording)**
+Custom clothes at the level of the garment, its colours, panels and patterns, for people
+who do not dress by anybody's rules. **(derived wording)**
 
 ## Operating Context
 
-- **Shop.** Products, prices, sizes and stock come from the owner's Fourthwall shop.
-  Fourthwall takes the payment, prints and ships. The bag lives in the browser.
-- **Outfit Lab.** Lock a face, describe pieces by voice or text, put them on, walk the look
-  in a scene, share a drop card.
-- **Studio.** Pick a blank, place art and type, see a mockup, publish to the rack, check
-  out. Customs are printed through Printful and paid through Stripe.
-- **Rack.** Published customs from the studio.
+- **Studio.** The core of the product. Today it places art and type on a blank and prints
+  through Printful, paid through Stripe.
+- **Shop.** The label's own drop. Products come from the owner's Fourthwall shop, which
+  takes payment, prints and ships.
+- **Outfit Lab.** Lock a face, describe pieces by voice or text, put them on, walk the
+  look, share a drop card.
+- **Rack.** Customs that people published from the studio.
+- Everything is made to order. There is no stock.
 - Pictures and video are generated with xAI and each one costs money, so paid actions ask
   first and every visitor has a daily allowance.
 
 ## Capabilities and Constraints
 
+- **Known gap.** The studio today is art on a blank tee, hoodie, hat or crewneck. That is
+  the "graphics on a shirt" the owner does not want to stop at.
+- **Open decision.** How garment-level customizing works (colours per panel, patterns,
+  trims) and which maker or makers produce it.
+- **Open decision.** Whether people get their own profile that others can follow. The
+  owner raised it as a maybe.
 - With no Fourthwall token the shop shows a labelled preview drop that cannot be bought.
 - With no Printful or Stripe keys the studio runs in sandbox and says so.
 - Sign-in, saved designs, carts and orders need a database.
@@ -55,25 +66,31 @@ paying. **(unconfirmed wording)**
 ## Brand Commitments
 
 - Name: Street Royalty. Mark: a crown, drawn in code (`src/components/site/shell.tsx`).
-- Voice in the copy today: short, plain, confident. No hype words. **(unconfirmed as a rule)**
-- The owner named mkbhd.com and fourthwall.com as sites to build on. Fourthwall is the
-  commerce engine. What should be taken from mkbhd.com is an **open decision**.
+- It has to be uniquely the founder's. **Open decision:** his taste has not been captured
+  yet. He needs to be asked.
+- The colour-blocked sweatsuits in the site's pictures are the first pieces he wants made
+  for real: lilac with cream panels and orange piping, and mint with peach panels and
+  blue piping (`public/brand/prod-*-hoodie.webp`, `prod-*-jogger.webp`).
+- mkbhd.com is not a reference. Fourthwall came up while the owner was looking for good
+  print on demand, and is not binding.
 
 ## Evidence on Hand
 
-- Brand and product pictures in `public/brand/` are generated images, not photographs of
-  real garments.
+- Every brand and product picture in `public/brand/` is generated. No real garment
+  exists yet.
 - No customers, reviews, press, sales figures or founder story are on record. Future work
-  must not invent them.
+  must not invent them, and the founder's personal story is his to tell.
 
 ## Product Principles
 
-1. Play comes before the purchase. The lab and the studio are reasons to visit, not extras.
-2. Nothing generated is passed off as real. Previews say they are previews.
-3. Anything that costs money asks first.
-4. The owner's shop is the source of truth for what is for sale.
+1. Make clothes, not merch.
+2. No rules about what goes together. The tool never corrects someone's taste.
+3. Easy enough for someone who does not do tech. **(derived)**
+4. Nothing generated is passed off as real. Previews say they are previews.
+5. Anything that costs money asks first.
 
 ## Accessibility & Inclusion
 
-No standard has been set. What the site does today: it works with motion reduced, with
-WebGL off and with script off, and keeps touch targets at phone size.
+No standard has been set. From the audience: plain words, few steps, big touch targets,
+and it has to work on a phone. **(derived)** The site already works with motion reduced,
+with WebGL off and with script off.
