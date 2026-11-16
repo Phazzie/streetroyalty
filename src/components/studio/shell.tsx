@@ -11,6 +11,7 @@ const LINKS = [
   { to: "/shop", label: "Shop", tone: "chip-orange" },
   { to: "/cart", label: "Cart", tone: "chip-blue" },
   { to: "/orders", label: "Orders", tone: "" },
+  { to: "/dashboard", label: "Board", tone: "chip-violet" },
 ] as const;
 
 export function StudioShell({ current, children }: { current: string; children: ReactNode }) {

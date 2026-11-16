@@ -79,6 +79,10 @@ export type DesignLayer =
       y: number;
       scale: number;
       rotation: number;
+      /** Moon text power — optional, absent means flat (pre-Moon layers). */
+      arc?: number;
+      outline?: boolean;
+      tracking?: number;
     };
 
 export type MockupRequest = {

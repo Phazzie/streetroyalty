@@ -1,4 +1,5 @@
 import type { DesignLayer, PrintArea } from "@/lib/pod/types";
+import { arcLayout, clampFx } from "@/lib/moon/textfx";
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -34,10 +35,30 @@ export async function renderPrintFile(area: PrintArea, layers: DesignLayer[]): P
     if (layer.type === "text") {
       const px = Math.max(18, Math.round(height * 0.14 * layer.scale));
       ctx.font = `${px}px "${layer.font}", sans-serif`;
-      ctx.fillStyle = layer.color;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(layer.text, 0, 0, width * 0.92);
+      const fx = clampFx(layer);
+      if (Math.abs(fx.arc) < 0.001 && !fx.outline && fx.tracking === 0) {
+        ctx.fillStyle = layer.color;
+        ctx.fillText(layer.text, 0, 0, width * 0.92);
+      } else {
+        // Curved / outlined / tracked text draws per character along the arc.
+        const cells = arcLayout(layer.text, fx);
+        for (const cell of cells) {
+          ctx.save();
+          ctx.translate(cell.along * px, cell.lift * px);
+          ctx.rotate((cell.rotate * Math.PI) / 180);
+          if (fx.outline) {
+            ctx.strokeStyle = layer.color;
+            ctx.lineWidth = Math.max(1.5, px * 0.07);
+            ctx.strokeText(cell.char, 0, 0);
+          } else {
+            ctx.fillStyle = layer.color;
+            ctx.fillText(cell.char, 0, 0);
+          }
+          ctx.restore();
+        }
+      }
     } else {
       const image = await loadImage(layer.src);
       const dw = width * 0.52 * layer.scale;

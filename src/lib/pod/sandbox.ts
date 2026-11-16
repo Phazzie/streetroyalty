@@ -44,6 +44,23 @@ const CREW: PrintArea[] = [
   { placement: "back", widthIn: 12, heightIn: 16, dpi: 150 },
 ];
 
+const LONGSLEEVE: PrintArea[] = [
+  { placement: "front", widthIn: 12, heightIn: 16, dpi: 150 },
+  { placement: "back", widthIn: 12, heightIn: 16, dpi: 150 },
+  { placement: "sleeve_left", widthIn: 3.5, heightIn: 12, dpi: 150 },
+  { placement: "sleeve_right", widthIn: 3.5, heightIn: 12, dpi: 150 },
+];
+
+const JOGGER: PrintArea[] = [
+  { placement: "front", widthIn: 5, heightIn: 5, dpi: 150 },
+  { placement: "back", widthIn: 8, heightIn: 4, dpi: 150 },
+];
+
+const TOTE: PrintArea[] = [
+  { placement: "front", widthIn: 12, heightIn: 12, dpi: 150 },
+  { placement: "back", widthIn: 12, heightIn: 12, dpi: 150 },
+];
+
 type Blank = {
   id: string;
   name: string;
@@ -56,7 +73,7 @@ type Blank = {
   colors: { name: string; hex: string }[];
   sizes: string[];
   wholesaleCents: number;
-  shape: "tee" | "hoodie" | "hat" | "crew";
+  shape: "tee" | "hoodie" | "hat" | "crew" | "tote" | "joggers";
 };
 
 const BLANKS: Blank[] = [
@@ -144,6 +161,70 @@ const BLANKS: Blank[] = [
     wholesaleCents: 2495,
     shape: "crew",
   },
+  {
+    id: "longsleeve-block",
+    name: "Block Long-Sleeve",
+    type: "Long-Sleeve",
+    description: "Long sleeves carry their own print run — down the arm, not just the chest.",
+    technique: "dtg",
+    techniqueTitle: "DTG printing",
+    placements: [
+      { placement: "front", title: "Front" },
+      { placement: "back", title: "Back" },
+      { placement: "sleeve_left", title: "Left sleeve" },
+      { placement: "sleeve_right", title: "Right sleeve" },
+    ],
+    areas: LONGSLEEVE,
+    colors: [
+      { name: "Black", hex: "#141414" },
+      { name: "Bone", hex: "#efe6d6" },
+      { name: "Violet", hex: "#7c5cff" },
+    ],
+    sizes: ["S", "M", "L", "XL", "2XL"],
+    wholesaleCents: 1895,
+    shape: "tee",
+  },
+  {
+    id: "jogger-court",
+    name: "Court Joggers",
+    type: "Joggers",
+    description: "Tapered fleece joggers. Thigh hit on the front, block print across the back.",
+    technique: "dtg",
+    techniqueTitle: "DTG printing",
+    placements: [
+      { placement: "front", title: "Front thigh" },
+      { placement: "back", title: "Back" },
+    ],
+    areas: JOGGER,
+    colors: [
+      { name: "Black", hex: "#141414" },
+      { name: "Bone", hex: "#efe6d6" },
+      { name: "Royal", hex: "#2f5bff" },
+    ],
+    sizes: ["S", "M", "L", "XL", "2XL"],
+    wholesaleCents: 2695,
+    shape: "joggers",
+  },
+  {
+    id: "tote-corner",
+    name: "Corner Store Tote",
+    type: "Tote",
+    description: "Heavy canvas tote, both sides printable. Carries groceries and opinions.",
+    technique: "dtg",
+    techniqueTitle: "DTG printing",
+    placements: [
+      { placement: "front", title: "Front" },
+      { placement: "back", title: "Back" },
+    ],
+    areas: TOTE,
+    colors: [
+      { name: "Bone", hex: "#efe6d6" },
+      { name: "Black", hex: "#141414" },
+    ],
+    sizes: ["One size"],
+    wholesaleCents: 995,
+    shape: "tote",
+  },
 ];
 
 function sizePremium(size: string): number {
@@ -227,6 +308,12 @@ function garmentPath(shape: Blank["shape"]): string {
   if (shape === "crew") {
     return "M150 70 Q220 40 290 70 L348 108 L322 156 L286 136 V400 H154 V136 L118 156 L92 108 Z";
   }
+  if (shape === "tote") {
+    return "M170 130 C170 70 270 70 270 130 M140 130 H300 L316 400 H124 Z";
+  }
+  if (shape === "joggers") {
+    return "M150 60 H290 V110 L306 400 H244 L224 190 L216 400 H134 L134 110 Z";
+  }
   return "M148 72 L188 44 H252 L292 72 L368 112 L334 162 L292 140 V420 H148 V140 L106 162 L72 112 Z";
 }
 
@@ -235,6 +322,10 @@ function printWindow(
   placement: string,
 ): { x: number; y: number; w: number; h: number } {
   if (shape === "hat") return { x: 150, y: 118, w: 140, h: 52 };
+  if (shape === "tote") return { x: 160, y: 180, w: 120, h: 120 };
+  if (shape === "joggers") {
+    return placement === "back" ? { x: 165, y: 120, w: 110, h: 44 } : { x: 168, y: 128, w: 52, h: 52 };
+  }
   if (placement === "sleeve_left") return { x: 86, y: 150, w: 48, h: 48 };
   if (placement === "sleeve_right") return { x: 306, y: 150, w: 48, h: 48 };
   if (placement === "back") return { x: 155, y: 120, w: 130, h: 180 };
@@ -258,7 +349,11 @@ export function buildMockupSvg(input: {
         const byWidth = (window.w * 0.88) / Math.max(layer.text.length * 0.62, 1);
         const byHeight = window.h * 0.42 * layer.scale;
         const size = Math.max(8, Math.min(byWidth, byHeight));
-        return `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" fill="${escapeXml(layer.color)}" font-family="Arial Black, sans-serif" font-size="${size}" text-anchor="middle" dominant-baseline="middle" transform="rotate(${layer.rotation.toFixed(1)} ${cx.toFixed(1)} ${cy.toFixed(1)})">${escapeXml(layer.text).slice(0, 80)}</text>`;
+        const spacing = layer.tracking ? ` letter-spacing="${(layer.tracking * size).toFixed(1)}"` : "";
+        const paint = layer.outline
+          ? `fill="none" stroke="${escapeXml(layer.color)}" stroke-width="${Math.max(1, size * 0.07).toFixed(1)}"`
+          : `fill="${escapeXml(layer.color)}"`;
+        return `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" ${paint}${spacing} font-family="Arial Black, sans-serif" font-size="${size}" text-anchor="middle" dominant-baseline="middle" transform="rotate(${layer.rotation.toFixed(1)} ${cx.toFixed(1)} ${cy.toFixed(1)})">${escapeXml(layer.text).slice(0, 80)}</text>`;
       }
       const href = safeHref(layer.src);
       if (!href) return "";
