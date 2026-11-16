@@ -113,11 +113,12 @@ Orders are created with v2 `POST /v2/orders`, which leaves them in `draft`. `POS
 
 ## Checks
 
-`npm run ci` runs lint, typecheck, tests, and the production build. The same command runs in three places:
+`npm run ci` runs lint, typecheck, tests, and the production build. The same command runs in two places:
 
-- **GitHub Actions** (`.github/workflows/ci.yml`) on every pull request and on `main`.
 - **Bitbucket Pipelines** (`bitbucket-pipelines.yml`) on `main` and on pull requests in the Bitbucket mirror. The free plan has 50 build minutes a month, so other branches are checked by hand with the custom `check` pipeline.
 - **Depot on Origin**, described next.
+
+GitHub Actions is not used. Since 12 November every run on this repository has ended in about two seconds with no runner assigned and no log, which is what GitHub does when it will not start jobs for an account. Once that is cleared in the account's billing settings, the old workflow can come back from `git show df37b18:.github/workflows/ci.yml`.
 
 Origin runs those checks through Depot: the workflow is `.depot/workflows/ci.yml`, on the Depot runner. Connect the Depot app from the Origin codebase Apps page, then put `XAI_API_KEY` in Depot if you want the review job. That job skips when the key is missing. It comments on the Origin pull request when `PR_NUMBER` is set and the Origin CLI is signed in, and otherwise leaves the review in the log.
 
