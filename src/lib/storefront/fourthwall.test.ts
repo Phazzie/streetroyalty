@@ -9,6 +9,7 @@ import {
   mapFourthwallProduct,
   mapFourthwallProducts,
   moneyToCents,
+  sellableLines,
   withPairings,
 } from "./fourthwall.ts";
 
@@ -199,6 +200,15 @@ describe("checkout", () => {
   it("tells real variant ids from preview ones", () => {
     assert.equal(isFourthwallVariantId(VARIANT_S), true);
     assert.equal(isFourthwallVariantId("demo:crown-tee:S"), false);
+  });
+  it("only calls a bag sellable when every line could go to Fourthwall", () => {
+    assert.equal(sellableLines([{ variantId: VARIANT_S }]), true);
+    assert.equal(sellableLines([]), false);
+    assert.equal(sellableLines([{ variantId: "not-a-real-id" }]), false);
+    assert.equal(
+      sellableLines([{ variantId: VARIANT_S }, { variantId: "demo:crown-tee:S" }]),
+      false,
+    );
   });
 });
 

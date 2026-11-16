@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { sellableLines } from "./fourthwall.ts";
 import { MAX_BAG_LINES, MAX_LINE_QUANTITY } from "./types.ts";
 
 export const getStorefront = createServerFn({ method: "GET" }).handler(async () => {
@@ -38,8 +39,9 @@ export const startStoreCheckout = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const { startCheckout, storefrontLive } = await import("./fourthwall.server.ts");
-    if (storefrontLive() && data.lines.length > 0) {
+    if (storefrontLive() && sellableLines(data.lines)) {
       // Each live checkout creates a cart at Fourthwall, so one visitor cannot start them without end.
+      // A bag that cannot be sent is refused by startCheckout below and is never counted.
       const { count } = await import("../ai/guard.server.ts");
       const verdict = await count("checkout", { visitor: 40, global: 5000 });
       if (!verdict.ok) throw new Error("Too many checkouts started today. Try again tomorrow.");

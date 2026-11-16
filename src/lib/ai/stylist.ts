@@ -63,9 +63,12 @@ export function parsePlan(raw: string): OutfitPlan | null {
   return { note, pieces };
 }
 
+// Each rule matches from the start of a word, so "training" is not rain and "brunch" is not a run.
 const HOUSE: { match: RegExp; plan: OutfitPlan }[] = [
   {
-    match: /wedding|formal|gala|interview|church|funeral|court/,
+    // A court date dresses up. A basketball court is left for the sports rule below.
+    match:
+      /\b(wedding|formal|gala|interview|church|funeral|courtroom|court (date|hearing|appearance))|\b(in|to|have|got|for) court\b/,
     plan: {
       note: "Sharp, dark, and quiet. The fit does the talking.",
       pieces: [
@@ -77,7 +80,7 @@ const HOUSE: { match: RegExp; plan: OutfitPlan }[] = [
     },
   },
   {
-    match: /cold|winter|snow|rain|storm|freez/,
+    match: /\b(cold|winter|snow|rain|storm|freez)/,
     plan: {
       note: "Built for the weather, still a look.",
       pieces: [
@@ -89,7 +92,7 @@ const HOUSE: { match: RegExp; plan: OutfitPlan }[] = [
     },
   },
   {
-    match: /gym|run|workout|train|court|game|hoop/,
+    match: /\b(gym|run(s|ning)?\b|jog|workout|train|court|game|hoop|basketball)/,
     plan: {
       note: "Light, loose, and ready to move.",
       pieces: [
@@ -100,7 +103,7 @@ const HOUSE: { match: RegExp; plan: OutfitPlan }[] = [
     },
   },
   {
-    match: /date|dinner|club|party|birthday|night out|concert|show/,
+    match: /\b(date|dinner|club|party|birthday|night out|concert|show(s|case)?\b)/,
     plan: {
       note: "Dark base, one piece that catches the light.",
       pieces: [
@@ -112,7 +115,7 @@ const HOUSE: { match: RegExp; plan: OutfitPlan }[] = [
     },
   },
   {
-    match: /beach|summer|vacation|pool|cookout|bbq|picnic|hot/,
+    match: /\b(beach|summer|vacation|pool|cookout|bbq|picnic|hot\b)/,
     plan: {
       note: "Easy colours and room to breathe.",
       pieces: [

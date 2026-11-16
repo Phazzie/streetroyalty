@@ -21,6 +21,7 @@ export const critiqueOutfit = createServerFn({ method: "POST" })
   }))
   .handler(async ({ data }) => {
     const fallback = localCritique(data.spoken);
+    if (!data.spoken.trim()) return { ...fallback, source: "local" as const };
     const { guardedText } = await import("./grok.server.ts");
     const raw = await guardedText(
       `You are the crown critic for a streetwear look. Reply with JSON only: {"verdict":"","note":"","next":""}. verdict is under 8 words, note is one sentence, next is the single garment to add. Look: ${data.spoken || "nothing"}`,
@@ -54,6 +55,7 @@ export const nameLook = createServerFn({ method: "POST" })
   }))
   .handler(async ({ data }) => {
     const fallback = localLookName(data.spoken);
+    if (!data.spoken.trim()) return { name: fallback, source: "local" as const };
     const { guardedText } = await import("./grok.server.ts");
     const raw = await guardedText(
       `Name this outfit in 2 or 3 words, no quotes, no punctuation. Outfit: ${data.spoken || "empty"}`,
@@ -84,6 +86,7 @@ export const pickCrowd = createServerFn({ method: "POST" })
     spoken: String(input?.spoken ?? "").slice(0, 240),
   }))
   .handler(async ({ data }) => {
+    if (!data.spoken.trim()) return { crowd: localCrowd(), source: "local" as const };
     const { guardedText } = await import("./grok.server.ts");
     const raw = await guardedText(
       `Should the runway crowd cheer, boo, or both for this outfit? Reply with one word: cheer, boo, or both. Outfit: ${data.spoken || "unknown"}`,

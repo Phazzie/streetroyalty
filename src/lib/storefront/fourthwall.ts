@@ -260,6 +260,11 @@ export function isFourthwallVariantId(id: string): boolean {
   return UUID.test(id);
 }
 
+/** True when every line could be sent to Fourthwall. Anything else is refused before it costs allowance. */
+export function sellableLines(lines: { variantId: string }[]): boolean {
+  return lines.length > 0 && lines.every((line) => isFourthwallVariantId(line.variantId));
+}
+
 /** Attach "finish the outfit" picks to live products, which carry no such data of their own. */
 export function withPairings(products: StoreProduct[]): StoreProduct[] {
   return products.map((product) => {

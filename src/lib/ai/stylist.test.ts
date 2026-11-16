@@ -47,6 +47,21 @@ describe("stylist", () => {
       assert.ok(plan.pieces.length >= 3 && plan.pieces.length <= MAX_PLAN_PIECES);
     }
   });
+  it("tells a courtroom from a basketball court", () => {
+    assert.match(localPlan("pickup at the basketball court").note, /ready to move/);
+    assert.match(localPlan("Tennis court, Saturday").note, /ready to move/);
+    assert.match(localPlan("court date on Monday").pieces[0].spoken, /blazer/);
+    assert.match(localPlan("I have court tomorrow").pieces[0].spoken, /blazer/);
+    assert.match(localPlan("a day in the courtroom").pieces[0].spoken, /blazer/);
+  });
+  it("matches whole words, not letters inside other words", () => {
+    assert.match(localPlan("training session").note, /ready to move/);
+    assert.match(localPlan("brunch with the crew").note, /everyday uniform/);
+    assert.match(localPlan("a photoshoot").note, /everyday uniform/);
+    assert.match(localPlan("runway show").note, /Dark base/);
+    assert.match(localPlan("running errands in the rain").note, /weather/);
+    assert.match(localPlan("a hot day").note, /Easy colours/);
+  });
   it("keeps the occasion inside its own quotes in the prompt", () => {
     const prompt = planPrompt('brunch "with" the\n  crew');
     assert.match(prompt, /Occasion: "brunch 'with' the crew"\./);
