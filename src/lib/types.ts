@@ -14,6 +14,10 @@ export type Reaction = "cheer" | "boo" | "both";
 
 export type View = "lock" | "hub" | "board" | "look" | "runway";
 
+export const SCENES = ["runway", "street", "rooftop", "subway"] as const;
+
+export type Scene = (typeof SCENES)[number];
+
 export type Slot = "front" | "side" | "threequarter" | "extra";
 
 export const SLOTS: Slot[] = ["front", "side", "threequarter", "extra"];

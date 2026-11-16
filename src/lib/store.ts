@@ -15,11 +15,12 @@ import type {
   Piece,
   PieceDraft,
   Reaction,
+  Scene,
   Slot,
   Ticket,
   View,
 } from "@/lib/types";
-import { REQUIRED_SLOTS } from "@/lib/types";
+import { REQUIRED_SLOTS, SCENES } from "@/lib/types";
 import { hush, speak } from "@/lib/voice";
 
 type Persisted = {
@@ -31,6 +32,7 @@ type Persisted = {
   view: View;
   draft: Look | null;
   reaction: Reaction;
+  scene: Scene;
   lastJob: LastJob | null;
 };
 
@@ -46,6 +48,8 @@ type LabState = Persisted & {
   setStatus: (status: string) => void;
   setView: (view: View) => void;
   setReaction: (reaction: Reaction) => void;
+  setScene: (scene: Scene) => void;
+  buildPlan: (drafts: PieceDraft[], occasion: string) => void;
   setRef: (ref: CharacterRef) => void;
   togglePiece: (id: string) => void;
   dropPiece: (id: string) => void;
@@ -87,6 +91,7 @@ function snapshot(state: LabState): Persisted {
     view: state.view,
     draft: state.draft,
     reaction: state.reaction,
+    scene: state.scene,
     lastJob: state.lastJob,
   };
 }
@@ -106,6 +111,7 @@ function sameScreen(stage: View, next: View): View {
 }
 
 function failLine(result: { ok: boolean; kind?: string } | null): string {
+  if (result && !result.ok && result.kind === "limit") return copy.limit;
   return result && !result.ok && result.kind === "unavailable" ? copy.cantBuild : copy.missed;
 }
 
@@ -193,8 +199,15 @@ async function buildPieces(drafts: PieceDraft[], transcript: string, thenWear: b
   patch({ lastJob: { kind: "pieces", drafts, transcript, thenWear, pieceIds: previousIds } });
   const outcomes: (string | null)[] = [];
   let missed = 0;
+  let lastFail: { ok: boolean; kind?: string } | null = null;
   for (const draft of drafts) {
     if (!alive(my)) return;
+    // Past the daily limit every further piece would be refused too, so stop asking.
+    if (lastFail?.kind === "limit") {
+      missed += 1;
+      outcomes.push(null);
+      continue;
+    }
     const ticketId = nextId("GEN");
     let result: Awaited<ReturnType<typeof generatePiece>> | null = null;
     try {
@@ -205,6 +218,7 @@ async function buildPieces(drafts: PieceDraft[], transcript: string, thenWear: b
     }
     if (!alive(my)) return;
     if (!result || !result.ok) {
+      lastFail = result;
       missed += 1;
       outcomes.push(null);
       continue;
@@ -248,12 +262,13 @@ async function buildPieces(drafts: PieceDraft[], transcript: string, thenWear: b
   }
   patch({ lastJob: { kind: "pieces", drafts, transcript, thenWear, pieceIds: settled.nextIds } });
   if (!settled.nextIds.some(Boolean)) {
-    noteStatus(copy.missed, copy.missed);
+    const line = failLine(lastFail);
+    noteStatus(line, line);
     finish(my);
     return;
   }
   if (!thenWear) {
-    const done = missed ? copy.partial : copy.onBoard;
+    const done = lastFail?.kind === "limit" ? copy.limit : missed ? copy.partial : copy.onBoard;
     noteStatus(done, done);
     patch({ view: sameScreen(started, "board") });
     finish(my);
@@ -391,6 +406,7 @@ async function walk(my = begin(), again = false) {
     return;
   }
   const reaction = useLab.getState().reaction;
+  const scene = useLab.getState().scene;
   noteStatus(copy.walking, copy.walking);
   patch({ lastJob: { kind: "video" }, view: "runway" });
   const stage: View = "runway";
@@ -403,6 +419,7 @@ async function walk(my = begin(), again = false) {
         faceImage: faces()[0],
         spoken: draft.spoken,
         reaction,
+        scene,
       },
     });
   } catch (error) {
@@ -581,6 +598,44 @@ function runIntent(intent: Intent, view: View, text: string) {
   useLab.setState({ status: copy.unclear });
 }
 
+const SHOP_KINDS: Record<string, Category> = {
+  hoodie: "Tops",
+  tee: "Tops",
+  crewneck: "Tops",
+  "long sleeve": "Tops",
+  jogger: "Bottoms",
+  cap: "Hats",
+  beanie: "Hats",
+};
+
+/** Puts a shop piece on the board, selected, so it can be worn like any built piece. */
+export async function wearShopPiece(input: { slug: string; name: string; kind: string; image: string }) {
+  const source = `shop:${input.slug}`;
+  const state = useLab.getState();
+  const existing = state.pieces.find((piece) => piece.sourceTranscript === source);
+  if (existing) {
+    patch({
+      pieces: state.pieces.map((piece) => (piece.id === existing.id ? { ...piece, selected: true } : piece)),
+      view: "board",
+    });
+    useLab.setState({ status: `${input.name} is on the board. Put it on you.` });
+    return;
+  }
+  const image = await shrink(input.image);
+  const piece: Piece = {
+    id: nextId("piece"),
+    category: SHOP_KINDS[input.kind.toLowerCase()] ?? "Accessories",
+    spoken: input.name,
+    sourceTranscript: source,
+    image,
+    selected: true,
+    ticketId: "",
+    createdAt: Date.now(),
+  };
+  patch({ pieces: [piece, ...useLab.getState().pieces].slice(0, 30), view: "board" });
+  useLab.setState({ status: `${input.name} is on the board. Put it on you.` });
+}
+
 export async function hydrate() {
   if (hydrated) return;
   hydrated = true;
@@ -601,6 +656,7 @@ export async function hydrate() {
       seq: data.seq ?? 0,
       draft: data.draft ?? null,
       reaction: data.reaction ?? "both",
+      scene: SCENES.includes(data.scene) ? data.scene : "runway",
       lastJob: data.lastJob ?? null,
       view,
       ready: true,
@@ -622,6 +678,7 @@ export const useLab = create<LabState>((set, get) => ({
   view: "lock",
   draft: null,
   reaction: "both",
+  scene: "runway",
   lastJob: null,
   ready: false,
   busy: false,
@@ -631,6 +688,14 @@ export const useLab = create<LabState>((set, get) => ({
   setView: (view) => {
     set({ view, status: "" });
     persist();
+  },
+  setScene: (scene) => {
+    set({ scene });
+    persist();
+  },
+  buildPlan: (drafts, occasion) => {
+    if (get().busy || drafts.length === 0) return;
+    void buildPieces(drafts.slice(0, 4), `stylist: ${occasion}`.slice(0, 200), false, false);
   },
   setReaction: (reaction) => {
     set({ reaction });

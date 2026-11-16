@@ -7,7 +7,7 @@ import { copy } from "@/lib/copy";
 import { createSingleFlight } from "@/lib/ui/single-flight";
 import { cn } from "@/lib/cn";
 import { useLab } from "@/lib/store";
-import type { Reaction } from "@/lib/types";
+import { SCENES, type Reaction } from "@/lib/types";
 
 const CHOICES: { id: Reaction; label: string }[] = [
   { id: "cheer", label: copy.cheer },
@@ -20,6 +20,8 @@ export function RunwayScreen() {
   const draft = useLab((state) => state.draft);
   const reaction = useLab((state) => state.reaction);
   const setReaction = useLab((state) => state.setReaction);
+  const scene = useLab((state) => state.scene);
+  const setScene = useLab((state) => state.setScene);
   const busy = useLab((state) => state.busy);
   const status = useLab((state) => state.status);
   const retryReaction = useLab((state) => state.retryReaction);
@@ -75,6 +77,27 @@ export function RunwayScreen() {
             {copy.reshootNote} Last walk: {shotLabel}.
           </p>
         ) : null}
+        <div>
+          <p className="mb-2 text-sm text-muted" id="scene-label">
+            {copy.scene}
+          </p>
+          <div role="group" aria-labelledby="scene-label" className="grid grid-cols-4 gap-2">
+            {SCENES.map((item) => (
+              <button
+                key={item}
+                type="button"
+                aria-pressed={scene === item}
+                onClick={() => setScene(item)}
+                className={cn(
+                  "h-11 rounded-md border text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ink",
+                  scene === item ? "border-ink bg-accent font-extrabold text-accent-fg" : "border-line bg-cream text-fg",
+                )}
+              >
+                {copy.scenes[item]}
+              </button>
+            ))}
+          </div>
+        </div>
         <div>
           <p className="mb-2 text-sm text-muted" id="judges-label">
             {copy.judges}

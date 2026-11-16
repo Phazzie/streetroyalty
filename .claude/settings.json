@@ -1,0 +1,6 @@
+{
+  "env": {
+    "IMPECCABLE_NO_TELEMETRY": "1",
+    "IMPECCABLE_LIVE_COPY_AGENT": "off"
+  }
+}

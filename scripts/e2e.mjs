@@ -7,9 +7,12 @@ import { chromium } from "playwright";
 
 const base = process.env.E2E_BASE_URL || "http://127.0.0.1:8081";
 const routes = [
-  ["/", "Street Royalty"],
+  ["/", "Crown never"],
+  ["/lab", "Street Royalty"],
   ["/studio", "Build the piece"],
-  ["/shop", "The rack"],
+  ["/shop", "The drop"],
+  ["/shop/lilac-set-hoodie", "The Lilac Hoodie"],
+  ["/rack", "The rack"],
   ["/gallery", "Your rack"],
   ["/cart", "Cart"],
   ["/orders", "Orders"],
@@ -33,14 +36,15 @@ try {
     }
     const status = response?.status() ?? 0;
     if (status >= 400) throw new Error(`${path} returned ${status}`);
-    await page.getByText(text, { exact: false }).first().waitFor({ timeout: 20_000 });
+    // Match the page heading. Plain text would also match nav links that are hidden at this width.
+    await page.getByRole("heading", { name: text, exact: false }).first().waitFor({ timeout: 20_000 });
     console.log(`ok ${path}`);
   }
   await page.goto(`${base}/studio`, { waitUntil: "domcontentloaded" });
   await page.getByText(/tee|hoodie|hat/i).first().waitFor({ timeout: 25_000 });
   console.log("ok studio catalog");
 
-  await page.goto(`${base}/shop`, { waitUntil: "networkidle" });
+  await page.goto(`${base}/rack`, { waitUntil: "networkidle" });
   await page.getByLabel("Search the rack").fill("pink hoodie");
   await page.getByRole("button", { name: "Find" }).click();
   await page.getByText(/Matched with/).waitFor({ timeout: 20_000 });

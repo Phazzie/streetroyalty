@@ -26,3 +26,11 @@ export async function completeText(prompt: string, maxTokens = 180): Promise<str
     return null;
   }
 }
+
+/** The same call, counted against the daily text cap first. Over the cap it answers null, like a missing key. */
+export async function guardedText(prompt: string, maxTokens = 180): Promise<string | null> {
+  if (!process.env.XAI_API_KEY?.trim()) return null;
+  const { spend } = await import("./guard.server.ts");
+  if (!(await spend("text")).ok) return null;
+  return completeText(prompt, maxTokens);
+}

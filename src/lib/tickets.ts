@@ -1,4 +1,4 @@
-import type { Category, Reaction } from "@/lib/types";
+import type { Category, Reaction, Scene } from "@/lib/types";
 
 export const LOCK_LINE =
   "Keep the person's face, hair, body proportions, and lighting identical to the character references. Apply only the clothing described. Do not alter identity.";
@@ -56,17 +56,37 @@ export function tweakPrompt(baseSpoken: string, change: string): string {
 }
 
 const CROWD: Record<Reaction, string> = {
-  cheer: "Judges cheer, loud, on their feet.",
-  boo: "Judges boo, loud and messy.",
-  both: "Judges split. Some cheer, some boo. Both are loud.",
+  cheer: "cheer, loud, on their feet.",
+  boo: "boo, loud and messy.",
+  both: "split. Some cheer, some boo. Both are loud.",
 };
 
-export function videoPrompt(reaction: Reaction, spoken: string, hasFace: boolean): string {
+const SCENE: Record<Scene, { walk: string; crowd: string }> = {
+  runway: {
+    walk: "walks a short dark runway toward the camera, steady stride, one spotlight.",
+    crowd: "Judges",
+  },
+  street: {
+    walk: "walks down the middle of a rain-slick city street at night toward the camera, neon signs reflecting on the wet road, steady stride.",
+    crowd: "People on the pavement",
+  },
+  rooftop: {
+    walk: "walks across a city rooftop at dusk toward the camera, skyline behind, warm low sun, steady stride.",
+    crowd: "People at the rooftop party",
+  },
+  subway: {
+    walk: "walks along an empty subway platform toward the camera, tiled walls, a train passing behind, steady stride.",
+    crowd: "People on the platform",
+  },
+};
+
+export function videoPrompt(reaction: Reaction, spoken: string, hasFace: boolean, scene: Scene = "runway"): string {
   const outfit = quote(spoken);
   const outfitLine = outfit ? ` Outfit, exact: "${outfit}".` : "";
-  const crowd = CROWD[reaction];
+  const place = SCENE[scene] ?? SCENE.runway;
+  const crowd = `${place.crowd} ${CROWD[reaction]}`;
   if (hasFace) {
-    return `Use the first image as the person and the outfit. Use the second image as the face lock. The same person walks a short dark runway toward the camera, steady stride, one spotlight.${outfitLine} ${crowd} Realistic live action, no on-screen text.`;
+    return `Use the first image as the person and the outfit. Use the second image as the face lock. The same person ${place.walk}${outfitLine} ${crowd} Realistic live action, no on-screen text.`;
   }
-  return `The person in the still walks a short dark runway toward the camera, same face, same outfit, steady stride, one spotlight.${outfitLine} ${crowd} Realistic live action, no on-screen text.`;
+  return `The person in the still ${place.walk.replace("toward the camera,", "toward the camera, same face, same outfit,")}${outfitLine} ${crowd} Realistic live action, no on-screen text.`;
 }

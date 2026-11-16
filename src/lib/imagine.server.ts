@@ -1,7 +1,8 @@
+import { artPrompt, type ArtStyleId } from "@/lib/ai/art-styles";
 import { CLIP_BYTE_CAP, declaredByteLength, readCappedBytes } from "@/lib/bounded-bytes";
 import { isCategory } from "@/lib/split-pieces";
 import { lookPrompt, piecePrompt, tweakPrompt, videoPrompt } from "@/lib/tickets";
-import type { Reaction } from "@/lib/types";
+import type { Reaction, Scene } from "@/lib/types";
 
 type Fail = { ok: false; kind: "unavailable" | "missed" };
 type ImageOk = { ok: true; image: string; prompt: string };
@@ -130,6 +131,19 @@ export async function runPiece(input: { spoken: string; category: string }): Pro
   });
 }
 
+export async function runArt(input: { idea: string; style: ArtStyleId }): Promise<ImageResult> {
+  if (!input.idea) return { ok: false, kind: "missed" };
+  return generateImage("/v1/images/generations", {
+    model: IMAGE_MODEL,
+    prompt: artPrompt(input.idea, input.style),
+    n: 1,
+    aspect_ratio: "1:1",
+    resolution: "1k",
+    quality: "low",
+    response_format: "b64_json",
+  });
+}
+
 export async function runLook(input: {
   mode: "look" | "tweak";
   spoken: string;
@@ -170,11 +184,13 @@ export async function runStart(input: {
   faceImage: string | null;
   spoken: string;
   reaction: Reaction;
+  scene?: Scene;
 }): Promise<StartOk | Fail> {
   if (!input.lookImage) return { ok: false, kind: "missed" };
   if (!key()) return { ok: false, kind: "unavailable" };
   const hasFace = Boolean(input.faceImage);
-  const prompt = videoPrompt(input.reaction, input.spoken, hasFace);
+  const scene = input.scene ?? "runway";
+  const prompt = videoPrompt(input.reaction, input.spoken, hasFace, scene);
   const primary = hasFace
     ? {
         model: VIDEO_MODEL,
@@ -199,7 +215,7 @@ export async function runStart(input: {
   if (hasFace && (result.status < 200 || result.status >= 300)) {
     result = await postJson("/v1/videos/generations", {
       model: VIDEO_MODEL,
-      prompt: videoPrompt(input.reaction, input.spoken, false),
+      prompt: videoPrompt(input.reaction, input.spoken, false, scene),
       image: { url: input.lookImage },
       duration: 6,
       aspect_ratio: "9:16",

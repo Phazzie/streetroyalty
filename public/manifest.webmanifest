@@ -2,7 +2,7 @@
   "name": "Street Royalty Outfit Lab",
   "short_name": "Royalty",
   "id": "/",
-  "start_url": "/",
+  "start_url": "/lab",
   "scope": "/",
   "display": "standalone",
   "background_color": "#cbb6ee",
