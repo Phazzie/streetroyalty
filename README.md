@@ -113,10 +113,11 @@ Orders are created with v2 `POST /v2/orders`, which leaves them in `draft`. `POS
 
 ## Checks
 
-`npm run ci` runs lint, typecheck, tests, and the production build. The same command runs in two places:
+`npm run ci` runs lint, typecheck, tests, and the production build. The same command runs in these places:
 
-- **Bitbucket Pipelines** (`bitbucket-pipelines.yml`) on `main` and on pull requests in the Bitbucket mirror. The free plan has 50 build minutes a month, so other branches are checked by hand with the custom `check` pipeline.
-- **Depot on Origin**, described next.
+- **Vercel**, on every push. `vercel.json` makes `npm run ci` the build command, so a failed lint, type, or test stops the deploy and shows as a failed Vercel check on the pull request. The install includes the dev tools for that reason.
+- **Bitbucket Pipelines** (`bitbucket-pipelines.yml`), once the Bitbucket mirror is being pushed and Pipelines is switched on there. Neither is done yet. It is set to run on `main` and on pull requests, because the free plan has 50 build minutes a month.
+- **Depot on Origin**, described below.
 
 GitHub Actions is not used. Since 12 November every run on this repository has ended in about two seconds with no runner assigned and no log, which is what GitHub does when it will not start jobs for an account. Once that is cleared in the account's billing settings, the old workflow can come back from `git show df37b18:.github/workflows/ci.yml`.
 
