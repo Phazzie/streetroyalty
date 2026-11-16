@@ -14,6 +14,8 @@ export default tseslint.config(
       ".vercel/**",
       ".nitro/**",
       "node_modules/**",
+      // Vendored third-party skill files, kept as shipped.
+      ".claude/**",
       "src/routeTree.gen.ts",
     ],
   },

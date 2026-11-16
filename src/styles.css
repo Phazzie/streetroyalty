@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Keep the vendored skill files out of the class scan. */
+@source not "../.claude";
 
 @theme {
   --color-bg: #0b0614;
