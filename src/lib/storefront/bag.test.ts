@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { addLine, bagCount, bagSubtotalCents, parseStoredBag, setLineQuantity } from "./bag.ts";
 import { MAX_BAG_LINES, MAX_LINE_QUANTITY, type BagLine } from "./types.ts";
 

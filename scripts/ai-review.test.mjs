@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { clipDiff, commentDestination, reviewDecision, reviewPrompt } from "./ai-review.mjs";
 
 describe("ai review", () => {
