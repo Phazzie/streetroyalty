@@ -68,6 +68,30 @@ describe("the remix button", () => {
     expect(mocks.remixPiece).not.toHaveBeenCalled();
   });
 
+  it("remembers the piece through sign-in and greets the person who comes back", async () => {
+    window.sessionStorage.clear();
+    const first = render(<RemixButton designId="d1" slug="crown-tee-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /Remix this/ }));
+    expect(window.sessionStorage.getItem("sr-remix-next")).toBe("crown-tee-1");
+    first.unmount();
+
+    mocks.session = { user: { id: "bo" }, isPending: false };
+    // Another piece does not claim the note.
+    const other = render(<RemixButton designId="d2" slug="other-piece-2" />);
+    expect(screen.queryByText(/You are signed in now/)).toBeNull();
+    other.unmount();
+
+    const second = render(<RemixButton designId="d1" slug="crown-tee-1" />);
+    expect(await screen.findByText(/You are signed in now/)).toBeTruthy();
+    expect(window.sessionStorage.getItem("sr-remix-next")).toBeNull();
+    expect(mocks.remixPiece).not.toHaveBeenCalled();
+    second.unmount();
+
+    // Said once. The next visit is an ordinary one.
+    render(<RemixButton designId="d1" slug="crown-tee-1" />);
+    expect(screen.queryByText(/You are signed in now/)).toBeNull();
+  });
+
   it("does not ask a signed-in maker to sign in", () => {
     mocks.session = { user: { id: "bo" }, isPending: false };
     render(<RemixButton designId="d1" slug="crown-tee-1" />);

@@ -55,7 +55,11 @@ export type FamilyLimits = {
   pictures: number;
 };
 
-export const FAMILY_LIMITS: FamilyLimits = { walk: 5000, picture: 300_000, pictures: 1_500_000 };
+/**
+ * A mockup from the print provider is a short link. A sandbox mockup is a data URL with the
+ * artwork inside it, usually a few hundred thousand characters, so about three of those fit.
+ */
+export const FAMILY_LIMITS: FamilyLimits = { walk: 5000, picture: 600_000, pictures: 2_000_000 };
 
 const SUFFIX = " remix";
 const MAX_TITLE = 80;

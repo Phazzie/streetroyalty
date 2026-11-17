@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -24,6 +24,31 @@ const CSS = `
   .sr-rx-btn .sr-rx-copy, .sr-rx-btn .sr-rx-copy-dot { animation: none !important; }
 }
 `;
+
+/**
+ * Where a signed-out visitor was when they tapped the button: the slug of the piece. Signing
+ * in lands on the studio today. A sign-in page that reads this key can send them back here.
+ */
+export const REMIX_NEXT_KEY = "sr-remix-next";
+
+function remember(slug: string): void {
+  try {
+    window.sessionStorage.setItem(REMIX_NEXT_KEY, slug);
+  } catch {
+    // Private windows can refuse storage. The button still works without the note.
+  }
+}
+
+/** True once, for the piece the visitor meant to remix before signing in. */
+function cameBackFor(slug: string): boolean {
+  try {
+    if (window.sessionStorage.getItem(REMIX_NEXT_KEY) !== slug) return false;
+    window.sessionStorage.removeItem(REMIX_NEXT_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function signedOut(reason: unknown): boolean {
   if (!reason || typeof reason !== "object") return false;
@@ -55,12 +80,24 @@ export function RemixButton({ designId, slug }: { designId: string; slug: string
   const [state, setState] = useState<"idle" | "busy" | "opening">("idle");
   const [error, setError] = useState("");
   const flight = useRef(createSingleFlight());
+  const [back, setBack] = useState(false);
   const noteId = `remix-note-${designId}`;
   const working = state !== "idle";
+  const signedIn = Boolean(user);
+
+  // Someone who left to sign in and came back is told the button is ready for them now.
+  useEffect(() => {
+    if (signedIn && cameBackFor(slug)) setBack(true);
+  }, [signedIn, slug]);
+
+  function toSignIn() {
+    remember(slug);
+    void navigate({ to: "/login" });
+  }
 
   function start() {
     if (!isPending && !user) {
-      void navigate({ to: "/login" });
+      toSignIn();
       return;
     }
     void flight.current(async () => {
@@ -74,7 +111,7 @@ export function RemixButton({ designId, slug }: { designId: string; slug: string
       } catch (reason: unknown) {
         setState("idle");
         if (signedOut(reason)) {
-          void navigate({ to: "/login" });
+          toSignIn();
           return;
         }
         setError(reason instanceof Error ? reason.message : "The remix did not start. Try again.");
@@ -106,6 +143,9 @@ export function RemixButton({ designId, slug }: { designId: string; slug: string
         </span>
       </Button>
       <p id={noteId} className="mt-2 text-sm text-muted">
+        {back ? (
+          <span className="text-fg">You are signed in now. Tap it to make your copy. </span>
+        ) : null}
         You get your own copy to change. The original maker stays credited.
         {!isPending && !user ? " Sign in first, then come back here and tap it again." : null}
       </p>
