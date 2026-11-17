@@ -166,7 +166,7 @@ function palette(hex: string): Palette {
     shadeAlpha: Math.min(0.62, Math.max(0.24, 0.6 - 0.36 * lum)),
     lightAlpha: Math.min(0.3, Math.max(0.12, 0.12 + 0.2 * lum)),
     grain: dark ? "1" : "0",
-    grainAlpha: dark ? 0.13 : pale ? 0.26 : 0.22,
+    grainAlpha: dark ? 0.1 : pale ? 0.2 : 0.17,
     dark,
   };
 }
@@ -283,6 +283,7 @@ function compose(options: {
 <radialGradient id="b" cx=".5" cy=".47" r=".72"><stop offset="0" stop-color="#3a2d52"/><stop offset=".5" stop-color="#20182c"/><stop offset="1" stop-color="#0b0614"/></radialGradient>
 <pattern id="d" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="1.2" cy="1.2" r=".7" fill="#f6f1ff" opacity=".06"/></pattern>
 <pattern id="m" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M48 0H0V48" fill="none" stroke="#b7a8d4" stroke-width=".7" opacity=".1"/></pattern>
+<pattern id="r" width="9" height="48" patternUnits="userSpaceOnUse"><path d="M0 .5H9M0 12.5H4M0 24.5H6M0 36.5H4" fill="none" stroke="#b7a8d4" stroke-width=".8" opacity=".4"/></pattern>
 <linearGradient id="l" x1=".1" y1="0" x2=".9" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="${f(tones.lightAlpha * 0.9)}"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset=".6" stop-color="${tones.shade}" stop-opacity="0"/><stop offset="1" stop-color="${tones.shade}" stop-opacity="${f(tones.shadeAlpha * 0.55)}"/></linearGradient>
 <filter id="f" filterUnits="userSpaceOnUse" ${whole}><feGaussianBlur stdDeviation="3.2"/></filter>
 <filter id="w" filterUnits="userSpaceOnUse" ${whole}><feGaussianBlur stdDeviation="9"/></filter>
@@ -294,6 +295,7 @@ function compose(options: {
 <rect width="480" height="600" fill="url(#b)"/>
 <rect width="480" height="600" fill="url(#m)"/>
 <rect width="480" height="600" fill="url(#d)"/>
+<rect width="9" height="600" fill="url(#r)"/>
 <path d="M20 ${captionY - 3}h14M27 ${captionY - 10}v14" stroke="#b7a8d4" stroke-width="1" opacity=".55"/>
 <text x="42" y="${captionY + 1}" fill="#b7a8d4" font-family="${DISPLAY_STACK}" font-weight="900" font-size="9.5" letter-spacing="2.2" opacity=".85">PREVIEW / ${drawing.label}</text>
 <g${place}>
