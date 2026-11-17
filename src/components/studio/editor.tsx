@@ -253,6 +253,8 @@ export function Editor({ designId }: { designId: string }) {
       setNote("Eight layers is the limit.");
       return false;
     }
+    // Counted now, not when the page next draws, so a second picture landing in the same moment is turned away here.
+    layerCount.current += 1;
     const id = `img-${Date.now()}`;
     originals.current.set(id, original);
     setLayers((current) => {
