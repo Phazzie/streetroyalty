@@ -1,6 +1,7 @@
 import {
   CLAIMABLE,
   CLAIM_HOLD_MS,
+  HOLDABLE,
   canTransition,
   type FulfillmentOrder,
   type OrderStatus,
@@ -66,7 +67,7 @@ export function memoryStore(seed: FulfillmentOrder[]): MemoryStore {
     },
     async markNeedsReview(id) {
       const order = orders.get(id);
-      if (!order || !CLAIMABLE.includes(order.status)) return;
+      if (!order || !HOLDABLE.includes(order.status)) return;
       order.status = "needs_review";
       order.paymentStatus = "paid";
     },

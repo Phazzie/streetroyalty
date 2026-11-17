@@ -28,6 +28,13 @@ export const ORDER_STATUSES: OrderStatus[] = [
 /** An order can be claimed for printing from these. Anything later already went to the printer or was stopped. */
 export const CLAIMABLE: OrderStatus[] = ["draft", "awaiting_payment", "failed"];
 
+/**
+ * An order can be held for a human from these. Canceled is here because a
+ * buyer can still pay a Stripe session for an order that was canceled after
+ * the session was made, and that money has to be refunded by someone.
+ */
+export const HOLDABLE: OrderStatus[] = ["draft", "awaiting_payment", "failed", "canceled"];
+
 /** How long a claim holds before another paid signal may take it over, in case the first one died mid-confirm. */
 export const CLAIM_HOLD_MS = 2 * 60 * 1000;
 
@@ -154,8 +161,6 @@ export function decidePaymentFulfillment(
   if (order.status === "submitted" || order.status === "shipped" || order.status === "delivered") {
     return { ok: true, action: "ignored", reason: "already_fulfilled" };
   }
-  if (order.status === "failed" && order.paymentStatus !== "paid")
-    return { ok: false, reason: "unpaid" };
   if (!order.providerOrderId) return { ok: false, reason: "missing_provider_order" };
   if (!canTransition(order.status, "submitted")) return { ok: false, reason: "illegal_transition" };
   return { ok: true, action: "confirmed" };
@@ -227,6 +232,32 @@ export async function fulfillPaidOrder(
   }
   await store.markSubmitted(input.orderId, "pending");
   return { ok: true, action: "confirmed" };
+}
+
+const HOLD_REASONS: Record<string, string> = {
+  amount_mismatch:
+    "Stripe captured an amount that does not match this order. The print was not submitted. Refund the charge in Stripe.",
+  canceled:
+    "Payment arrived for an order that was already canceled. Nothing was printed. Refund the charge in Stripe.",
+};
+
+/**
+ * A card payment reported by Stripe, from the webhook or from the buyer's
+ * return to the site. It prints the order when it can. When money was taken
+ * and the order cannot print, it holds the order for a human instead of leaving
+ * a charge with nothing on record.
+ */
+export async function settleCardPayment(
+  store: OrderStore,
+  provider: PodProvider,
+  input: Parameters<typeof fulfillPaidOrder>[2],
+): Promise<FulfillmentResult> {
+  const result = await fulfillPaidOrder(store, provider, input);
+  if (!result.ok && input.paid) {
+    const reason = HOLD_REASONS[result.reason];
+    if (reason) await store.markNeedsReview(input.orderId, reason);
+  }
+  return result;
 }
 
 export function parsePrintfulEvent(rawBody: string): ProviderEvent {
@@ -361,19 +392,13 @@ export async function processStripeWebhook(args: {
     return { status: 200, body: { ok: false, reason: "sandbox_print" } };
   }
   try {
-    const result = await fulfillPaidOrder(args.store, args.provider, {
+    const result = await settleCardPayment(args.store, args.provider, {
       orderId: event.orderId,
       paid: event.paid,
       amountCents: event.amountCents,
       podMode: args.podMode,
       paymentsMode: args.paymentsMode,
     });
-    if (!result.ok && result.reason === "amount_mismatch") {
-      await args.store.markNeedsReview(
-        event.orderId,
-        "Stripe captured an amount that does not match this order. The print was not submitted. Refund the charge in Stripe.",
-      );
-    }
     if (result.ok) await args.store.clearPurchasedLines(event.orderId);
     await args.store.recordEvent(event.id, "stripe", event.type);
     return { status: 200, body: result };

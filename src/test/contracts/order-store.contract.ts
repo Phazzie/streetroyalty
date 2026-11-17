@@ -144,7 +144,7 @@ export function orderStoreContract(name: string, make: () => Promise<StoreHarnes
       },
     );
 
-    it.each(["draft", "awaiting_payment", "failed"] as OrderStatus[])(
+    it.each(["draft", "awaiting_payment", "failed", "canceled"] as OrderStatus[])(
       "can hold a %s order for review",
       async (status) => {
         await harness.seed(order(status));
@@ -153,7 +153,7 @@ export function orderStoreContract(name: string, make: () => Promise<StoreHarnes
       },
     );
 
-    it.each(["submitted", "shipped", "delivered", "canceled"] as OrderStatus[])(
+    it.each(["submitted", "shipped", "delivered"] as OrderStatus[])(
       "does not pull a %s order back for review",
       async (status) => {
         await harness.seed(order(status));

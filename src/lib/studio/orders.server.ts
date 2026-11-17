@@ -2,11 +2,13 @@ import { getSql, type Sql } from "../db.ts";
 import {
   CLAIMABLE,
   CLAIM_HOLD_MS,
+  HOLDABLE,
   assertLivePaymentHasPrinter,
   fulfillPaidOrder,
   processPrintfulWebhook,
   processStripeWebhook,
   purchasedLineKeys,
+  settleCardPayment,
   statusesThatCanBecome,
   type FulfillmentOrder,
   type OrderStatus,
@@ -186,7 +188,7 @@ export function dbStore(sql: Sql): OrderStore {
       await sql`
         update orders
         set status = 'needs_review', payment_status = 'paid', failure_reason = ${reason.slice(0, 500)}, updated_at = now()
-        where id = ${id} and status in ('draft', 'awaiting_payment', 'failed')
+        where id = ${id} and status = any(string_to_array(${HOLDABLE.join(",")}, ','))
       `;
     },
     async applyProviderUpdate(id, patch) {
@@ -269,7 +271,7 @@ export async function syncStripeReturn(userId: string, sessionId: string) {
     id: string;
   }>`select id from orders where id = ${session.orderId} and user_id = ${userId}`;
   if (!rows[0]) throw new Error("Order not found.");
-  const result = await fulfillPaidOrder(dbStore(sql), getPodProvider(), {
+  const result = await settleCardPayment(dbStore(sql), getPodProvider(), {
     orderId: session.orderId,
     paid: session.paid,
     amountCents: session.amountCents,
