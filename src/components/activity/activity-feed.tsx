@@ -36,6 +36,9 @@ const KIND_NAME: Record<ActivityKind, string> = {
 type Load =
   { state: "loading" } | { state: "error" } | { state: "ready"; items: ActivityItem[]; now: Date };
 
+/** How often an open page looks for news. */
+const REFRESH_MS = 60_000;
+
 /** Where this browser keeps the time of the newest news it has shown. Nothing personal. */
 const SEEN_KEY = "sr-activity-seen";
 
@@ -301,11 +304,12 @@ export function ActivityFeed() {
     if (!quiet) setLoad({ state: "loading" });
     try {
       const items = await myActivity();
+      const newest = items[0]?.when;
       if (!seenRead.current) {
         seenRead.current = true;
-        setSeen(readSeen());
+        // On a first visit nothing is new. What turns up while the page is open still is.
+        setSeen(readSeen() ?? newest ?? new Date().toISOString());
       }
-      const newest = items[0]?.when;
       if (newest) writeSeen(newest);
       setLoad({ state: "ready", items, now: new Date() });
     } catch {
@@ -324,7 +328,12 @@ export function ActivityFeed() {
       if (document.visibilityState === "visible") void fetchFeed(true);
     };
     document.addEventListener("visibilitychange", onShow);
-    return () => document.removeEventListener("visibilitychange", onShow);
+    // And once a minute while the page is in view, so news turns up without a reload.
+    const timer = window.setInterval(onShow, REFRESH_MS);
+    return () => {
+      document.removeEventListener("visibilitychange", onShow);
+      window.clearInterval(timer);
+    };
   }, [userId, fetchFeed]);
 
   const items = load.state === "ready" ? load.items : null;
@@ -426,9 +435,11 @@ export function ActivityFeed() {
 
           <div className="sr-act-seam mt-5 max-w-2xl" key={filter ?? "all"}>
             {groups.map((group) => (
-              <section key={group.key} aria-label={group.label} className="pb-4">
-                <h3 className="tape relative mb-1 ml-0.5">{group.label}</h3>
-                <ul>
+              <div key={group.key} className="pb-4">
+                <h3 id={`sr-act-day-${group.key}`} className="tape relative mb-1 ml-0.5">
+                  {group.label}
+                </h3>
+                <ul aria-labelledby={`sr-act-day-${group.key}`}>
                   {group.items.map((item, at) => (
                     <Row
                       key={item.id}
@@ -438,7 +449,7 @@ export function ActivityFeed() {
                     />
                   ))}
                 </ul>
-              </section>
+              </div>
             ))}
           </div>
           {items.length >= 40 ? (

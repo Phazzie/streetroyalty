@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ActivityItem, ShelfPiece } from "@/lib/social/activity-api";
@@ -121,11 +121,11 @@ describe("ActivityFeed", () => {
   it("groups the news under Today, Yesterday and the date, one sentence a row", async () => {
     api.myActivity.mockResolvedValue([CROWN, FOLLOW, BATTLE]);
     render(<ActivityFeed />);
-    const today = await screen.findByRole("region", { name: "Today" });
+    const today = await screen.findByRole("list", { name: "Today" });
     expect(within(today).getByRole("listitem").textContent).toContain(
       "Bo crowned Do Better Hoodie.",
     );
-    const yesterday = screen.getByRole("region", { name: "Yesterday" });
+    const yesterday = screen.getByRole("list", { name: "Yesterday" });
     expect(within(yesterday).getByRole("listitem").textContent).toContain(
       "Cy started following you.",
     );
@@ -173,14 +173,14 @@ describe("ActivityFeed", () => {
   it("has no filter when all the news is one kind", async () => {
     api.myActivity.mockResolvedValue([CROWN]);
     render(<ActivityFeed />);
-    await screen.findByRole("region", { name: "Today" });
+    await screen.findByRole("list", { name: "Today" });
     expect(screen.queryByRole("group")).toBeNull();
   });
 
   it("marks what arrived since the last visit, and nothing on a first visit", async () => {
     api.myActivity.mockResolvedValue([FOLLOW, BATTLE]);
     const first = render(<ActivityFeed />);
-    await screen.findByRole("region", { name: "Yesterday" });
+    await screen.findByRole("list", { name: "Yesterday" });
     expect(screen.queryByText("New")).toBeNull();
     first.unmount();
 
@@ -190,12 +190,49 @@ describe("ActivityFeed", () => {
     expect(screen.getAllByText("New")).toHaveLength(1);
   });
 
+  it("looks again every minute, and marks what turned up while the page was open", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      api.myActivity.mockResolvedValueOnce([FOLLOW]);
+      api.myActivity.mockResolvedValue([{ ...CROWN, when: hoursAgo(0) }, FOLLOW]);
+      render(<ActivityFeed />);
+      await screen.findByRole("list", { name: "Yesterday" });
+      expect(screen.queryByRole("list", { name: "Today" })).toBeNull();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000);
+      });
+      expect(await screen.findByRole("list", { name: "Today" })).toBeTruthy();
+      expect(api.myActivity).toHaveBeenCalledTimes(2);
+      expect(screen.getAllByText("New")).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps what is on screen when a later look fails", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      api.myActivity.mockResolvedValueOnce([CROWN]);
+      api.myActivity.mockRejectedValue(new Error("down"));
+      render(<ActivityFeed />);
+      await screen.findByRole("list", { name: "Today" });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000);
+      });
+      expect(api.myActivity).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole("list", { name: "Today" })).toBeTruthy();
+      expect(screen.queryByText("This did not load.")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("offers another go when the news does not load", async () => {
     api.myActivity.mockRejectedValueOnce(new Error("down"));
     api.myActivity.mockResolvedValue([CROWN]);
     render(<ActivityFeed />);
     await userEvent.click(await screen.findByRole("button", { name: "Try again" }));
-    expect(await screen.findByRole("region", { name: "Today" })).toBeTruthy();
+    expect(await screen.findByRole("list", { name: "Today" })).toBeTruthy();
   });
 });
 
