@@ -459,43 +459,45 @@ function Breaker({
         </div>
       </div>
 
-      <div className="gl-body mt-3 flex flex-col gap-3">
-        <p className="max-w-prose text-muted">
-          {report ? report.now : `While it is off: ${lowerFirst(spec.without)}`}
-        </p>
-        {report?.notes.map((note) => (
-          <p key={note} className="max-w-prose border-2 border-amber bg-bg px-3 py-2 text-sm">
-            {note}
+      <div className="gl-body mt-3 grid gap-3 lg:grid-cols-2 lg:gap-10">
+        <div className="flex min-w-0 flex-col gap-3">
+          <p className="max-w-prose text-muted">
+            {report ? report.now : `While it is off: ${lowerFirst(spec.without)}`}
           </p>
-        ))}
-        {report && report.waitsOn.length > 0 ? (
-          <p className="text-sm">
-            Waiting on{" "}
-            {report.waitsOn.map((id) => (
-              <a
-                key={id}
-                href={`#sw-${id}`}
-                className="inline-flex min-h-11 items-center underline underline-offset-4"
-              >
-                {names[id]}
-              </a>
-            ))}
-            .
-          </p>
-        ) : null}
-        <ul className="flex flex-col gap-3">
-          {needed.map((variable) => (
-            <Fuse
-              key={variable.name}
-              name={variable.name}
-              what={variable.what}
-              set={isSet(variable.name)}
-              onCopied={onCopied}
-            />
+          {report?.notes.map((note) => (
+            <p key={note} className="max-w-prose border-2 border-amber bg-bg px-3 py-2 text-sm">
+              {note}
+            </p>
           ))}
-        </ul>
-        <details className="gl-how" open={open}>
-          <summary>How to switch it on</summary>
+          {report && report.waitsOn.length > 0 ? (
+            <p className="text-sm">
+              Waiting on{" "}
+              {report.waitsOn.map((id) => (
+                <a
+                  key={id}
+                  href={`#sw-${id}`}
+                  className="inline-flex min-h-11 items-center underline underline-offset-4"
+                >
+                  {names[id]}
+                </a>
+              ))}
+              .
+            </p>
+          ) : null}
+          <ul className="flex flex-col gap-3">
+            {needed.map((variable) => (
+              <Fuse
+                key={variable.name}
+                name={variable.name}
+                what={variable.what}
+                set={isSet(variable.name)}
+                onCopied={onCopied}
+              />
+            ))}
+          </ul>
+        </div>
+        <details className="gl-how min-w-0" open={open}>
+          <summary>{face === "on" ? "How it was switched on" : "How to switch it on"}</summary>
           <div className="mt-2 flex flex-col gap-4 border-l-2 border-line pl-3">
             <ol className="gl-steps flex max-w-prose flex-col gap-2 text-sm">
               {spec.steps.map((step) => (
@@ -571,23 +573,19 @@ export function GoLivePanel({ view }: { view: PanelView }) {
           <div className="min-w-0">
             <p className="display text-4xl sm:text-5xl">{verdict}</p>
             {board ? (
-              <p className="mt-3 max-w-prose text-muted">
-                {onCount} of {SERVICES.length} switches fully on. Printing is{" "}
-                {board.podMode === "live" ? "live" : "in sandbox"}. Payments are{" "}
-                {board.paymentsMode === "live" ? "live" : "in sandbox"}.
-                {nextId ? (
-                  <>
-                    {" "}
-                    Next:{" "}
-                    <a href={`#sw-${nextId}`} className="underline underline-offset-4">
-                      {lowerFirst(names[nextId])}
-                    </a>
-                    .
-                  </>
-                ) : (
-                  " Every switch is on. Place a test order."
-                )}
-              </p>
+              <>
+                <p className="mt-3 max-w-prose text-muted">
+                  {onCount} of {SERVICES.length} switches fully on. Printing is{" "}
+                  {board.podMode === "live" ? "live" : "in sandbox"}. Payments are{" "}
+                  {board.paymentsMode === "live" ? "live" : "in sandbox"}.
+                  {nextId ? null : " Place a test order to prove it."}
+                </p>
+                <p className="mt-4">
+                  <a href={`#sw-${nextId ?? "test"}`} className="chip chip-on">
+                    Next: {nextId ? lowerFirst(names[nextId]) : "the test order"}
+                  </a>
+                </p>
+              </>
             ) : visitor ? (
               <>
                 <p className="mt-3 max-w-prose text-muted">
