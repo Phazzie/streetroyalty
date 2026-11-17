@@ -114,7 +114,7 @@ export function failSentence(kind: TryOnFail): string {
     return "That is today's pictures used up. The fitting room opens again tomorrow.";
   }
   if (kind === "offline") {
-    return "The fitting room could not be reached, so nothing was made. Check your signal and try again.";
+    return "The fitting room could not be reached. Check your signal and try again.";
   }
   return "That one did not come out. The picture maker turned it down or dropped it. Try again, or lock a different face in the lab.";
 }

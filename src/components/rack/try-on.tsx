@@ -44,7 +44,7 @@ export function TryOn({
   /** Null until the server has said whether try-on is on. */
   const [open, setOpen] = useState<boolean | null>(null);
   const [perDay, setPerDay] = useState<number | null>(null);
-  /** Null until this device's lab has been read. It follows the lab, so locking a face in another tab shows up here. */
+  /** Null until this device's lab has been read. It follows the lab's own store, so it is right whoever read the lab first. */
   const labRead = useLab((state) => state.ready);
   const labRefs = useLab((state) => state.refs);
   const hasFace = labRead ? pickFaces(labRefs).length > 0 : null;
@@ -55,6 +55,8 @@ export function TryOn({
   const [exact, setExact] = useState(true);
   const [fail, setFail] = useState<TryOnFail | null>(null);
   const flight = useRef(createSingleFlight());
+  /** Counts fittings, so a picture that lands after the visitor moved to another piece is dropped. */
+  const fitting = useRef(0);
   const askRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -76,6 +78,7 @@ export function TryOn({
   // A different piece is a different fitting: clear the last picture and draw a new reference.
   useEffect(() => {
     let live = true;
+    fitting.current += 1;
     setStep("idle");
     setImage("");
     setFail(null);
@@ -97,6 +100,8 @@ export function TryOn({
 
   function wear() {
     void flight.current(async () => {
+      const mine = fitting.current;
+      const moved = () => mine !== fitting.current;
       setStep("dressing");
       setFail(null);
       try {
@@ -114,7 +119,10 @@ export function TryOn({
           setStep("idle");
           return;
         }
+        // Moved on to another piece while the pictures were being read: spend nothing.
+        if (moved()) return;
         const result = await generateLook({ data: request });
+        if (moved()) return;
         if (!result.ok) {
           const kind = failKind(result.kind);
           if (kind === "off") setOpen(false);
@@ -127,6 +135,7 @@ export function TryOn({
         setExact(request.clothingImages.length > 0);
         setStep("shown");
       } catch {
+        if (moved()) return;
         setFail("offline");
         setStep("idle");
       }

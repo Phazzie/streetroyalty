@@ -172,7 +172,7 @@ describe("failures", () => {
     }
     expect(failSentence("off")).toBe("Try-on is switched off for now.");
     expect(failSentence("limit")).toContain("tomorrow");
-    expect(failSentence("offline")).toContain("nothing was made");
+    expect(failSentence("offline")).toContain("could not be reached");
   });
 });
 
