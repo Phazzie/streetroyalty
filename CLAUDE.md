@@ -1,4 +1,5 @@
 @AGENTS.md
+@AGENTS.project.md
 
 # How we work here
 
