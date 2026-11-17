@@ -60,6 +60,21 @@ function seam(hex: string, strength = 1): string {
     : `rgba(255,255,255,${0.36 * strength})`;
 }
 
+const FALLBACK = "#8a8a8f";
+
+/**
+ * Colours can arrive from a link or a saved design, so only a plain colour value is ever painted:
+ * a hex or a colour function. Anything else (a url(), a word, a missing value) falls back to grey.
+ */
+function paint(value: unknown, fallback: string): string {
+  if (typeof value !== "string") return fallback;
+  const text = value.trim();
+  if (text.length === 0 || text.length > 48) return fallback;
+  if (/^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(text)) return text;
+  if (/^(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch)\([0-9a-z.,%\s/+-]+\)$/i.test(text)) return text;
+  return fallback;
+}
+
 type Ids = { rib: string; ribSlant: string; sheen: string; inner: string };
 
 type Resolved = Required<TracksuitColors>;
@@ -72,12 +87,14 @@ export function Tracksuit({ colors, view = "set", className, title }: Props) {
     sheen: `ts-sheen-${uid}`,
     inner: `ts-inner-${uid}`,
   };
+  const body = paint(colors.body, FALLBACK);
+  const panel = paint(colors.panel, body);
   const resolved: Resolved = {
-    body: colors.body,
-    panel: colors.panel,
-    piping: colors.piping,
-    rib: colors.rib ?? colors.body,
-    cord: colors.cord ?? colors.panel,
+    body,
+    panel,
+    piping: paint(colors.piping, panel),
+    rib: paint(colors.rib, body),
+    cord: paint(colors.cord, panel),
   };
 
   return (

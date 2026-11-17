@@ -10,6 +10,7 @@ import {
   decodeColorway,
   describeColorway,
   encodeColorway,
+  hexToOklch,
   KEPT_KEY,
   louder,
   normalizeHex,
@@ -31,6 +32,8 @@ import {
  */
 
 const CELL = 44;
+/** The small readout on the stage, for screens where the reels sit below the fold. */
+const MINI = 14;
 /** The strip is the reel's colours repeated, so a spin can run forward a few turns without running out. */
 const REPS = 6;
 const HOME = 2;
@@ -150,10 +153,15 @@ export function ClashMachine({ colors, onChange }: Props) {
         strip = [...strip];
         strip[index] = hex;
       }
-      const from = HOME * count + (((reel.pos % count) + count) % count);
+      const settled = HOME * count + (((reel.pos % count) + count) % count);
+      // A step that is still moving carries on from where the strip is, so a quick second tap
+      // never whips it back a whole turn. A pull always starts from home, where there is room to spin.
+      const moving =
+        !wasPull && reel.ms > 0 && reel.pos >= count && reel.pos < (REPS - 1) * count - 1;
+      const from = moving ? reel.pos : settled;
       const forward = (index - (from % count) + count) % count;
       if (forward === 0 && strip === reel.strip) {
-        next[key] = { strip, pos: from, ms: 0 };
+        next[key] = moving ? reel : { strip, pos: settled, ms: 0 };
         return;
       }
       window.clearTimeout(timers.current[key]);
@@ -253,7 +261,10 @@ export function ClashMachine({ colors, onChange }: Props) {
 
   async function copyLink() {
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      // Built from the colours on screen, not the address bar, which can be a beat behind.
+      const link = new URL(window.location.href);
+      link.searchParams.set("c", code);
+      await navigator.clipboard.writeText(link.toString());
       setNote("Link copied. Anyone who opens it gets this colourway.");
     } catch {
       setNote("Copy the address from the bar at the top. The colours are in it.");
@@ -262,11 +273,15 @@ export function ClashMachine({ colors, onChange }: Props) {
 
   const pullLabel = rolling ? "Rolling" : allLocked ? "All three are locked" : "Pull";
 
-  // The score label prints out of register in the three colours, further off the louder it gets.
+  // The score label prints out of register, further off the louder it gets. It takes the two
+  // strongest colours as its inks, so a white or cream never prints as a hole in the letters.
   const offset = (result.score / 100) * 5;
+  const inks = paletteOf(shown)
+    .map((hex) => ({ hex, chroma: hexToOklch(hex)?.c ?? 0 }))
+    .sort((a, b) => b.chroma - a.chroma);
   const scoreStyle = {
-    "--cm-a": shown.body,
-    "--cm-b": shown.piping,
+    "--cm-a": inks[0]?.hex ?? shown.body,
+    "--cm-b": inks[1]?.hex ?? shown.piping,
     "--cm-k": `${offset.toFixed(2)}px`,
   } as CSSProperties;
 
@@ -292,17 +307,31 @@ export function ClashMachine({ colors, onChange }: Props) {
               </p>
             </div>
           </div>
-          <p className="min-h-11 px-3 pt-2 text-sm text-muted" aria-live="polite">
-            <span className="sr-only">
-              {rolling ? "" : `${result.label}, ${result.score} out of 100. `}
-            </span>
-            {rolling ? "Rolling" : sentence(result.reasons.slice(0, 2).join(", and "))}
-          </p>
+          <div className="flex items-start justify-between gap-3 px-3 pt-2">
+            <p className="min-h-11 min-w-0 text-sm text-muted" aria-live="polite">
+              <span className="sr-only">
+                {rolling ? "" : `${result.label}, ${result.score} out of 100. `}
+              </span>
+              {rolling ? (
+                "Rolling"
+              ) : (
+                <>
+                  {sentence(result.reasons[0] ?? "").slice(0, -1)}
+                  {/* The second reason only where there is room for it beside the garment. */}
+                  {result.reasons[1] ? (
+                    <span className="hidden sm:inline">, and {result.reasons[1]}</span>
+                  ) : null}
+                  .
+                </>
+              )}
+            </p>
+            <MiniReels reels={reels} />
+          </div>
           <Tracksuit
             colors={shown}
             view={view}
             title={`A drawing of the sweatsuit in ${describeColorway(shown)}`}
-            className="mx-auto block h-[214px] w-full px-2 pb-2 sm:h-[340px] lg:h-[400px]"
+            className="mx-auto block h-[clamp(150px,calc(100dvh_-_40.5rem),260px)] w-full px-2 pb-2 sm:h-[340px] lg:h-[clamp(250px,calc(100dvh_-_31rem),420px)]"
           />
           <div
             className="grid grid-cols-3 border-t-2 border-ink"
@@ -360,8 +389,8 @@ export function ClashMachine({ colors, onChange }: Props) {
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="font-display text-[0.68rem] tracking-[0.14em] text-subtle uppercase">
-              House
+            <span className="w-full font-display text-[0.68rem] tracking-[0.14em] text-subtle uppercase sm:w-auto">
+              House colours
             </span>
             {PRESETS.map((preset) => (
               <button
@@ -482,6 +511,35 @@ export function ClashMachine({ colors, onChange }: Props) {
           Kept colourways stay on this device. To send one to somebody, load it and copy the link.
         </p>
       </section>
+    </div>
+  );
+}
+
+/** The three reels again, small, beside the score: on a phone the spin shows without scrolling. */
+function MiniReels({ reels }: { reels: Reels }) {
+  return (
+    <div className="flex shrink-0 gap-[3px] pt-px lg:hidden" aria-hidden="true">
+      {REEL_KEYS.map((key) => {
+        const reel = reels[key];
+        const cells: string[] = [];
+        for (let rep = 0; rep < REPS; rep += 1) cells.push(...reel.strip);
+        return (
+          <div key={key} className="cm-mini-window">
+            <div
+              className="cm-strip"
+              style={{
+                transform: `translateY(${-(reel.pos - 1) * MINI}px)`,
+                transition:
+                  reel.ms > 0 ? `transform ${reel.ms}ms cubic-bezier(0.16, 1, 0.3, 1)` : "none",
+              }}
+            >
+              {cells.map((cell, index) => (
+                <div key={index} style={{ height: MINI, background: cell }} />
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -657,10 +715,29 @@ const CSS = `
 .cm-lever { padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }
 .cm-window {
   position: relative;
+  box-sizing: content-box;
   height: ${CELL * 3}px;
   overflow: hidden;
   border: 2px solid var(--color-ink);
   background: var(--color-bg);
+}
+.cm-mini-window {
+  position: relative;
+  box-sizing: content-box;
+  width: 24px;
+  height: ${MINI * 3}px;
+  overflow: hidden;
+  border: 2px solid var(--color-ink);
+}
+.cm-mini-window::after {
+  content: "";
+  position: absolute;
+  inset: ${MINI}px 0;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 2px var(--color-ink),
+    0 -${MINI}px 0 0 rgb(244 234 220 / 62%),
+    0 ${MINI}px 0 0 rgb(244 234 220 / 62%);
 }
 .cm-window-locked { box-shadow: 4px 4px 0 var(--color-pipe); }
 .cm-strip { will-change: transform; }

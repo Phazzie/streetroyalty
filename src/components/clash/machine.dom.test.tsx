@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClashMachine } from "./machine";
 import {
@@ -54,6 +54,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -161,6 +162,64 @@ describe("ClashMachine", () => {
     render(<Harness />);
     expect(screen.getByRole("button", { name: "Load mint, peach and royal blue" })).toBeTruthy();
     expect(screen.getAllByRole("listitem")).toHaveLength(1);
+  });
+
+  it("shows the reels again beside the score, as decoration", () => {
+    const { container } = render(<Harness />);
+    const small = container.querySelectorAll(".cm-mini-window");
+    expect(small).toHaveLength(3);
+    expect(small[0]?.closest("[aria-hidden]")?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("copies a link built from the colours on screen", async () => {
+    const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined);
+    Object.defineProperty(window.navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    render(<Harness start={PRESETS[1]?.colors} />);
+    fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
+    expect(await screen.findByText(/Link copied/)).toBeTruthy();
+    const link = new URL(writeText.mock.calls[0]?.[0] ?? "");
+    expect(link.searchParams.get("c")).toBe(encodeColorway(PRESETS[1]?.colors ?? DEFAULT_COLORWAY));
+  });
+
+  it("says so when the link cannot be copied", async () => {
+    Object.defineProperty(window.navigator, "clipboard", {
+      value: { writeText: () => Promise.reject(new Error("refused")) },
+      configurable: true,
+    });
+    render(<Harness />);
+    fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
+    expect(await screen.findByText(/Copy the address/)).toBeTruthy();
+  });
+
+  it("carries a reel on from where it is when a second step lands mid-move", () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }));
+    vi.useFakeTimers();
+    const { container } = render(<Harness />);
+    const strip = () => container.querySelectorAll<HTMLElement>(".cm-window .cm-strip")[1];
+    const offset = () => Number(/-?[\d.]+/.exec(strip()?.style.transform ?? "")?.[0]);
+    const before = screen.getByRole("button", { name: "Panels: colour before" });
+
+    // Cream is the first colour on the panel reel, so stepping back crosses the join in the strip.
+    fireEvent.click(before);
+    const first = offset();
+    fireEvent.click(before);
+    // One cell further, not a whole turn of the reel.
+    expect(Math.abs(offset() - first)).toBe(44);
+    expect(strip()?.style.transition).toContain("transform");
+
+    act(() => {
+      vi.advanceTimersByTime(600);
+    });
+    expect(strip()?.style.transition).toBe("none");
+    expect(seen).toHaveLength(2);
   });
 
   it("says plainly that it is a toy", () => {

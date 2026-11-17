@@ -90,6 +90,29 @@ describe("Tracksuit", () => {
     expect(new Set(ids).size).toBe(8);
   });
 
+  it("paints only plain colour values, and greys out anything else", () => {
+    const { container } = render(
+      <Tracksuit
+        view="set"
+        colors={{
+          body: "url(https://example.com/x.svg#p)",
+          panel: "javascript:alert(1)",
+          piping: "oklch(0.7 0.2 150)",
+          rib: "#ABC",
+          cord: "red;stroke:url(x)",
+        }}
+      />,
+    );
+    const html = container.innerHTML;
+    expect(html).not.toContain("example.com");
+    expect(html).not.toContain("javascript:");
+    expect(html).not.toContain("stroke:url");
+    expect(html).toContain("oklch(0.7 0.2 150)");
+    expect(html).toContain("#ABC");
+    // The body was not a colour, so the cloth is the fallback grey.
+    expect(container.querySelector('[data-panel="body"]')?.outerHTML).toContain("#8a8a8f");
+  });
+
   it("is decoration unless it is given a title, and survives a colour that is not a colour", () => {
     const plain = render(
       <Tracksuit colors={{ body: "nope", panel: "", piping: "#12" }} />,
