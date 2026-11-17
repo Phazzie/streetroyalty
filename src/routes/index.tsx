@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { RiskApp } from "@/components/risk/risk-app";
+import { HomePage } from "@/components/site/home";
+import { getStorefront } from "@/lib/storefront/api";
 
 export const Route = createFileRoute("/")({
+  loader: () => getStorefront(),
   component: Home,
 });
 
 function Home() {
-  return <RiskApp />;
+  const catalog = Route.useLoaderData();
+  return <HomePage catalog={catalog} />;
 }

@@ -1,27 +1,40 @@
 @import "tailwindcss";
+/* Keep the vendored skill files out of the class scan. */
 @source not "../.claude";
 
 @theme {
-  --color-bg: #090908;
-  --color-elevated: #1a1815;
-  --color-surface: #141310;
-  --color-fg: #f2efe8;
-  --color-muted: #9a958c;
-  --color-subtle: #6e6a63;
-  --color-line: #2a2722;
-  --color-accent: #ff5c35;
-  --color-accent-fg: #140a06;
-  --color-stretch: #5ecfbf;
-  --color-sand: #d4a574;
-  --color-steel: #9aa7b5;
-  --color-bait: #e07070;
-  --font-display: "Syne", "Avenir Next", "Segoe UI", sans-serif;
-  --font-sans: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --color-bg: #0b0614;
+  --color-cream: #161022;
+  --color-ink: #f6f1ff;
+  --color-fg: #f6f1ff;
+  --color-lilac: #7c5cff;
+  --color-mint: #12343a;
+  --color-pipe: #ff2d95;
+  --color-pink: #ff2d95;
+  --color-lime: #d6ff3c;
+  --color-blue: #3d7eff;
+  --color-orange: #ff6a00;
+  --color-violet: #c084fc;
+  --color-cyan: #3df0ff;
+  --color-amber: #ffb020;
+  --color-surface: #20182c;
+  --color-muted: #d5cbe8;
+  --color-subtle: #b7a8d4;
+  --color-line: #3a2d52;
+  --color-accent: #d6ff3c;
+  --color-accent-fg: #14081c;
+  --color-night: #0b0614;
+  --color-paper: #f5ebdd;
+  --color-lilac-soft: #b9a3ee;
+  --color-mint-soft: #a5dccb;
+  --font-display: "Archivo Black", "Arial Black", sans-serif;
+  --font-sans: "Outfit", "Avenir Next", "Segoe UI", sans-serif;
+  --font-cond: "Archivo", "Arial Narrow", "Archivo Black", sans-serif;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --radius-sm: 0.35rem;
   --radius-md: 0.55rem;
-  --radius-lg: 0.85rem;
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --radius-lg: 0.8rem;
+  --radius-xl: 1.1rem;
 }
 
 @layer base {
@@ -45,124 +58,497 @@
     overflow-x: clip;
   }
 
-  textarea,
-  input,
-  select {
-    font-family: var(--font-sans);
+  /* Grit sits behind the page. A positive z-index here paints over type and the sticky header. */
+  body::before {
+    content: "";
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-image: radial-gradient(rgb(255 255 255 / 14%) 0.8px, transparent 0.9px);
+    background-size: 7px 7px;
+    opacity: 0.45;
+  }
+
+  body > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  button,
+  input {
+    font-family: var(--font-display);
+  }
+
+  h1,
+  h2,
+  .font-display {
+    text-wrap: balance;
   }
 }
 
-/* Atmospheric edit-bay field — full-bleed, not card collage */
-.hero-plane {
-  background:
-    radial-gradient(120% 80% at 70% 20%, color-mix(in oklab, var(--color-accent) 28%, transparent), transparent 55%),
-    radial-gradient(90% 70% at 10% 80%, color-mix(in oklab, var(--color-stretch) 18%, transparent), transparent 50%),
-    linear-gradient(165deg, #12100e 0%, #090908 45%, #0c1010 100%);
-}
-
-.atmosphere-wash {
-  background:
-    radial-gradient(ellipse 80% 50% at 50% -10%, color-mix(in oklab, var(--color-accent) 12%, transparent), transparent 60%),
-    radial-gradient(ellipse 60% 40% at 100% 50%, color-mix(in oklab, var(--color-stretch) 8%, transparent), transparent 55%);
-}
-
-.atmosphere-grain {
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
-  background-size: 180px 180px;
-  mix-blend-mode: overlay;
-  opacity: 0.28;
-}
-
-.risk-slider {
-  appearance: none;
-  height: 0.35rem;
-  border-radius: 999px;
-  background: var(--color-elevated);
-  outline: none;
-}
-
-.risk-slider::-webkit-slider-thumb {
-  appearance: none;
-  width: 1.1rem;
-  height: 1.1rem;
-  border-radius: 999px;
-  background: var(--color-accent);
-  border: 2px solid var(--color-fg);
-  cursor: pointer;
-}
-
-.risk-slider::-moz-range-thumb {
-  width: 1.1rem;
-  height: 1.1rem;
-  border-radius: 999px;
-  background: var(--color-accent);
-  border: 2px solid var(--color-fg);
-  cursor: pointer;
-}
-
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
+@layer components {
+  /* Condensed italic headline. One voice for every section title on the site pages. */
+  .display {
+    font-family: var(--font-cond);
+    font-stretch: 62%;
+    font-weight: 900;
+    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: -0.012em;
+    line-height: 0.88;
+    text-wrap: balance;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .eyebrow {
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  /* Cream paper band. Swaps the surface tokens so the same components read on light. */
+  .paper {
+    --color-bg: #f5ebdd;
+    --color-fg: #17101f;
+    --color-ink: #17101f;
+    --color-surface: #fffaf2;
+    --color-cream: #ecdfcd;
+    --color-muted: #4a4058;
+    --color-subtle: #675c76;
+    --color-line: #d8c8b1;
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+  }
+
+  /* Night band, for nesting a dark block inside a paper page. */
+  .night {
+    --color-bg: #0b0614;
+    --color-fg: #f6f1ff;
+    --color-ink: #f6f1ff;
+    --color-surface: #20182c;
+    --color-cream: #161022;
+    --color-muted: #d5cbe8;
+    --color-subtle: #b7a8d4;
+    --color-line: #3a2d52;
+    background-color: var(--color-bg);
+    color: var(--color-fg);
   }
 }
 
-@keyframes drift {
-  0%,
-  100% {
-    transform: translate(0, 0);
-  }
+.safe-top {
+  padding-top: max(0.85rem, env(safe-area-inset-top));
+}
+
+.safe-bottom {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+.clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.mess-field {
+  background-color: var(--color-bg);
+  background-image:
+    linear-gradient(
+      115deg,
+      transparent 0 42%,
+      color-mix(in srgb, var(--color-pipe) 28%, transparent) 42% 46%,
+      transparent 46%
+    ),
+    linear-gradient(
+      115deg,
+      transparent 0 68%,
+      color-mix(in srgb, var(--color-accent) 22%, transparent) 68% 71%,
+      transparent 71%
+    ),
+    url("/wild/mess.jpg");
+  background-size: auto, auto, cover;
+  background-position: center;
+}
+
+.banner-head {
+  background-color: #120a1c;
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-pipe) 55%, transparent),
+    color-mix(in srgb, var(--color-cyan) 28%, transparent)
+  );
+  border-bottom: 3px solid var(--color-pipe);
+  color: var(--color-fg);
+}
+
+.mash-bar {
+  background-color: var(--color-ink);
+  background-image:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--color-ink) 78%, transparent),
+      color-mix(in srgb, var(--color-ink) 62%, transparent)
+    ),
+    url("/wild/mash.jpg");
+  background-size: cover;
+}
+
+.phone-frame {
+  box-shadow: 0 0 0 3px var(--color-pipe);
+}
+
+.seam {
+  border: 3px solid var(--color-pipe);
+}
+
+.edge-b {
+  border-bottom: 3px solid var(--color-pipe);
+}
+
+.pending-pulse {
+  animation: pending 1.2s ease-in-out infinite;
+}
+
+@keyframes pending {
   50% {
-    transform: translate(12px, -18px);
+    opacity: 0.45;
   }
 }
 
-@keyframes card-in {
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: ticker 22s linear infinite;
+}
+
+@keyframes ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes live-ring {
+  from {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  to {
+    transform: scale(1.16);
+    opacity: 0;
+  }
+}
+
+.mic-live::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid var(--color-ink);
+  animation: live-ring 1.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0 0.9rem;
+  border: 2px solid var(--color-ink);
+  background: var(--color-surface);
+  color: var(--color-fg);
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition:
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.chip:hover {
+  transform: translateY(-2px);
+}
+
+.chip-on,
+.chip[aria-current="page"] {
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+}
+
+.chip-pink {
+  background: var(--color-pink);
+  color: #14081c;
+}
+
+.chip-blue {
+  background: var(--color-blue);
+  color: #14081c;
+}
+
+.chip-orange {
+  background: var(--color-orange);
+  color: #14081c;
+}
+
+.chip-violet {
+  background: var(--color-violet);
+  color: #14081c;
+}
+
+.chip:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  border: 2px solid var(--color-ink);
+  background: var(--color-pipe);
+  color: #14081c;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  box-shadow: 3px 3px 0 var(--color-accent);
+}
+
+.studio-card {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.studio-card:hover {
+  transform: translate(-2px, -4px) rotate(-0.3deg);
+  box-shadow: 7px 7px 0 var(--color-blue);
+}
+
+.tape {
+  display: inline-block;
+  background: color-mix(in srgb, var(--color-amber) 88%, white);
+  color: #14081c;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.7rem;
+  transform: rotate(-2deg);
+  box-shadow: 0 0 0 1px rgb(20 8 28 / 35%);
+}
+
+.empty-state {
+  border: 2px dashed var(--color-blue);
+  background:
+    linear-gradient(
+      135deg,
+      transparent 0 70%,
+      color-mix(in srgb, var(--color-orange) 70%, transparent) 70% 78%,
+      transparent 78%
+    ),
+    var(--color-surface);
+  padding: 1.5rem;
+}
+
+.sticker-shadow {
+  box-shadow: 4px 4px 0 var(--color-pipe);
+}
+
+.sticker-shadow:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 6px 6px 0 var(--color-pipe);
+}
+
+/* Scroll reveal. A block is only hidden once script has marked it as waiting below the fold. */
+.reveal[data-shown="false"] {
+  opacity: 0;
+  transform: translateY(1.75rem);
+}
+
+.reveal[data-shown="true"] {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 700ms var(--ease-out-expo),
+    transform 900ms var(--ease-out-expo);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+/* The padding keeps the italic overhang inside the clip box; the margin gives the space back. */
+.hero-line {
+  display: block;
+  overflow: hidden;
+  padding: 0.06em 0.14em;
+  margin: -0.06em -0.14em;
+}
+
+.hero-line > span {
+  display: block;
+  animation: hero-rise 900ms var(--ease-out-expo) both;
+  animation-delay: var(--line-delay, 0ms);
+}
+
+@keyframes hero-rise {
+  from {
+    transform: translateY(105%) skewY(4deg);
+  }
+  to {
+    transform: none;
+  }
+}
+
+.hero-fade {
+  animation: hero-fade 700ms ease-out both;
+  animation-delay: var(--line-delay, 0ms);
+}
+
+@keyframes hero-fade {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(0.75rem);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
-.animate-rise {
-  animation: rise 0.7s var(--ease-out-expo) both;
+.product-card .product-alt {
+  opacity: 0;
+  transition: opacity 320ms ease;
 }
 
-.animate-rise-delayed {
-  animation: rise 0.85s var(--ease-out-expo) 0.08s both;
+.product-card:hover .product-alt,
+.product-card:focus-visible .product-alt {
+  opacity: 1;
 }
 
-.animate-rise-late {
-  animation: rise 0.9s var(--ease-out-expo) 0.16s both;
+.product-card .product-main {
+  transition: transform 700ms var(--ease-out-expo);
 }
 
-.animate-drift {
-  animation: drift 14s ease-in-out infinite;
+.product-card:hover .product-main {
+  transform: scale(1.035);
 }
 
-.animate-drift-delayed {
-  animation: drift 18s ease-in-out 2s infinite;
+.drawer-in {
+  animation: drawer-in 420ms var(--ease-out-expo) both;
 }
 
-.animate-card {
-  animation: card-in 0.45s var(--ease-out-expo) both;
+@keyframes drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+.scrim-in {
+  animation: scrim-in 240ms ease-out both;
+}
+
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+input[type="range"] {
+  accent-color: var(--color-accent);
+  width: 100%;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-rise,
-  .animate-rise-delayed,
-  .animate-rise-late,
-  .animate-drift,
-  .animate-drift-delayed,
-  .animate-card {
-    animation: none !important;
+  .reveal[data-shown] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .hero-line > span,
+  .hero-fade,
+  .drawer-in,
+  .scrim-in {
+    animation: none;
+  }
+
+  .product-card .product-main,
+  .product-card .product-alt {
+    transition: none;
+  }
+
+  .product-card:hover .product-main {
+    transform: none;
+  }
+
+  .mic-live::after,
+  .marquee-track,
+  .walker-left,
+  .walker-right,
+  .studio-card,
+  .chip,
+  .sticker-shadow,
+  .pending-pulse {
+    animation: none;
+    transition: none;
+  }
+
+  .studio-card:hover,
+  .chip:hover,
+  .sticker-shadow:hover {
+    transform: none;
+  }
+}
+
+.hero-progress {
+  animation: hero-progress linear both;
+}
+
+@keyframes hero-progress {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-progress {
+    animation: none;
+    width: 100%;
   }
 }
