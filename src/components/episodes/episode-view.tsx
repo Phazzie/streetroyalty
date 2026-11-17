@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Pause, Play } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, ArrowRight, Pause, Play } from "lucide-react";
 import { OnAirLamp, Slate, StatusLine, TestCard } from "@/components/episodes/channel";
 import { OnScreenNow, PieceRow, type Look } from "@/components/episodes/on-screen";
-import { Timeline } from "@/components/episodes/timeline";
+import { Timeline, type WardrobeLane } from "@/components/episodes/timeline";
 import { cn } from "@/lib/cn";
 import {
   clampTime,
@@ -14,6 +14,7 @@ import {
   sceneAt,
   STATUS_LABEL,
 } from "@/lib/episodes/helpers";
+import { mergeEpisodeCast, parseSavedCast, SAVED_CAST_KEY } from "@/lib/episodes/saved-cast";
 import { isMissing, resolveRefs } from "@/lib/episodes/sheet";
 import { refKey, type Episode } from "@/lib/episodes/types";
 import type { StoreProduct } from "@/lib/storefront/types";
@@ -36,6 +37,7 @@ export function EpisodeView({
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(8);
   const [rack, setRack] = useState<DesignSummary[]>([]);
   const video = useRef<HTMLVideoElement | null>(null);
+  const navigate = useNavigate();
   const hasVideo = Boolean(episode.videoUrl);
   const allRefs = useMemo(() => episodePieces(episode), [episode]);
   const needsRack = allRefs.some((ref) => ref.kind === "rack");
@@ -81,6 +83,17 @@ export function EpisodeView({
     if (video.current) video.current.currentTime = next;
   };
 
+  // Hands this cast to the wardrobe sheet builder. Whatever is saved there already is kept.
+  const sendToBuilder = () => {
+    try {
+      const saved = parseSavedCast(window.localStorage.getItem(SAVED_CAST_KEY));
+      window.localStorage.setItem(SAVED_CAST_KEY, JSON.stringify(mergeEpisodeCast(saved, episode)));
+    } catch {
+      // Storage can be refused. The builder still opens, just without this cast in it.
+    }
+    void navigate({ to: "/episodes", hash: "wardrobe" });
+  };
+
   const scene = sceneAt(episode, time);
   const sceneIndex = scene ? episode.scenes.indexOf(scene) : -1;
   const have = useMemo(() => ({ products, rack }), [products, rack]);
@@ -99,6 +112,28 @@ export function EpisodeView({
     .join("|");
 
   const worn = useMemo(() => resolveRefs(allRefs, have), [allRefs, have]);
+  const lanes: WardrobeLane[] = useMemo(
+    () =>
+      episode.cast.map((member) => ({
+        cast: member.name,
+        segments: episode.scenes.flatMap((item) => {
+          const look = item.wardrobe.find((entry) => entry.cast === member.name);
+          if (!look || look.pieces.length === 0) return [];
+          return [
+            {
+              id: item.id,
+              startSec: item.startSec,
+              endSec: item.endSec,
+              // A piece with no colour on record gets a neutral band, never a guessed one.
+              colors: resolveRefs(look.pieces, have).map((piece) =>
+                isMissing(piece) ? "#3a2d52" : (piece.baseColor?.hex ?? "#8a8296"),
+              ),
+            },
+          ];
+        }),
+      })),
+    [episode, have],
+  );
   const planned = episode.status !== "out";
 
   return (
@@ -221,7 +256,7 @@ export function EpisodeView({
             </div>
           ) : null}
 
-          <Timeline episode={episode} time={time} onSeek={seek} className="mt-5" />
+          <Timeline episode={episode} time={time} onSeek={seek} lanes={lanes} className="mt-5" />
         </div>
 
         <OnScreenNow looks={looks} cutKey={cutKey} planned={planned} className="min-w-0" />
@@ -307,6 +342,23 @@ export function EpisodeView({
               </div>
             );
           })}
+        </div>
+        <div className="mt-8 border-2 border-ink bg-surface p-4 sm:flex sm:items-center sm:justify-between sm:gap-6 sm:p-5">
+          <div>
+            <p className="display text-3xl">Keep these outfits the same in every shot.</p>
+            <p className="mt-2 max-w-xl text-sm text-muted">
+              Sends this cast and what they wear to the wardrobe sheet builder. You get a reference
+              board and a block of words for each of them. Anything you saved there before is kept.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={sendToBuilder}
+            className="mt-4 inline-flex min-h-11 shrink-0 items-center gap-2 bg-accent px-4 font-display text-xs tracking-wider text-accent-fg uppercase sm:mt-0"
+          >
+            Make the wardrobe sheets
+            <ArrowRight className="h-4 w-4" strokeWidth={3} aria-hidden="true" />
+          </button>
         </div>
       </section>
     </div>

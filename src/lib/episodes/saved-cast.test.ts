@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { TEMPLATE_EPISODE } from "./data.ts";
 import {
   activeCharacter,
   addCharacter,
   characterLabel,
   defaultCast,
+  episodeOutfits,
   MAX_CHARACTERS,
   MAX_PIECES,
+  mergeEpisodeCast,
   parseSavedCast,
   removeCharacter,
   renameActive,
@@ -114,5 +117,61 @@ describe("editing the cast", () => {
   it("labels an unnamed character by its place in the cast", () => {
     expect(characterLabel({ id: "c1", name: " ", pieces: [] }, 1)).toBe("Character 2");
     expect(characterLabel({ id: "c1", name: "Rey", pieces: [] }, 1)).toBe("Rey");
+  });
+});
+
+describe("taking a cast from an episode", () => {
+  it("collects everything each person wears, once, in order", () => {
+    expect(episodeOutfits(TEMPLATE_EPISODE)).toEqual([
+      {
+        name: "Character A",
+        pieces: [
+          { kind: "shop", slug: "lilac-set-hoodie" },
+          { kind: "shop", slug: "lilac-set-jogger" },
+          { kind: "shop", slug: "crown-cap" },
+        ],
+      },
+      {
+        name: "Character B",
+        pieces: [
+          { kind: "shop", slug: "mint-set-hoodie" },
+          { kind: "shop", slug: "mint-set-jogger" },
+        ],
+      },
+    ]);
+  });
+
+  it("fills an empty save with the episode's cast", () => {
+    const cast = mergeEpisodeCast(defaultCast(), TEMPLATE_EPISODE);
+    expect(cast.characters.map((c) => c.name)).toEqual(["Character A", "Character B"]);
+    expect(cast.activeId).toBe("c1");
+    expect(activeCharacter(cast).pieces).toHaveLength(3);
+  });
+
+  it("keeps characters that were already saved, and updates one with the same name", () => {
+    let saved = renameActive(defaultCast(), "Rey");
+    saved = togglePiece(saved, { kind: "rack", slug: "abc" });
+    saved = renameActive(addCharacter(saved), "character b");
+    const cast = mergeEpisodeCast(saved, TEMPLATE_EPISODE);
+    expect(cast.characters.map((c) => c.name)).toEqual(["Rey", "Character B", "Character A"]);
+    expect(cast.characters[0]?.pieces).toEqual([{ kind: "rack", slug: "abc" }]);
+    expect(cast.characters[1]?.pieces).toHaveLength(2);
+    expect(activeCharacter(cast).name).toBe("Character A");
+    expect(parseSavedCast(JSON.stringify(cast))).toEqual(cast);
+  });
+
+  it("does not grow past the cap, and leaves the save alone when nobody fits", () => {
+    let saved = renameActive(defaultCast(), "One");
+    for (let n = 0; n < MAX_CHARACTERS; n += 1) saved = renameActive(addCharacter(saved), `N${n}`);
+    const cast = mergeEpisodeCast(saved, TEMPLATE_EPISODE);
+    expect(cast.characters).toHaveLength(MAX_CHARACTERS);
+    expect(cast.characters.map((c) => c.name)).toEqual(saved.characters.map((c) => c.name));
+    expect(cast.activeId).toBe(saved.activeId);
+  });
+
+  it("does not change the save it was given", () => {
+    const saved = defaultCast();
+    mergeEpisodeCast(saved, TEMPLATE_EPISODE);
+    expect(saved).toEqual(defaultCast());
   });
 });

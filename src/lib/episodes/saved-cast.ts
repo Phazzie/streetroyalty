@@ -1,5 +1,5 @@
 import { BOARD_SLOTS } from "./board.ts";
-import { refKey, type WardrobeRef } from "./types.ts";
+import { refKey, type Episode, type WardrobeRef } from "./types.ts";
 
 /**
  * The cast and pieces someone picked in the wardrobe sheet builder. Kept in this
@@ -133,4 +133,61 @@ export function selectCharacter(cast: SavedCast, id: string): SavedCast {
 /** A stand-in name for the tab of a character nobody has named yet. */
 export function characterLabel(character: SavedCharacter, index: number): string {
   return character.name.trim() || `Character ${index + 1}`;
+}
+
+/** What each cast member wears across an episode: every piece they put on, once, in order. */
+export function episodeOutfits(episode: Episode): { name: string; pieces: WardrobeRef[] }[] {
+  return episode.cast.map((member) => {
+    const pieces: WardrobeRef[] = [];
+    const seen = new Set<string>();
+    for (const scene of [...episode.scenes].sort((a, b) => a.startSec - b.startSec)) {
+      for (const look of scene.wardrobe) {
+        if (look.cast !== member.name) continue;
+        for (const ref of look.pieces) {
+          if (seen.has(refKey(ref)) || pieces.length >= MAX_PIECES) continue;
+          seen.add(refKey(ref));
+          pieces.push(ref);
+        }
+      }
+    }
+    return { name: member.name.slice(0, MAX_NAME), pieces };
+  });
+}
+
+/**
+ * Adds an episode's cast to what is already saved, without throwing anything away.
+ * A saved character with the same name gets the episode's pieces. An empty,
+ * unnamed slot is reused. Anyone else is added while there is room. The first
+ * cast member becomes the active one.
+ */
+export function mergeEpisodeCast(saved: SavedCast, episode: Episode): SavedCast {
+  let characters = saved.characters.map((character) => ({ ...character }));
+  let activeId = saved.activeId;
+  let first = true;
+  for (const outfit of episodeOutfits(episode)) {
+    if (outfit.pieces.length === 0) continue;
+    let target = characters.find(
+      (character) => character.name.trim().toLowerCase() === outfit.name.trim().toLowerCase(),
+    );
+    if (!target) {
+      target = characters.find(
+        (character) => !character.name.trim() && character.pieces.length === 0,
+      );
+    }
+    if (!target) {
+      if (characters.length >= MAX_CHARACTERS) continue;
+      const ids = new Set(characters.map((character) => character.id));
+      let n = characters.length + 1;
+      while (ids.has(`c${n}`)) n += 1;
+      target = { id: `c${n}`, name: "", pieces: [] };
+      characters = [...characters, target];
+    }
+    target.name = outfit.name;
+    target.pieces = outfit.pieces;
+    if (first) {
+      activeId = target.id;
+      first = false;
+    }
+  }
+  return { activeId, characters };
 }

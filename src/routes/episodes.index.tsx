@@ -72,7 +72,7 @@ function EpisodesPage() {
         </ul>
       </div>
 
-      <section className="paper" aria-labelledby="ep-builder">
+      <section id="wardrobe" className="paper scroll-mt-16" aria-labelledby="ep-builder">
         <div className="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6 lg:py-20">
           <p className="eyebrow text-subtle">Works today</p>
           <h2 id="ep-builder" className="display mt-3 text-6xl sm:text-7xl">

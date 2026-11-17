@@ -2,6 +2,32 @@ import { cn } from "@/lib/cn";
 import { formatTimecode, sceneAt } from "@/lib/episodes/helpers";
 import type { Episode } from "@/lib/episodes/types";
 
+/** One cast member's wardrobe along the episode: a coloured block wherever they are on screen. */
+export type WardrobeLane = {
+  cast: string;
+  segments: { id: string; startSec: number; endSec: number; colors: string[] }[];
+};
+
+/**
+ * Equal bands, one per piece, top to bottom, with a dark hairline between them so
+ * two pieces in the same colour still count as two. A change of outfit changes the bands.
+ */
+function bands(colors: string[]): string {
+  if (colors.length === 0) return "transparent";
+  const step = 100 / colors.length;
+  const stops: string[] = [];
+  colors.forEach((color, index) => {
+    const start = `${index * step}%`;
+    const end = `${(index + 1) * step}%`;
+    if (index === colors.length - 1) {
+      stops.push(`${color} ${start} ${end}`);
+      return;
+    }
+    stops.push(`${color} ${start} calc(${end} - 2px)`, `#0b0614 calc(${end} - 2px) ${end}`);
+  });
+  return `linear-gradient(180deg, ${stops.join(", ")})`;
+}
+
 /**
  * The episode as a strip of scenes with a playhead. Drag anywhere on it, use the
  * arrow keys, or tap a scene below to jump. It drives a video when there is one
@@ -11,11 +37,13 @@ export function Timeline({
   episode,
   time,
   onSeek,
+  lanes,
   className,
 }: {
   episode: Episode;
   time: number;
   onSeek: (seconds: number) => void;
+  lanes?: WardrobeLane[];
   className?: string;
 }) {
   const total = Math.max(1, episode.durationSec);
@@ -66,6 +94,34 @@ export function Timeline({
           aria-valuetext={`${formatTimecode(time)} of ${formatTimecode(total)}${now ? `, ${now.title}` : ""}`}
         />
       </div>
+
+      {lanes && lanes.length > 0 ? (
+        <div className="mt-3 flex flex-col gap-1.5" aria-hidden="true">
+          {lanes.map((lane) => (
+            <div key={lane.cast}>
+              <p className="eyebrow text-subtle" style={{ fontSize: "0.62rem" }}>
+                {lane.cast}
+              </p>
+              <div className="relative mt-0.5 h-7 border-x-2 border-ink">
+                {lane.segments.map((segment) => (
+                  <span
+                    key={segment.id}
+                    className="absolute inset-y-0 border border-ink"
+                    style={{
+                      left: `${(segment.startSec / total) * 100}%`,
+                      width: `${((segment.endSec - segment.startSec) / total) * 100}%`,
+                      background: bands(segment.colors),
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+          <p className="text-xs text-muted">
+            One band per piece. Where the bands change, the outfit changes.
+          </p>
+        </div>
+      ) : null}
 
       <ol className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
         {episode.scenes.map((scene) => {
