@@ -477,8 +477,10 @@ export function WardrobeBuilder({ products, demo }: { products: StoreProduct[]; 
               </p>
             ) : null}
             <p className="mt-1 text-sm text-muted">
-              The small swatches are measured from each picture, so they are a guide. Pictures of
-              the drop are generated previews, not photos of finished garments.
+              The small swatches are measured from each picture, so they are a guide.
+              {demo
+                ? " Pictures of the preview drop are generated, not photos of finished garments."
+                : ""}
             </p>
           </div>
 
