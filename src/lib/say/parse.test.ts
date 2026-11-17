@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { layoutArt } from "./art.ts";
+import { layoutArt, trimBand } from "./art.ts";
 import {
   MAX_LINES,
   applyUtterance,
@@ -370,6 +370,35 @@ describe("the picture for the road without an account", () => {
       expect(row.y).toBeGreaterThan(last);
       last = row.y;
     }
+  });
+
+  it("crops to the words and never past the picture", () => {
+    const one = layoutArt(
+      [{ text: "HI", color: "#ffffff", size: "medium", tilt: 0 }],
+      1200,
+      900,
+      measure,
+    );
+    const band = trimBand(one, 1200, 900, measure);
+    expect(band.height).toBeLessThan(300);
+    expect(band.top).toBeGreaterThan(300);
+    const row = one[0];
+    expect(row && row.y - band.top).toBeGreaterThan((row?.fontPx ?? 0) / 2);
+    const tilted = layoutArt(
+      [{ text: "A LONG TILTED LINE", color: "#ffffff", size: "big", tilt: -40 }],
+      1200,
+      900,
+      measure,
+    );
+    const swing = trimBand(tilted, 1200, 900, measure);
+    expect(swing.height).toBeGreaterThan(band.height);
+    expect(swing.top).toBeGreaterThanOrEqual(0);
+    expect(swing.top + swing.height).toBeLessThanOrEqual(900);
+    expect(band.width).toBeLessThan(600);
+    expect(band.left * 2 + band.width).toBe(1200);
+    expect(swing.width).toBeGreaterThan(band.width);
+    expect(swing.left).toBeGreaterThanOrEqual(0);
+    expect(trimBand([], 1200, 900, measure)).toEqual({ left: 0, top: 0, width: 1200, height: 900 });
   });
 
   it("draws big bigger than small", () => {

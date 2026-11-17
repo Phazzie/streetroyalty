@@ -50,6 +50,40 @@ export function layoutArt(
   });
 }
 
+/** The part of the picture that holds the words, with room for a tilted line's swing. */
+export function trimBand(
+  rows: readonly ArtRow[],
+  width: number,
+  height: number,
+  measure: (text: string, fontPx: number) => number,
+): { left: number; top: number; width: number; height: number } {
+  if (rows.length === 0) return { left: 0, top: 0, width, height };
+  let top = height;
+  let bottom = 0;
+  let half = 0;
+  for (const row of rows) {
+    const turn = (Math.abs(row.rotation) * Math.PI) / 180;
+    const wide = measure(row.text, row.fontPx);
+    const pad = row.fontPx * 0.08;
+    const reach = (Math.sin(turn) * wide) / 2 + Math.abs(Math.cos(turn)) * row.fontPx * 0.62 + pad;
+    top = Math.min(top, row.y - reach);
+    bottom = Math.max(bottom, row.y + reach);
+    half = Math.max(
+      half,
+      (Math.abs(Math.cos(turn)) * wide) / 2 + Math.sin(turn) * row.fontPx * 0.62 + pad,
+    );
+  }
+  const from = Math.max(0, Math.floor(top));
+  const to = Math.min(height, Math.ceil(bottom));
+  const left = Math.max(0, Math.floor(width / 2 - half));
+  return {
+    left,
+    top: from,
+    width: Math.max(16, width - left * 2),
+    height: Math.max(16, to - from),
+  };
+}
+
 function fontFor(font: string, px: number): string {
   return font === "Outfit"
     ? `700 ${px}px "Outfit", "Avenir Next", "Segoe UI", sans-serif`
@@ -73,13 +107,20 @@ export async function renderArt(intent: SayIntent): Promise<string> {
     if (!context) throw new Error("This browser could not draw the words.");
     context.textAlign = "center";
     context.textBaseline = "middle";
-    const rows = layoutArt(intent.lines, width, height, (text, px) => {
+    const measure = (text: string, px: number) => {
       context.font = fontFor(intent.font, px);
       return context.measureText(text).width;
-    });
+    };
+    const rows = layoutArt(intent.lines, width, height, measure);
+    // Crop to the words, so the picture arrives in the studio as large as it can be.
+    const band = trimBand(rows, width, height, measure);
+    canvas.width = band.width;
+    canvas.height = band.height;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
     for (const row of rows) {
       context.save();
-      context.translate(row.x, row.y);
+      context.translate(row.x - band.left, row.y - band.top);
       context.rotate((row.rotation * Math.PI) / 180);
       context.font = fontFor(intent.font, row.fontPx);
       context.fillStyle = row.color;
