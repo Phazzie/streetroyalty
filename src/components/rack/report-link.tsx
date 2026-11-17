@@ -137,7 +137,7 @@ export function ReportLink(props: ReportTarget) {
                 </p>
                 <Dialog.Close asChild>
                   <Button variant="ghost" className="mt-5 w-full">
-                    Close
+                    Done
                   </Button>
                 </Dialog.Close>
               </div>

@@ -88,7 +88,8 @@ export function ReportsQueue() {
               }
             : current,
         );
-        heading.current?.focus();
+        // Keep the keyboard somewhere sensible without yanking the page back to the top.
+        heading.current?.focus({ preventScroll: true });
       }, 1500),
     );
   }
