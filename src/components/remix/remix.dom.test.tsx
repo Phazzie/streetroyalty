@@ -60,10 +60,19 @@ beforeEach(() => {
 describe("the remix button", () => {
   it("sends a signed-out visitor to sign in and copies nothing", () => {
     render(<RemixButton designId="d1" slug="crown-tee-1" />);
+    // Signing in lands on the studio, not back here, so the line under the button says so first.
+    expect(screen.getByText(/Sign in first, then come back here/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /Remix this/ }));
 
     expect(mocks.navigate).toHaveBeenCalledWith({ to: "/login" });
     expect(mocks.remixPiece).not.toHaveBeenCalled();
+  });
+
+  it("does not ask a signed-in maker to sign in", () => {
+    mocks.session = { user: { id: "bo" }, isPending: false };
+    render(<RemixButton designId="d1" slug="crown-tee-1" />);
+    expect(screen.getByText(/The original maker stays credited/)).toBeTruthy();
+    expect(screen.queryByText(/Sign in first/)).toBeNull();
   });
 
   it("makes one copy however many times it is tapped, then opens it in the studio", async () => {
@@ -131,6 +140,7 @@ describe("the family tree", () => {
           remixes: [],
           remixCount: 0,
           descendants: 0,
+          atLeast: false,
         }}
       />,
     );
@@ -152,6 +162,7 @@ describe("the family tree", () => {
           remixes: [{ ...stop("Royal Red", "bo"), below: 2 }],
           remixCount: 1,
           descendants: 3,
+          atLeast: false,
         }}
       />,
     );

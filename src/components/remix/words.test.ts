@@ -52,12 +52,21 @@ describe("family tree words", () => {
     );
   });
 
+  it("says at least when the family was too big to count in full", () => {
+    expect(familySummary({ generation: 1, broken: false, descendants: 5000, atLeast: true })).toBe(
+      "An original. At least 5000 pieces on the rack came from this one.",
+    );
+    expect(remixLineNote({ shown: 24, remixCount: 40, descendants: 5000, atLeast: true })).toBe(
+      "At least 40 remixes on the rack, 5000 pieces down the whole line. Showing the first 24.",
+    );
+  });
+
   it("describes the remix line without repeating itself", () => {
     expect(remixLineNote({ shown: 2, remixCount: 2, descendants: 2 })).toBe(
       "2 remixes on the rack.",
     );
     expect(remixLineNote({ shown: 1, remixCount: 1, descendants: 4 })).toBe(
-      "1 remix on the rack, 4 down the whole line.",
+      "1 remix on the rack, 4 pieces down the whole line.",
     );
     expect(remixLineNote({ shown: 24, remixCount: 30, descendants: 30 })).toBe(
       "30 remixes on the rack. Showing the first 24.",

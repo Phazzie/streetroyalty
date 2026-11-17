@@ -107,6 +107,7 @@ export function RemixButton({ designId, slug }: { designId: string; slug: string
       </Button>
       <p id={noteId} className="mt-2 text-sm text-muted">
         You get your own copy to change. The original maker stays credited.
+        {!isPending && !user ? " Sign in first, then come back here and tap it again." : null}
       </p>
       {error ? (
         <p role="alert" className="mt-2 border-2 border-pipe bg-surface px-3 py-2 text-sm text-fg">

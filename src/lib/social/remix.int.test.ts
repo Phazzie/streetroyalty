@@ -1,7 +1,15 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { getSql } from "../db.ts";
 import { getDesign, listDesigns, listShop } from "../studio/designs.server.ts";
-import { REMIX_HOURLY_LIMIT, readFamily, remixDesign, remixTitle } from "./remix.server.ts";
+import {
+  FAMILY_LIMITS,
+  REMIX_HOURLY_LIMIT,
+  keepPicturesLight,
+  readFamily,
+  remixDesign,
+  remixTitle,
+  type FamilyNode,
+} from "./remix.server.ts";
 import { truncateAll } from "../../test/db.ts";
 import { seedDesign, seedUser } from "../../test/seed.ts";
 
@@ -174,6 +182,7 @@ describe("a piece's family", () => {
       remixes: [],
       remixCount: 0,
       descendants: 0,
+      atLeast: false,
     });
   });
 
@@ -274,6 +283,72 @@ describe("a piece's family", () => {
     expect(middle.chain.map((item) => item.slug)).toEqual([root.slug, first.slug]);
     expect(middle.remixCount).toBe(2);
     expect(middle.descendants).toBe(3);
+  });
+
+  it("leaves a heavy picture out and keeps the piece", async () => {
+    const root = await seedDesign("ada", { title: "Do Better", published: true });
+    const second = await publishedRemix("bo", root.slug);
+    const sql = await getSql();
+    const heavy = `data:image/svg+xml;utf8,${"x".repeat(4000)}`;
+    const light = "data:image/svg+xml;utf8,%3Csvg%2F%3E";
+    await sql`update designs set mockup_url = ${heavy} where id = ${root.id}`;
+    await sql`update designs set mockup_url = ${light} where id = ${second.id}`;
+
+    const limits = { ...FAMILY_LIMITS, picture: 1000 };
+    const family = await readFamily(second.slug, limits);
+    expect(family.chain[0]).toMatchObject({ slug: root.slug, onRack: true, mockupUrl: null });
+    expect(family.chain[1]?.mockupUrl).toBe(light);
+    const fromRoot = await readFamily(root.slug, limits);
+    expect(fromRoot.chain[0]?.mockupUrl).toBeNull();
+    expect(fromRoot.remixes[0]?.mockupUrl).toBe(light);
+    // With room for it, the same picture comes through.
+    expect((await readFamily(root.slug)).chain[0]?.mockupUrl).toBe(heavy);
+  });
+
+  it("stops sending pictures once one answer holds enough of them", async () => {
+    const root = await seedDesign("ada", { title: "Do Better", published: true });
+    await publishedRemix("bo", root.slug);
+    await publishedRemix("cy", root.slug);
+    const sql = await getSql();
+    const picture = `data:image/svg+xml;utf8,${"x".repeat(476)}`;
+    await sql`update designs set mockup_url = ${picture}`;
+
+    // Room for two pictures of 500 characters: this piece and its first remix.
+    const family = await readFamily(root.slug, { ...FAMILY_LIMITS, pictures: 1000 });
+    expect(family.chain[0]?.mockupUrl).toBe(picture);
+    expect(family.remixes.map((item) => item.mockupUrl)).toEqual([picture, null]);
+    expect(family.remixes.every((item) => item.onRack && item.slug)).toBe(true);
+  });
+
+  it("spends the picture budget on the earliest nodes", () => {
+    const tile = (size: number): FamilyNode => ({
+      slug: "s",
+      title: "t",
+      mockupUrl: size ? "x".repeat(size) : null,
+      maker: null,
+      onRack: true,
+    });
+    const nodes = [tile(6), tile(0), tile(5), tile(4)];
+    keepPicturesLight(nodes, 10);
+    // 6 fits, 5 would overflow, 4 still fits in what is left.
+    expect(nodes.map((item) => item.mockupUrl?.length ?? 0)).toEqual([6, 0, 0, 4]);
+  });
+
+  it("stops counting a huge family and says the number is a floor", async () => {
+    const root = await seedDesign("ada", { title: "Do Better", published: true });
+    const first = await publishedRemix("bo", root.slug);
+    await publishedRemix("cy", root.slug);
+    await publishedRemix("ada", first.slug);
+
+    const whole = await readFamily(root.slug);
+    expect(whole.atLeast).toBe(false);
+    expect(whole.descendants).toBe(3);
+
+    const cut = await readFamily(root.slug, { ...FAMILY_LIMITS, walk: 2 });
+    expect(cut.atLeast).toBe(true);
+    expect(cut.descendants).toBe(2);
+    // The list of direct remixes does not depend on the walk.
+    expect(cut.remixes).toHaveLength(2);
   });
 
   it("refuses a draft and a slug that does not exist", async () => {

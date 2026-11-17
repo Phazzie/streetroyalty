@@ -28,6 +28,8 @@ export function familySummary(input: {
   /** True when part of the line was deleted, so the count of generations is not known. */
   broken: boolean;
   descendants: number;
+  /** True when the family was too big to count in full, so the number is a floor. */
+  atLeast?: boolean;
 }): string {
   const place =
     input.generation <= 1
@@ -37,7 +39,7 @@ export function familySummary(input: {
         : `${ordinal(input.generation)} generation.`;
   const after =
     input.descendants > 0
-      ? `${countPieces(input.descendants)} on the rack came from this one.`
+      ? `${input.atLeast ? "At least " : ""}${countPieces(input.descendants)} on the rack came from this one.`
       : "Nobody has remixed it yet.";
   return `${place} ${after}`;
 }
@@ -47,10 +49,13 @@ export function remixLineNote(input: {
   shown: number;
   remixCount: number;
   descendants: number;
+  atLeast?: boolean;
 }): string {
-  const direct = `${countRemixes(input.remixCount)} on the rack`;
+  const direct = `${input.atLeast ? "At least " : ""}${countRemixes(input.remixCount)} on the rack`;
   const deeper =
-    input.descendants > input.remixCount ? `, ${input.descendants} down the whole line` : "";
+    input.descendants > input.remixCount
+      ? `, ${countPieces(input.descendants)} down the whole line`
+      : "";
   const cut = input.shown < input.remixCount ? `. Showing the first ${input.shown}` : "";
   return `${direct}${deeper}${cut}.`;
 }

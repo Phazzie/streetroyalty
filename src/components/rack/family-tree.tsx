@@ -69,8 +69,8 @@ const CSS = `
 .sr-ft-link { display: flex; min-height: 2.75rem; flex-direction: column; justify-content: center; }
 .sr-ft-link:hover .sr-ft-title, .sr-ft-maker:hover { text-decoration: underline; text-underline-offset: 3px; }
 .sr-ft-maker {
-  display: inline-flex; min-height: 2.75rem; align-items: center; font-family: var(--font-display);
-  font-size: 0.85rem; color: var(--color-fg);
+  display: inline-flex; min-height: 2.75rem; align-items: flex-start; padding-top: 0.15rem;
+  font-family: var(--font-display); font-size: 0.85rem; line-height: 1.4; color: var(--color-fg);
 }
 .sr-ft-maker[data-plain="true"] { font-family: var(--font-sans); font-size: 0.875rem; color: var(--color-muted); }
 .sr-ft-fork { position: relative; }
@@ -322,7 +322,12 @@ export function FamilyTreeView({ family }: { family: Family }) {
 
   const { chain, remixes, broken } = family;
   const generation = chain.length;
-  const summary = familySummary({ generation, broken, descendants: family.descendants });
+  const summary = familySummary({
+    generation,
+    broken,
+    descendants: family.descendants,
+    atLeast: family.atLeast,
+  });
 
   if (generation <= 1 && remixes.length === 0 && family.descendants === 0) {
     return (
@@ -407,6 +412,7 @@ export function FamilyTreeView({ family }: { family: Family }) {
                 shown: remixes.length,
                 remixCount: family.remixCount,
                 descendants: family.descendants,
+                atLeast: family.atLeast,
               })}
             </p>
           </div>
@@ -422,7 +428,7 @@ export function FamilyTreeView({ family }: { family: Family }) {
                   index={branchStep(index)}
                   extra={
                     remix.below > 0 ? (
-                      <p className="text-sm text-muted">
+                      <p className="-mt-3 text-sm text-muted">
                         {remix.below === 1 ? "1 more piece" : `${remix.below} more pieces`} down
                         this branch.
                       </p>
@@ -438,7 +444,7 @@ export function FamilyTreeView({ family }: { family: Family }) {
           <p className="text-sm text-muted">
             {family.descendants > 0
               ? "The remixes of this one left the rack. The line carries on below them."
-              : "End of the line for now. Nobody has remixed this one yet."}
+              : "End of the line for now. Remix it and the next stop is yours."}
           </p>
         </div>
       )}

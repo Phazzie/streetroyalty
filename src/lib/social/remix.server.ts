@@ -14,7 +14,7 @@ export type FamilyNode = {
   slug: string | null;
   /** Null only when the piece was deleted outright. */
   title: string | null;
-  /** Only pieces on the rack show their picture. */
+  /** Only pieces on the rack show their picture, and only while the tree's pictures stay light. */
   mockupUrl: string | null;
   /** Null only when the piece was deleted outright, because the maker went with the row. */
   maker: { name: string; handle: string | null } | null;
@@ -38,7 +38,24 @@ export type PieceFamily = {
   remixCount: number;
   /** Every published piece below this one, at any depth. */
   descendants: number;
+  /**
+   * True when the family below is too big to count in one go. remixCount and descendants
+   * are then a floor, and the page says "at least".
+   */
+  atLeast: boolean;
 };
+
+/** How much one open request for a family is allowed to read and send back. */
+export type FamilyLimits = {
+  /** Pieces below this one that are walked before the count stops. */
+  walk: number;
+  /** Longest single picture, in characters. A sandbox mockup is a data URL and can be megabytes. */
+  picture: number;
+  /** All pictures in one answer, in characters. */
+  pictures: number;
+};
+
+export const FAMILY_LIMITS: FamilyLimits = { walk: 5000, picture: 300_000, pictures: 1_500_000 };
 
 const SUFFIX = " remix";
 const MAX_TITLE = 80;
@@ -79,7 +96,9 @@ export async function remixDesign(userId: string, slug: string): Promise<{ desig
   const newSlug = slugify(title, id);
   // One statement, so a copy can never exist without its credit. It reads the source
   // again with the same guard, in case the piece left the rack a moment ago.
-  const made = await sql<{ design_id: string }>`
+  let made: { design_id: string }[];
+  try {
+    made = await sql<{ design_id: string }>`
     with src as (
       select * from designs where id = ${source.id} and status = 'published'
     ),
@@ -104,6 +123,10 @@ export async function remixDesign(userId: string, slug: string): Promise<{ desig
     from copy, src
     returning design_id
   `;
+  } catch {
+    // Whatever the database said, it is not for the person who tapped the button.
+    throw new Error("The remix did not save. Try again.");
+  }
   if (!made[0]) throw new Error("That piece is not on the rack, so it cannot be remixed.");
   return { designId: id };
 }
@@ -135,10 +158,16 @@ function node(row: NodeRow | undefined): FamilyNode {
 }
 
 /** The line a published piece came from, and what has been made from it since. */
-export async function readFamily(slug: string): Promise<PieceFamily> {
+export async function readFamily(
+  slug: string,
+  limits: FamilyLimits = FAMILY_LIMITS,
+): Promise<PieceFamily> {
   const sql = await getSql();
+  // A picture over the limit is left in the database: the tree draws a blank tile for it.
   const selfRows = await sql<NodeRow>`
-    select d.id, d.slug, d.title, d.mockup_url, d.status, p.handle, p.display_name,
+    select d.id, d.slug, d.title,
+      case when length(d.mockup_url) <= ${limits.picture} then d.mockup_url end as mockup_url,
+      d.status, p.handle, p.display_name,
       u."name" as user_name
     from designs d
     left join profiles p on p.user_id = d.user_id
@@ -160,7 +189,9 @@ export async function readFamily(slug: string): Promise<PieceFamily> {
       where up.depth < ${MAX_DEPTH}
     )
     select up.parent_id as ancestor_id, up.root_id, up.depth, d.id, d.slug, d.title,
-      d.mockup_url, d.status, p.handle, p.display_name, u."name" as user_name
+      case when d.status = 'published' and length(d.mockup_url) <= ${limits.picture}
+        then d.mockup_url end as mockup_url,
+      d.status, p.handle, p.display_name, u."name" as user_name
     from up
     left join designs d on d.id = up.parent_id
     left join profiles p on p.user_id = d.user_id
@@ -174,8 +205,10 @@ export async function readFamily(slug: string): Promise<PieceFamily> {
     // The walk stopped short of the original: a piece on the way was deleted and took its
     // own lineage row with it. The original is still named on every row below, so credit it.
     const rootRows = await sql<NodeRow>`
-      select d.id, d.slug, d.title, d.mockup_url, d.status, p.handle, p.display_name,
-        u."name" as user_name
+      select d.id, d.slug, d.title,
+        case when d.status = 'published' and length(d.mockup_url) <= ${limits.picture}
+          then d.mockup_url end as mockup_url,
+        d.status, p.handle, p.display_name, u."name" as user_name
       from (select ${top.root_id}::text as root_id) r
       left join designs d on d.id = r.root_id
       left join profiles p on p.user_id = d.user_id
@@ -186,7 +219,8 @@ export async function readFamily(slug: string): Promise<PieceFamily> {
   }
 
   // Walk down once. "top" is the direct remix each descendant hangs under.
-  const down = await sql<{ top: string; on_rack: number; top_on_rack: number }>`
+  // The walk stops after limits.walk pieces, so one huge family cannot tie the database up.
+  const down = await sql<{ top: string; walked: number; on_rack: number; top_on_rack: number }>`
     with recursive down as (
       select l.design_id as top, l.design_id, 1 as depth
       from design_lineage l where l.parent_id = ${self.id}
@@ -196,13 +230,15 @@ export async function readFamily(slug: string): Promise<PieceFamily> {
       join down on l.parent_id = down.design_id
       where down.depth < ${MAX_DEPTH}
     )
-    select down.top,
+    select seen.top,
+      count(*)::int as walked,
       count(*) filter (where d.status = 'published')::int as on_rack,
-      count(*) filter (where d.status = 'published' and d.id = down.top)::int as top_on_rack
-    from down
-    join designs d on d.id = down.design_id
-    group by down.top
+      count(*) filter (where d.status = 'published' and d.id = seen.top)::int as top_on_rack
+    from (select * from down limit ${limits.walk}) seen
+    join designs d on d.id = seen.design_id
+    group by seen.top
   `;
+  const atLeast = down.reduce((sum, row) => sum + Number(row.walked), 0) >= limits.walk;
   const below = new Map(
     down.map((row) => [row.top, Number(row.on_rack) - Number(row.top_on_rack)]),
   );
@@ -210,8 +246,9 @@ export async function readFamily(slug: string): Promise<PieceFamily> {
   const remixCount = down.reduce((sum, row) => sum + Number(row.top_on_rack), 0);
 
   const remixRows = await sql<NodeRow>`
-    select d.id, d.slug, d.title, d.mockup_url, d.status, p.handle, p.display_name,
-      u."name" as user_name
+    select d.id, d.slug, d.title,
+      case when length(d.mockup_url) <= ${limits.picture} then d.mockup_url end as mockup_url,
+      d.status, p.handle, p.display_name, u."name" as user_name
     from design_lineage l
     join designs d on d.id = l.design_id
     left join profiles p on p.user_id = d.user_id
@@ -221,11 +258,30 @@ export async function readFamily(slug: string): Promise<PieceFamily> {
     limit ${MAX_REMIXES_SHOWN}
   `;
 
+  const here = node(self);
+  const remixes = remixRows.map((row) => ({ ...node(row), below: below.get(row.id ?? "") ?? 0 }));
+  // This piece first, then its line from the nearest parent up, then the remixes.
+  keepPicturesLight([here, ...ancestors, ...remixes], limits.pictures);
+
   return {
-    chain: [...ancestors.reverse(), node(self)],
+    chain: [...ancestors.reverse(), here],
     broken,
-    remixes: remixRows.map((row) => ({ ...node(row), below: below.get(row.id ?? "") ?? 0 })),
+    remixes,
     remixCount,
     descendants,
+    atLeast,
   };
+}
+
+/**
+ * Drop pictures, in place, once the ones already kept add up to the budget. Earlier
+ * nodes win. The tree draws a blank tile where a picture was dropped.
+ */
+export function keepPicturesLight(nodes: FamilyNode[], budget: number): void {
+  let spent = 0;
+  for (const item of nodes) {
+    const size = item.mockupUrl?.length ?? 0;
+    if (spent + size > budget) item.mockupUrl = null;
+    else spent += size;
+  }
 }
