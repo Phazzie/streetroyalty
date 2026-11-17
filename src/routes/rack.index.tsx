@@ -159,6 +159,9 @@ function RackPage() {
       {makers.length > 1 || (user && !isPending) ? (
         <nav aria-label="Makers on the rack" className="mb-5 border-y-2 border-line py-2">
           <ul className="flex items-stretch gap-2 overflow-x-auto pb-1">
+            <li className="flex shrink-0 items-center pr-1 font-display text-xs tracking-wide text-muted uppercase">
+              Who made these
+            </li>
             {user && !isPending ? (
               <li className="shrink-0">
                 <Link to="/me" className="chip h-full whitespace-nowrap">

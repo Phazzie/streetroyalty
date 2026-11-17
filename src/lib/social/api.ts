@@ -34,7 +34,11 @@ export const rackList = createServerFn({ method: "GET" })
 /** Open: a published piece is a public shop page. */
 export const rackPiece = createServerFn({ method: "GET" })
   .middleware([optionalUser])
-  .validator((input: { slug?: string }) => ({ slug: String(input?.slug ?? "").trim() }))
+  .validator((input: { slug?: string }) => ({
+    slug: String(input?.slug ?? "")
+      .trim()
+      .slice(0, 200),
+  }))
   .handler(async ({ data, context }) => {
     const { rackPiece: piece } = await import("./rack.server.ts");
     return piece(context.userId, data.slug);
@@ -43,7 +47,11 @@ export const rackPiece = createServerFn({ method: "GET" })
 /** Open: a maker's page is their public shop window. */
 export const makerPage = createServerFn({ method: "GET" })
   .middleware([optionalUser])
-  .validator((input: { handle?: string }) => ({ handle: String(input?.handle ?? "").trim() }))
+  .validator((input: { handle?: string }) => ({
+    handle: String(input?.handle ?? "")
+      .trim()
+      .slice(0, 64),
+  }))
   .handler(async ({ data, context }) => {
     const { makerPage: page } = await import("./makers.server.ts");
     return page(context.userId, data.handle);
@@ -52,7 +60,7 @@ export const makerPage = createServerFn({ method: "GET" })
 export const toggleCrown = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { designId?: string; want?: boolean }) => ({
-    designId: String(input?.designId ?? ""),
+    designId: String(input?.designId ?? "").slice(0, 64),
     want: wantOf(input?.want),
   }))
   .handler(async ({ data, context }) => {
@@ -63,7 +71,7 @@ export const toggleCrown = createServerFn({ method: "POST" })
 export const toggleFollow = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { handle?: string; want?: boolean }) => ({
-    handle: String(input?.handle ?? ""),
+    handle: String(input?.handle ?? "").slice(0, 64),
     want: wantOf(input?.want),
   }))
   .handler(async ({ data, context }) => {
@@ -81,9 +89,10 @@ export const getMyProfile = createServerFn({ method: "GET" })
 export const updateProfile = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { name?: string; handle?: string; bio?: string }) => ({
-    name: String(input?.name ?? ""),
-    handle: String(input?.handle ?? ""),
-    bio: String(input?.bio ?? ""),
+    // Cut long before the real checks, so nobody can post a novel at them.
+    name: String(input?.name ?? "").slice(0, 200),
+    handle: String(input?.handle ?? "").slice(0, 64),
+    bio: String(input?.bio ?? "").slice(0, 2000),
   }))
   .handler(async ({ data, context }) => {
     const { updateProfile: update } = await import("./makers.server.ts");

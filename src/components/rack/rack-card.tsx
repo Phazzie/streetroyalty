@@ -45,8 +45,10 @@ export function RackCard({
             <span className="block aspect-[4/5] bg-bg" />
           )}
         </span>
-        <span className="mt-2 block truncate font-display uppercase">{piece.title}</span>
-        <span className="flex items-baseline justify-between gap-2">
+        <span className="mt-2 line-clamp-2 min-h-[2.4em] font-display leading-[1.2] break-words uppercase">
+          {piece.title}
+        </span>
+        <span className="mt-1 flex flex-col gap-x-2 sm:flex-row sm:items-baseline sm:justify-between">
           <span className="truncate text-sm text-muted">{piece.productName}</span>
           <span className="font-display text-lg">{formatMoney(piece.retailCents)}</span>
         </span>

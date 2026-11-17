@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RackPiece } from "../../lib/social/types.ts";
-import { awningColors } from "./awning.ts";
+import { awningColors, isLime } from "./awning.ts";
 import { crownCut } from "./crown-cut.ts";
 
 function piece(palette: string[]): RackPiece {
@@ -39,11 +39,22 @@ describe("a maker's own crown", () => {
 describe("the awning over a maker's window", () => {
   it("is striped in the colours they use most, most used first", () => {
     const colors = awningColors([
-      piece(["#000000", "#d6ff3c"]),
-      piece(["#ff2d95", "#d6ff3c"]),
-      piece(["#000000", "#d6ff3c", "#ffffff"]),
+      piece(["#000000", "#3d6bff"]),
+      piece(["#ff2d95", "#3d6bff"]),
+      piece(["#000000", "#3d6bff", "#ffffff"]),
     ]);
-    expect(colors).toEqual(["#d6ff3c", "#000000", "#ff2d95", "#ffffff"]);
+    expect(colors).toEqual(["#3d6bff", "#000000", "#ff2d95", "#ffffff"]);
+  });
+
+  it("leaves lime off the stripes, because lime only ever means tap this", () => {
+    for (const lime of ["#d6ff3c", "#d7ff3d", "#c8f02c", "#bfff00"])
+      expect(isLime(lime)).toBe(true);
+    for (const other of ["#ff2d95", "#3d6bff", "#ffb020", "#f5ebdd", "#14081c", "#1f9d5c", "bad"])
+      expect(isLime(other), other).toBe(false);
+    const colors = awningColors([piece(["#d6ff3c", "#ff2d95"]), piece(["#d6ff3c", "#000000"])]);
+    expect(colors).toEqual(["#ff2d95", "#000000"]);
+    // A maker who prints in nothing but lime still gets two stripes, from their crown.
+    expect(awningColors([piece(["#d6ff3c"])], "cy")).toEqual([crownCut("cy").card, "#14081c"]);
   });
 
   it("stops at five stripes", () => {

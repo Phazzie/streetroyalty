@@ -116,11 +116,16 @@ function ProductPage() {
               <h1 className="mt-3 font-display text-4xl leading-none break-words">{piece.title}</h1>
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-y-2 border-line py-2">
                 <MakerLine maker={piece.maker} size="md" className="flex-1" />
-                <FollowButton
-                  handle={piece.maker.handle}
-                  following={shop?.maker.followedByMe ?? false}
-                  isMe={shop?.maker.isMe ?? false}
-                />
+                {shop ? (
+                  <FollowButton
+                    handle={piece.maker.handle}
+                    following={shop.maker.followedByMe}
+                    isMe={shop.maker.isMe}
+                  />
+                ) : (
+                  // Holds the button's place until we know whether you follow them, or it is you.
+                  <span aria-hidden="true" className="block min-h-11 w-24" />
+                )}
               </div>
               <p className="mt-4 text-muted">
                 {piece.productName} · {piece.colorName} · {piece.placement} print
@@ -136,7 +141,7 @@ function ProductPage() {
                     type="button"
                     aria-pressed={item.variantId === variantId}
                     onClick={() => setVariantId(item.variantId)}
-                    className={`chip ${item.variantId === variantId ? "chip-on" : ""}`}
+                    className={`chip min-w-11 ${item.variantId === variantId ? "chip-on" : ""}`}
                   >
                     {item.label}
                   </button>

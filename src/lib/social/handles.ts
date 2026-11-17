@@ -125,9 +125,34 @@ function singleLine(raw: string): string {
       // Control characters, line breaks included, become spaces: a bio is one plain line.
       // eslint-disable-next-line no-control-regex
       .replace(/[\u0000-\u001f\u007f]+/g, " ")
+      // Blank fillers, and the marks that flip the reading direction, are dropped: they
+      // make empty-looking names and can scramble the words around them.
+      .replace(
+        /[\u00ad\u061c\u115f\u1160\u180e\u200b\u200e\u200f\u2028-\u202e\u2060-\u2069\u3164\ufeff\uffa0]/g,
+        "",
+      )
       .replace(/\s+/g, " ")
       .trim()
   );
+}
+
+/** Names that would read as the house, or its staff, speaking. */
+const HOUSE_NAMES: ReadonlySet<string> = new Set([
+  "admin",
+  "administrator",
+  "official",
+  "staff",
+  "support",
+  "moderator",
+]);
+
+/** True when a display name would pass for Street Royalty itself, however it is spaced or cased. */
+export function isHouseName(name: string): boolean {
+  const flat = String(name ?? "")
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+  return flat.includes("streetroyalty") || HOUSE_NAMES.has(flat);
 }
 
 export function checkDisplayName(raw: string): Checked {
@@ -136,6 +161,11 @@ export function checkDisplayName(raw: string): Checked {
     return { ok: false, error: `A name needs at least ${NAME_MIN} characters.` };
   if (name.length > NAME_MAX)
     return { ok: false, error: `Keep the name to ${NAME_MAX} characters.` };
+  // Something a person can read, so a name is never a row of marks or blanks.
+  if ((name.match(/[\p{L}\p{N}]/gu) ?? []).length < NAME_MIN)
+    return { ok: false, error: `A name needs at least ${NAME_MIN} letters or numbers.` };
+  if (isHouseName(name))
+    return { ok: false, error: "That name belongs to the house. Pick your own." };
   return { ok: true, value: name };
 }
 

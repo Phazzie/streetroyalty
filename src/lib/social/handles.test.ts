@@ -6,6 +6,7 @@ import {
   checkHandle,
   handleCandidate,
   handleFromName,
+  isHouseName,
   isReservedHandle,
   normalizeHandle,
 } from "./handles.ts";
@@ -75,6 +76,26 @@ describe("a display name and a bio", () => {
     expect(checkDisplayName("A").ok).toBe(false);
     expect(checkDisplayName("a".repeat(41)).ok).toBe(false);
     expect(checkDisplayName("Ada\nRoyal")).toEqual({ ok: true, value: "Ada Royal" });
+  });
+
+  it("drops characters nobody can see, so a name cannot be blank or flip the line", () => {
+    expect(checkDisplayName("\u200b\u200b\u200b").ok).toBe(false);
+    expect(checkDisplayName("\u3164\u3164\u3164").ok).toBe(false);
+    expect(checkDisplayName("\u200d\u200c\u200d").ok).toBe(false);
+    expect(checkDisplayName("...").ok).toBe(false);
+    expect(checkDisplayName("Ada\u202e Royal\u200b")).toEqual({ ok: true, value: "Ada Royal" });
+    expect(checkBio("clash\u202e on purpose\ufeff")).toEqual({
+      ok: true,
+      value: "clash on purpose",
+    });
+  });
+
+  it("will not let a maker trade under the house's name", () => {
+    for (const name of ["Street Royalty", "STREET  ROYALTY", "street.royalty official", "Admin"])
+      expect(checkDisplayName(name).ok, name).toBe(false);
+    expect(isHouseName("Str\u00e9et Royalty")).toBe(true);
+    for (const name of ["Royal Ada", "Street Sweeper", "Adminah"])
+      expect(checkDisplayName(name).ok, name).toBe(true);
   });
 
   it("keeps a bio to 160 characters of plain text, stored as typed", () => {
