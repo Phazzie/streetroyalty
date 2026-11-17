@@ -56,27 +56,27 @@ Set the variables below to leave sandbox.
 
 Copy `.env.example` to the host’s secret store. Do not commit real keys. This workspace does not ship a `.env` file. `DATABASE_URL` and the auth client credentials are injected on deploy. Preview uses an embedded database when `DATABASE_URL` is unset.
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `PRINTFUL_API_KEY` | Live print | Private token from [Printful Developers](https://developers.printful.com/). |
-| `PRINTFUL_STORE_ID` | Account-level tokens | Store id. Required when the token is not already scoped to one store. Sent as `X-PF-Store-Id`. |
-| `PRINTFUL_WEBHOOK_SECRET` | Live webhooks | Hex secret from the webhook configuration. The app hex-decodes it, which is how Printful documents the key. |
-| `POD_MODE` | No | `sandbox` (default without a key) or `live`. |
-| `STRIPE_SECRET_KEY` | Live payments | Secret key (`sk_test_...` or `sk_live_...`). |
-| `STRIPE_WEBHOOK_SECRET` | Live payments | Signing secret (`whsec_...`) for `checkout.session.completed`. |
-| `PAYMENTS_MODE` | No | `sandbox` (default without a key) or `live`. |
-| `APP_PUBLIC_URL` | Live print | Public https origin, no trailing slash. Printful downloads print files from `{APP_PUBLIC_URL}/api/print-files/{id}`. |
-| `STUDIO_MARKUP` | No | Retail = wholesale × markup. Default `2.2`. Clamped between 1 and 5. |
-| `PRINT_FILE_SIGNING_SECRET` | Live print files | HMAC key for print-file URLs. Sandbox uses a built-in secret. Live mode will not publish a file URL without it. |
-| `STUDIO_ADMIN_EMAILS` | Webhook setup | Comma-separated sign-in emails allowed to press **Connect webhooks**. Empty means nobody can. |
-| `DATABASE_URL` | Deploy | Postgres connection. Injected on deploy. Unset in local preview. |
-| `XAI_API_KEY` | AI | Server-only key for image, video, the crown critic, the stylist, print art, print lines, rack search, and pull-request review. When it is missing, the text features use a built-in fallback, pictures and video say they are unavailable, and review skips. |
-| `FOURTHWALL_STOREFRONT_TOKEN` | Live shop | Public storefront token from the Fourthwall dashboard, under Settings, For developers. Unset means the preview drop. |
-| `FOURTHWALL_CHECKOUT_DOMAIN` | No | Host for Fourthwall checkout, for example `your-shop.fourthwall.com`. Defaults to the domain the Storefront API reports for the shop. |
-| `BETTER_AUTH_URL` | Hosting outside Grok | The site's public https origin. Sign-in refuses requests from any other origin. |
-| `BETTER_AUTH_SECRET` | Hosting outside Grok | Long random string that signs sessions. Without it every server instance invents its own and sign-ins do not stick. |
-| `AI_VISITOR_IMAGE`, `AI_VISITOR_VIDEO`, `AI_VISITOR_TEXT` | No | Most generations one visitor gets per day. Defaults 30, 5, 80. |
-| `AI_DAILY_IMAGE`, `AI_DAILY_VIDEO`, `AI_DAILY_TEXT` | No | Most generations the whole site makes per day. Defaults 600, 60, 4000. Zero turns a kind off. |
+| Variable                                                  | Required             | Purpose                                                                                                                                                                                                                                                      |
+| --------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `PRINTFUL_API_KEY`                                        | Live print           | Private token from [Printful Developers](https://developers.printful.com/).                                                                                                                                                                                  |
+| `PRINTFUL_STORE_ID`                                       | Account-level tokens | Store id. Required when the token is not already scoped to one store. Sent as `X-PF-Store-Id`.                                                                                                                                                               |
+| `PRINTFUL_WEBHOOK_SECRET`                                 | Live webhooks        | Hex secret from the webhook configuration. The app hex-decodes it, which is how Printful documents the key.                                                                                                                                                  |
+| `POD_MODE`                                                | No                   | `sandbox` (default without a key) or `live`.                                                                                                                                                                                                                 |
+| `STRIPE_SECRET_KEY`                                       | Live payments        | Secret key (`sk_test_...` or `sk_live_...`).                                                                                                                                                                                                                 |
+| `STRIPE_WEBHOOK_SECRET`                                   | Live payments        | Signing secret (`whsec_...`) for `checkout.session.completed`.                                                                                                                                                                                               |
+| `PAYMENTS_MODE`                                           | No                   | `sandbox` (default without a key) or `live`.                                                                                                                                                                                                                 |
+| `APP_PUBLIC_URL`                                          | Live print           | Public https origin, no trailing slash. Printful downloads print files from `{APP_PUBLIC_URL}/api/print-files/{id}`.                                                                                                                                         |
+| `STUDIO_MARKUP`                                           | No                   | Retail = wholesale × markup. Default `2.2`. Clamped between 1 and 5.                                                                                                                                                                                         |
+| `PRINT_FILE_SIGNING_SECRET`                               | Live print files     | HMAC key for print-file URLs. Sandbox uses a built-in secret. Live mode will not publish a file URL without it.                                                                                                                                              |
+| `STUDIO_ADMIN_EMAILS`                                     | Webhook setup        | Comma-separated sign-in emails allowed to press **Connect webhooks**. Empty means nobody can.                                                                                                                                                                |
+| `DATABASE_URL`                                            | Deploy               | Postgres connection. Injected on deploy. Unset in local preview.                                                                                                                                                                                             |
+| `XAI_API_KEY`                                             | AI                   | Server-only key for image, video, the crown critic, the stylist, print art, print lines, rack search, and pull-request review. When it is missing, the text features use a built-in fallback, pictures and video say they are unavailable, and review skips. |
+| `FOURTHWALL_STOREFRONT_TOKEN`                             | Live shop            | Public storefront token from the Fourthwall dashboard, under Settings, For developers. Unset means the preview drop.                                                                                                                                         |
+| `FOURTHWALL_CHECKOUT_DOMAIN`                              | No                   | Host for Fourthwall checkout, for example `your-shop.fourthwall.com`. Defaults to the domain the Storefront API reports for the shop.                                                                                                                        |
+| `BETTER_AUTH_URL`                                         | Hosting outside Grok | The site's public https origin. Sign-in refuses requests from any other origin.                                                                                                                                                                              |
+| `BETTER_AUTH_SECRET`                                      | Hosting outside Grok | Long random string that signs sessions. Without it every server instance invents its own and sign-ins do not stick.                                                                                                                                          |
+| `AI_VISITOR_IMAGE`, `AI_VISITOR_VIDEO`, `AI_VISITOR_TEXT` | No                   | Most generations one visitor gets per day. Defaults 30, 5, 80.                                                                                                                                                                                               |
+| `AI_DAILY_IMAGE`, `AI_DAILY_VIDEO`, `AI_DAILY_TEXT`       | No                   | Most generations the whole site makes per day. Defaults 600, 60, 4000. Zero turns a kind off.                                                                                                                                                                |
 
 ## Spending caps
 
@@ -113,7 +113,15 @@ Orders are created with v2 `POST /v2/orders`, which leaves them in `draft`. `POS
 
 ## Checks
 
-`npm run ci` runs lint, typecheck, tests, and the production build. Origin runs those checks through Depot: the workflow is `.depot/workflows/ci.yml`, on the Depot runner. Connect the Depot app from the Origin codebase Apps page, then put `XAI_API_KEY` in Depot if you want the review job. That job skips when the key is missing. It comments on the Origin pull request when `PR_NUMBER` is set and the Origin CLI is signed in, and otherwise leaves the review in the log.
+`npm run ci` runs lint, typecheck, tests, and the production build. The same command runs in these places:
+
+- **Vercel**, on every push. `vercel.json` makes `npm run ci` the build command, so a failed lint, type, or test stops the deploy and shows as a failed Vercel check on the pull request. The install asks for the dev tools by name (`--include=dev`), because lint needs them and npm leaves them out when a host sets `NODE_ENV=production`.
+- **Bitbucket Pipelines** (`bitbucket-pipelines.yml`), once the Bitbucket mirror is being pushed and Pipelines is switched on there. Neither is done yet. It is set to run on `main` and on pull requests, because the free plan has 50 build minutes a month.
+- **Depot on Origin**, described below.
+
+GitHub Actions is not used. Since 12 November every run on this repository has ended in about two seconds with no runner assigned and no log, which is what GitHub does when it will not start jobs for an account. Once that is cleared in the account's billing settings, the old workflow can come back from `git show df37b18:.github/workflows/ci.yml`.
+
+Origin runs those checks through Depot: the workflow is `.depot/workflows/ci.yml`, on the Depot runner. Connect the Depot app from the Origin codebase Apps page, then put `XAI_API_KEY` in Depot if you want the review job. That job skips when the key is missing. It comments on the Origin pull request when `PR_NUMBER` is set and the Origin CLI is signed in, and otherwise leaves the review in the log.
 
 ## Develop
 

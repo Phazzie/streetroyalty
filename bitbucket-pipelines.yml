@@ -1,0 +1,28 @@
+# The same check as `npm run ci`, on Bitbucket.
+# Bitbucket's free plan has 50 build minutes a month, so this runs on main and on
+# pull requests, not on every push. Any other branch can be checked by hand with
+# the custom "check" pipeline.
+image: node:22
+
+definitions:
+  caches:
+    npm: ~/.npm
+  steps:
+    - step: &check
+        name: Lint, types, tests, build
+        caches:
+          - npm
+        script:
+          - npm ci
+          - npm run ci
+
+pipelines:
+  branches:
+    main:
+      - step: *check
+  pull-requests:
+    "**":
+      - step: *check
+  custom:
+    check:
+      - step: *check
