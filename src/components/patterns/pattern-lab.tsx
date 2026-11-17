@@ -18,7 +18,7 @@ import {
   type PatternId,
   type PatternSpec,
 } from "@/lib/gfx/patterns";
-import { GARMENT_BOX, drawGarment } from "./garment";
+import { GARMENTS, GARMENT_BOX, drawGarment, type GarmentId } from "./garment";
 
 /** The studio takes a layer up to 1,400,000 characters. Stay clear of it. */
 const STUDIO_LIMIT = 1_300_000;
@@ -127,6 +127,7 @@ export function PatternLab({
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [size, setSize] = useState(0);
+  const [wear, setWear] = useState<GarmentId>("tee");
   const swatch = useRef<HTMLCanvasElement>(null);
   const garment = useRef<HTMLCanvasElement>(null);
   const stage = useRef<HTMLDivElement>(null);
@@ -177,7 +178,7 @@ export function PatternLab({
       const teeCtx = tee?.getContext("2d");
       if (tee && teeCtx) {
         const width = backing(tee, GARMENT_MAX, GARMENT_BOX.height / GARMENT_BOX.width);
-        drawGarment(teeCtx, spec, width, "#f6f1ff", draft);
+        drawGarment(teeCtx, spec, width, "#f6f1ff", draft, wear);
       }
     };
     const frame = requestAnimationFrame(() => paint(true));
@@ -186,7 +187,7 @@ export function PatternLab({
       cancelAnimationFrame(frame);
       clearTimeout(settle);
     };
-  }, [spec, size]);
+  }, [spec, size, wear]);
 
   // The strip only changes with the seed, or the colours of the pattern in use.
   const activeColors = spec.colors.join("");
@@ -349,10 +350,23 @@ export function PatternLab({
             className="m-auto block w-full max-w-[20rem]"
             style={{ aspectRatio: `${GARMENT_BOX.width} / ${GARMENT_BOX.height}` }}
             role="img"
-            aria-label="The pattern on a tee shape"
+            aria-label={`The pattern on a ${wear} shape`}
           />
+          <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Try it on">
+            {GARMENTS.map((garmentChoice) => (
+              <button
+                key={garmentChoice.id}
+                type="button"
+                aria-pressed={wear === garmentChoice.id}
+                onClick={() => setWear(garmentChoice.id)}
+                className={`chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg ${wear === garmentChoice.id ? "chip-pink" : ""}`}
+              >
+                {garmentChoice.name}
+              </button>
+            ))}
+          </div>
           <p className="mt-2 text-sm text-muted">
-            On a tee shape. A sketch, not the printed piece.
+            A sketch of the cloth on a shape, not the printed piece.
           </p>
         </div>
 
