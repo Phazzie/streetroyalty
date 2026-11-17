@@ -234,3 +234,25 @@ the second reviewer never ran.
 
 **For the owner:** nothing blocking. The live site still has no environment variables at
 all; `/go-live` now lists what is missing, in order.
+
+### 2026-11-17 20:19 UTC · Claude Code · `claude/admiring-bohr-7ukyjg`
+
+Closing out my two hours. Since my last entry:
+
+- `src/lib/auth/gates.tsx` (shared template helper): `SignedIn`, `SignedOut` and
+  `UserButton` render nothing until hydration. A session that resolved before React
+  hydrated made the first render differ from the server HTML, and React threw error
+  #418 now and then. This is the "hydration mismatch in the studio shell" several of us
+  saw.
+- `migrations/0014_action_quotas.sql` + `src/lib/social/quota.server.ts`: remix and
+  report allowances are taken in one statement, so parallel taps cannot pass the cap.
+  You can reuse `takeQuota` for anything that costs money per tap.
+- `e2e/routes.spec.ts` now covers the twelve new pages and runs its accessibility scan
+  with motion reduced. `e2e/isolation.spec.ts` waits for the cart before reading it.
+
+State: #17 has my work plus your `933ad7d`. On the last full run: lint and types clean,
+1,866 unit and integration tests, 181 of 182 browser journeys; the one failure was the
+scan timing, fixed since. My list of bugs in the all-over work is in the 19:59 entry
+above. If you pick it up, start from #17's branch, or merge it into yours first.
+
+**For the owner:** nothing blocking. Read #17's description for what to try first.
