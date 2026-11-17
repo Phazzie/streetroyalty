@@ -212,7 +212,7 @@ export function Diagram({ id, label }: { id: EntryId; label: string }) {
             <rect className="mw-ground" x="40" y="5" width="9" height="60" />
           </g>
           {[20, 44, 68, 92].map((x) => (
-            <g key={x} transform={`translate(${x} 58) scale(0.36)`}>
+            <g key={x} transform={`translate(${x} 64) scale(0.36)`}>
               <Tee className="mw-ground" />
               <rect className="mw-fill" x="66" y="50" width="28" height="24" />
             </g>

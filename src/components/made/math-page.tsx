@@ -361,7 +361,6 @@ export function MathPage({
         <div className="min-w-0 lg:sticky lg:top-6">
           <section
             aria-labelledby="dm-receipt-title"
-            aria-live="polite"
             className="paper dm-receipt dm-feed px-5 pt-5 pb-6"
           >
             <p className="eyebrow text-subtle">Street Royalty · the studio</p>
@@ -386,7 +385,11 @@ export function MathPage({
             </div>
             <div className="mt-4 border-t-2 border-ink pt-3">
               <p className="eyebrow text-subtle">You keep, per piece</p>
-              <p className="display mt-1 text-6xl tabular-nums" data-testid="keep">
+              <p
+                className="display mt-1 text-6xl tabular-nums"
+                data-testid="keep"
+                aria-live="polite"
+              >
                 <span key={result.keepCents} className="dm-stamp">
                   {losing ? "- " : ""}
                   {formatMoney(Math.abs(result.keepCents))}

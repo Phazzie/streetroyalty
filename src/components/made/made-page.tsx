@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { Diagram, DIAGRAM_CSS, DiagramKey, PrintedOrSewn } from "@/components/made/diagrams";
+import { DpiDemo } from "@/components/made/dpi-demo";
 import { SiteShell } from "@/components/site/shell";
 import { ENTRIES, type Entry } from "@/lib/made/glossary";
 import { MAKERS, METHODS, sourcesOf, type Claim, type Maker } from "@/lib/made/makers";
@@ -97,7 +98,7 @@ function Receipts({ maker }: { maker: Maker }) {
                   href={row.claim.sourceUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="break-all underline decoration-2 underline-offset-4"
+                  className="flex min-h-11 items-center break-all underline decoration-2 underline-offset-4"
                 >
                   {row.claim.sourceUrl.replace(/^https:\/\/(www\.)?/, "")}
                 </a>
@@ -175,6 +176,9 @@ export function MadePage() {
             {words.map((entry, index) => (
               <EntryCard key={entry.id} entry={entry} index={methods.length + index} />
             ))}
+          </div>
+          <div id="try-dpi" className="mw-jump mt-5">
+            <DpiDemo />
           </div>
         </div>
       </section>
