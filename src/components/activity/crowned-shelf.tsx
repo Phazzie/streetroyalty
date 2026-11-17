@@ -193,7 +193,8 @@ export function CrownedShelf() {
     const step = () => {
       speed += -angle * 0.09;
       speed *= 0.88;
-      angle += speed;
+      // A hard shove still only swings so far.
+      angle = Math.max(-7, Math.min(7, angle + speed));
       if (Math.abs(angle) < 0.02 && Math.abs(speed) < 0.02) {
         angle = 0;
         speed = 0;
