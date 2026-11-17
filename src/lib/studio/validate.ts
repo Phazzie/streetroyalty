@@ -1,4 +1,5 @@
 import type { DesignLayer, Recipient } from "../pod/types.ts";
+import { clampFx } from "./textfx.ts";
 
 export const STUDIO_FONTS = ["Archivo Black", "Outfit"] as const;
 
@@ -42,8 +43,26 @@ export function parseLayers(input: unknown): DesignLayer[] {
       .trim()
       .slice(0, 80);
     if (!text) throw new Error("Text layers need words.");
-    return { ...shared, type: "text" as const, text, font, color };
+    return { ...shared, type: "text" as const, text, font, color, ...textExtras(layer) };
   });
+}
+
+function textExtras(layer: Record<string, unknown>): {
+  arc?: number;
+  outline?: boolean;
+  tracking?: number;
+} {
+  if (layer.arc == null && layer.tracking == null && layer.outline == null) return {};
+  const fx = clampFx({
+    arc: layer.arc == null ? 0 : Number(layer.arc),
+    tracking: layer.tracking == null ? 0 : Number(layer.tracking),
+    outline: Boolean(layer.outline),
+  });
+  return {
+    ...(fx.arc !== 0 ? { arc: fx.arc } : {}),
+    ...(fx.outline ? { outline: true } : {}),
+    ...(fx.tracking !== 0 ? { tracking: fx.tracking } : {}),
+  };
 }
 
 export function parsePrintFile(input: unknown): { mime: string; base64: string } | null {

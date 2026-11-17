@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ActivityFeed, CrownedShelf } from "@/components/activity";
 import { ProfileForm } from "@/components/makers/profile-form";
 import { Button } from "@/components/ui/button";
 import { Note, StudioShell } from "@/components/studio/shell";
@@ -35,7 +36,7 @@ function MePage() {
   }, [viewerId]);
 
   return (
-    <StudioShell current="/rack">
+    <StudioShell current="/me">
       <p className="tag">Maker</p>
       <h1 className="mt-3 font-display text-4xl leading-none">Your name on the rack</h1>
       {!isPending && !user ? (
@@ -75,6 +76,12 @@ function MePage() {
             </div>
           ) : null}
           <ProfileForm profile={profile} onSaved={setProfile} />
+        </div>
+      ) : null}
+      {user ? (
+        <div className="mt-12 grid gap-12">
+          <ActivityFeed />
+          <CrownedShelf />
         </div>
       ) : null}
     </StudioShell>

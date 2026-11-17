@@ -13,9 +13,11 @@ describe("the database handle", () => {
       "0002_studio.sql",
       "0003_order_flags.sql",
       "0004_ai_usage.sql",
+      "0005_garments.sql",
       "0010_social.sql",
       "0011_tag_scans.sql",
       "0012_reports.sql",
+      "0013_cart_colorway_lines.sql",
     ]);
   });
 

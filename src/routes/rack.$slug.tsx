@@ -7,9 +7,13 @@ import { FamilyTree } from "@/components/rack/family-tree";
 import { FollowButton } from "@/components/rack/follow-button";
 import { MakerLine } from "@/components/rack/maker-line";
 import { MoneySplit } from "@/components/rack/money-split";
+import { PieceOptions } from "@/components/rack/piece-options";
 import { PieceTag } from "@/components/rack/piece-tag";
 import { RackCard } from "@/components/rack/rack-card";
 import { RemixButton } from "@/components/rack/remix-button";
+import { ReportLink } from "@/components/rack/report-link";
+import { ScanStrip } from "@/components/rack/scan-strip";
+import { TryOn } from "@/components/rack/try-on";
 import { Note, StudioShell } from "@/components/studio/shell";
 import { formatMoney } from "@/lib/pod/money";
 import { printNote } from "@/lib/ai/api";
@@ -31,6 +35,7 @@ function ProductPage() {
   const [piece, setPiece] = useState<Piece | null>(null);
   const [shop, setShop] = useState<Shop | null>(null);
   const [variantId, setVariantId] = useState("");
+  const [colorwayId, setColorwayId] = useState("");
   const [error, setError] = useState("");
   const [adding, setAdding] = useState(false);
   const [advice, setAdvice] = useState("");
@@ -46,6 +51,7 @@ function ProductPage() {
         if (!live) return;
         setPiece(next);
         setVariantId(next.variantId);
+        setColorwayId(next.activeColorwayId ?? next.colorways[0]?.id ?? "");
         if (!next.maker.handle) return;
         // The maker's follow state and their other pieces. The page works without it.
         void makerPage({ data: { handle: next.maker.handle } })
@@ -81,6 +87,7 @@ function ProductPage() {
       ) : null}
       {piece ? (
         <>
+          <ScanStrip slug={piece.slug} />
           <div className="grid gap-6 md:grid-cols-2">
             <div className="min-w-0">
               {piece.mockupUrl ? (
@@ -127,9 +134,7 @@ function ProductPage() {
                   <span aria-hidden="true" className="block min-h-11 w-24" />
                 )}
               </div>
-              <p className="mt-4 text-muted">
-                {piece.productName} · {piece.colorName} · {piece.placement} print
-              </p>
+              <PieceOptions piece={piece} colorwayId={colorwayId} onColorway={setColorwayId} />
               <p className="mt-4 font-display text-3xl">
                 {formatMoney(size?.retailCents ?? piece.retailCents)}
               </p>
@@ -176,7 +181,13 @@ function ProductPage() {
                   void flight.current(async () => {
                     setAdding(true);
                     try {
-                      await cartAdd({ data: { designId: piece.id, variantId } });
+                      await cartAdd({
+                        data: {
+                          designId: piece.id,
+                          variantId,
+                          colorwayId: colorwayId || undefined,
+                        },
+                      });
                       void navigate({ to: "/cart" });
                     } catch (reason: unknown) {
                       setError(reason instanceof Error ? reason.message : "Sign in to add it.");
@@ -205,6 +216,16 @@ function ProductPage() {
               makerHandle={piece.maker.handle || undefined}
             />
           </div>
+          <div className="mt-10">
+            <TryOn
+              slug={piece.slug}
+              title={piece.title}
+              mockupUrl={piece.mockupUrl}
+              productType={piece.productType}
+              colorName={piece.colorName}
+              placement={piece.placement}
+            />
+          </div>
           {more.length > 0 && piece.maker.handle ? (
             <section className="mt-10" aria-labelledby="more-from-maker">
               <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
@@ -222,6 +243,9 @@ function ProductPage() {
               </div>
             </section>
           ) : null}
+          <div className="mt-10 flex justify-end border-t border-line pt-3">
+            <ReportLink kind="piece" slug={piece.slug} />
+          </div>
         </>
       ) : null}
     </StudioShell>

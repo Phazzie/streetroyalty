@@ -1,8 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArtEffects, ArtMaker, WornPreview } from "@/components/studio/art-tools";
+import { AopStage } from "@/components/studio/aop-stage";
+import { CurvedText } from "@/components/studio/curved-text";
+import { PreflightPanel } from "@/components/studio/preflight-panel";
+import { SetBoard } from "@/components/studio/set-board";
 import { Note, Panel } from "@/components/studio/shell";
 import { renderPrintFile } from "@/components/studio/print-file";
 import { luminance } from "@/lib/color";
@@ -25,6 +29,14 @@ import {
 import { suggestLines } from "@/lib/ai/api";
 import { createSingleFlight } from "@/lib/ui/single-flight";
 import { designVisualKey } from "@/lib/studio/design-key";
+import {
+  SET_PARTNER,
+  defaultGarment,
+  withSharedColorways,
+  type GarmentDesign,
+} from "@/lib/studio/garments";
+import { canPublish, preflightVerdict, runPrintChecks, type ImageFacts } from "@/lib/studio/preflight";
+import { TEXT_PRESETS, clampFx, isFlatText } from "@/lib/studio/textfx";
 import { MAX_LAYERS, STUDIO_FONTS } from "@/lib/studio/validate";
 
 type CatalogCard = {
@@ -32,6 +44,7 @@ type CatalogCard = {
   name: string;
   type: string;
   imageUrl?: string;
+  construction?: "placement" | "aop";
 };
 
 const starter: DesignLayer = {
@@ -58,6 +71,10 @@ export function Editor({ designId }: { designId: string }) {
   const [variantId, setVariantId] = useState("");
   const [placement, setPlacement] = useState("front");
   const [layers, setLayers] = useState<DesignLayer[]>([starter]);
+  const [garment, setGarment] = useState<GarmentDesign | null>(null);
+  const [showSet, setShowSet] = useState(false);
+  const [printOverride, setPrintOverride] = useState(false);
+  const [imageFacts, setImageFacts] = useState<ImageFacts[]>([]);
   const [selected, setSelected] = useState("tagline");
   const [title, setTitle] = useState("Night shift tee");
   const [savedId, setSavedId] = useState(designId);
@@ -130,6 +147,7 @@ export function Editor({ designId }: { designId: string }) {
           setSavedId(design.id);
           setTitle(design.title);
           setLayers(design.layers);
+          setGarment(design.garment);
           setPlacement(design.placement);
           setCollectionId(design.collectionId ?? "");
           setMockupUrl("");
@@ -152,8 +170,12 @@ export function Editor({ designId }: { designId: string }) {
     ? [...new Map(product.variants.map((item) => [item.color, item])).values()]
     : [];
   const sizes = product?.variants.filter((item) => item.color === variant?.color) ?? [];
-  const area: PrintArea = variant?.printAreas.find((item) => item.placement === placement) ??
-    variant?.printAreas[0] ?? { placement, widthIn: 12, heightIn: 16, dpi: 150 };
+  const area: PrintArea = useMemo(
+    () =>
+      variant?.printAreas.find((item) => item.placement === placement) ??
+      variant?.printAreas[0] ?? { placement, widthIn: 12, heightIn: 16, dpi: 150 },
+    [placement, variant],
+  );
   const active = layers.find((layer) => layer.id === selected) ?? null;
   const atLayerLimit = layers.length >= MAX_LAYERS;
 
@@ -300,6 +322,7 @@ export function Editor({ designId }: { designId: string }) {
           layers,
           printFile,
           mockupUrl: mockupUrl || null,
+          garment: aop ? garment : undefined,
         },
       });
       setSavedId(saved.id);
@@ -319,6 +342,10 @@ export function Editor({ designId }: { designId: string }) {
     await flight.current(async () => {
     setBusy(true);
     try {
+      if (!canPublish(verdict, printOverride)) {
+        setNote("The print check failed. Read it, or say you are publishing anyway.");
+        return;
+      }
       const printFile = await exportPrint();
       const key = designVisualKey({
         productId: product.id,
@@ -346,6 +373,7 @@ export function Editor({ designId }: { designId: string }) {
           layers,
           printFile,
           mockupUrl: url,
+          garment: aop ? garment : undefined,
         },
       });
       setSavedId(saved.id);
@@ -378,6 +406,7 @@ export function Editor({ designId }: { designId: string }) {
               layers,
               printFile,
               mockupUrl: mockupUrl || null,
+              garment: aop ? garment : undefined,
             },
           });
           id = saved.id;
@@ -394,7 +423,47 @@ export function Editor({ designId }: { designId: string }) {
     });
   }
 
+  const aop = product?.construction === "aop" && Boolean(product.aopTemplateId);
+  const checks = useMemo(
+    () =>
+      runPrintChecks({
+        layers,
+        area,
+        garmentHex: garment ? (garment.colorways.find((item) => item.id === garment.activeColorwayId)?.colors.body ?? variant?.colorHex ?? "#141414") : (variant?.colorHex ?? "#141414"),
+        images: imageFacts,
+      }),
+    [area, garment, imageFacts, layers, variant?.colorHex],
+  );
+  const verdict = preflightVerdict(checks);
   const ink = variant && luminance(variant.colorHex) > 0.62 ? "#141018" : "#f6f1ff";
+
+  useEffect(() => {
+    if (!product?.aopTemplateId) return;
+    const templateId = product.aopTemplateId;
+    setGarment((current) => (current?.templateId === templateId ? current : defaultGarment(templateId)));
+    // The house lime ink disappears on a light lilac body. Start from the mark color.
+    setLayers((current) =>
+      current.map((layer) =>
+        layer.type === "text" && layer.color.toLowerCase() === "#d6ff3c" ? { ...layer, color: "#1a1024" } : layer,
+      ),
+    );
+  }, [product?.aopTemplateId]);
+
+  useEffect(() => {
+    let cancel = false;
+    void (async () => {
+      const facts: ImageFacts[] = [];
+      for (const layer of layers) {
+        if (layer.type !== "image") continue;
+        const size = await readImageSize(layer.src);
+        if (size) facts.push({ layerId: layer.id, widthPx: size.width, heightPx: size.height });
+      }
+      if (!cancel) setImageFacts(facts);
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [layers]);
 
   return (
     <div className="grid min-w-0 gap-4 lg:grid-cols-[16rem_minmax(0,1fr)_20rem]">
@@ -420,6 +489,9 @@ export function Editor({ designId }: { designId: string }) {
               ) : null}
               <span className="block font-display text-xs uppercase">{item.type}</span>
               <span className="block text-sm">{item.name}</span>
+              {item.construction === "aop" ? (
+                <span className="block text-xs text-muted">All-over sublimation</span>
+              ) : null}
             </button>
           ))}
         </div>
@@ -427,6 +499,14 @@ export function Editor({ designId }: { designId: string }) {
 
       <div className="flex flex-col gap-4">
         <Panel title={product ? product.name : "Loading the rack"}>
+          {aop && garment ? (
+            <AopStage
+              garment={garment}
+              label={layers.find((layer) => layer.type === "text")?.text}
+              onChange={setGarment}
+              onPreviewSet={() => setShowSet(true)}
+            />
+          ) : (
           <div className="mx-auto w-full max-w-md">
             <div
               className="relative mx-auto aspect-[4/5] w-full border-2 border-ink"
@@ -453,9 +533,18 @@ export function Editor({ designId }: { designId: string }) {
                     }}
                   >
                     {layer.type === "text" ? (
-                      <span className="block max-w-full text-center font-display text-sm leading-tight">
-                        {layer.text}
-                      </span>
+                      isFlatText(clampFx({ arc: layer.arc, outline: layer.outline, tracking: layer.tracking })) ? (
+                        <span className="block max-w-full text-center font-display text-sm leading-tight">
+                          {layer.text}
+                        </span>
+                      ) : (
+                        <CurvedText
+                          text={layer.text}
+                          fx={clampFx({ arc: layer.arc, outline: layer.outline, tracking: layer.tracking })}
+                          color={layer.color}
+                          fontFamily={layer.font}
+                        />
+                      )
                     ) : (
                       <img src={layer.src} alt="" className="h-24 w-24 object-contain" />
                     )}
@@ -468,6 +557,7 @@ export function Editor({ designId }: { designId: string }) {
               dashed box.
             </p>
           </div>
+          )}
           {note ? (
             <div className="mt-3">
               <Note>{note}</Note>
@@ -494,6 +584,27 @@ export function Editor({ designId }: { designId: string }) {
             onNote={setNote}
           />
         </Panel>
+        {showSet && garment ? (
+          <Panel title="The set">
+            <SetBoard
+              title={`${title} set`}
+              colorways={garment.colorways}
+              activeColorwayId={garment.activeColorwayId}
+              onPick={(id) => setGarment({ ...garment, activeColorwayId: id })}
+              pieces={[
+                { name: product?.name ?? "This piece", garment },
+                {
+                  name: "The match",
+                  garment: withSharedColorways(
+                    defaultGarment(SET_PARTNER[garment.templateId] ?? "aop-joggers"),
+                    garment.colorways,
+                    garment.activeColorwayId,
+                  ),
+                },
+              ]}
+            />
+          </Panel>
+        ) : null}
       </div>
 
       <div className="flex flex-col gap-4">
@@ -691,6 +802,52 @@ export function Editor({ designId }: { designId: string }) {
                     onChange={(event) => patchLayer(active.id, { color: event.target.value })}
                     className="h-12 w-full border-2 border-ink bg-cream"
                   />
+                  <p className="text-sm text-muted">Curve</p>
+                  <div className="flex flex-wrap gap-2">
+                    {TEXT_PRESETS.map((preset) => (
+                      <button
+                        key={preset.name}
+                        type="button"
+                        className="chip"
+                        title={preset.note}
+                        onClick={() => patchLayer(active.id, preset.fx)}
+                      >
+                        {preset.name}
+                      </button>
+                    ))}
+                  </div>
+                  <label className="text-sm text-muted" htmlFor="layer-arc">
+                    Arc {active.arc ?? 0}°
+                  </label>
+                  <input
+                    id="layer-arc"
+                    type="range"
+                    min={-120}
+                    max={120}
+                    step={1}
+                    value={active.arc ?? 0}
+                    onChange={(event) => patchLayer(active.id, { arc: Number(event.target.value) })}
+                  />
+                  <label className="text-sm text-muted" htmlFor="layer-tracking">
+                    Tracking
+                  </label>
+                  <input
+                    id="layer-tracking"
+                    type="range"
+                    min={-0.05}
+                    max={0.6}
+                    step={0.01}
+                    value={active.tracking ?? 0}
+                    onChange={(event) => patchLayer(active.id, { tracking: Number(event.target.value) })}
+                  />
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(active.outline)}
+                      onChange={(event) => patchLayer(active.id, { outline: event.target.checked })}
+                    />
+                    Outline only
+                  </label>
                 </>
               ) : (
                 <ArtEffects
@@ -738,6 +895,15 @@ export function Editor({ designId }: { designId: string }) {
               </Button>
             </div>
           ) : null}
+        </Panel>
+
+        <Panel title="Print check">
+          <PreflightPanel
+            checks={checks}
+            verdict={verdict}
+            override={printOverride}
+            onOverride={setPrintOverride}
+          />
         </Panel>
 
         <Panel title="Keep it">
@@ -794,12 +960,30 @@ export function Editor({ designId }: { designId: string }) {
 }
 
 
+function readImageSize(src: string): Promise<{ width: number; height: number } | null> {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+    image.onerror = () => resolve(null);
+    image.src = src;
+  });
+}
+
 function GarmentHint({ type }: { type: string }) {
-  const label = type.toLowerCase().includes("hat")
+  const name = type.toLowerCase();
+  const label = name.includes("hat")
     ? "cap"
-    : type.toLowerCase().includes("hood")
-      ? "hoodie"
-      : "tee";
+    : name.includes("jog")
+      ? "joggers"
+      : name.includes("tote")
+        ? "tote"
+        : name.includes("jacket")
+          ? "jacket"
+          : name.includes("long")
+            ? "long sleeve"
+            : name.includes("hood")
+              ? "hoodie"
+              : "tee";
   return (
     <span className="pointer-events-none absolute top-3 left-3 font-display text-xs tracking-widest uppercase opacity-70">
       {label}

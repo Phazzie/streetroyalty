@@ -1,6 +1,7 @@
 import { getSql } from "../db.ts";
 import { getShopDesign } from "../studio/designs.server.ts";
 import { summary, type DesignRow } from "../studio/shared.server.ts";
+import type { ShopPiece } from "../studio/models.ts";
 import type { RackPiece, RackSort } from "./types.ts";
 
 type PieceRow = DesignRow & {
@@ -126,7 +127,7 @@ export function rackList(viewerId: string | null, sort: RackSort): Promise<RackP
 export async function rackPiece(
   viewerId: string | null,
   slug: string,
-): Promise<RackPiece & { sizes: { variantId: string; label: string; retailCents: number }[] }> {
+): Promise<ShopPiece & Pick<RackPiece, "maker" | "crowns" | "crownedByMe" | "palette">> {
   const shop = await getShopDesign(slug);
   const [social] = await piecesFor({ viewerId, sort: "fresh", slug });
   if (!social) throw new Error("That piece is not on the rack.");

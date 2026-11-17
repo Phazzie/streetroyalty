@@ -39,6 +39,15 @@ const OPEN: Record<string, string> = {
   // Street scans: a stranger who scans a tag is not signed in.
   countTagScan: "counts one scan of a public piece; same-site only, capped per piece per day",
   tagScans: "a public count on a public rack page",
+  // Makers and the social rack: public shop pages. The viewer is read only to mark their own crowns and follows.
+  rackList: "the public rack, with makers and crown counts",
+  rackPiece: "a public rack page",
+  makerPage: "a maker's public shop window, published pieces only",
+  pieceFamily: "a published piece's public family tree",
+  nextBattle: "anyone can watch a battle; reads published pieces only, writes nothing",
+  throne: "the public battle leaderboard",
+  tryOnStatus: "says whether try-on is on and the daily allowance; the same for everyone",
+  goLiveBoard: "lists services and missing variable names; per-variable status only for admins",
 };
 
 function sourceFiles(dir: string): string[] {

@@ -74,6 +74,8 @@ function words(value: string): string {
  */
 function oneLine(value: string | null | undefined, max: number): string {
   return String(value ?? "")
+    // Matching control characters is the point: they are what gets stripped.
+    // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u001f\u007f\u2028\u2029]+/g, " ")
     .replace(/\s+/g, " ")
     .trim()

@@ -1,4 +1,5 @@
 import type { DesignLayer, PrintArea } from "@/lib/pod/types";
+import { arcLayout, clampFx, isFlatText } from "@/lib/studio/textfx";
 import { MAX_PRINT } from "@/lib/studio/validate";
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -67,10 +68,15 @@ function draw(
     if (layer.type === "text") {
       const px = Math.max(18, Math.round(height * 0.14 * layer.scale));
       ctx.font = `${px}px "${layer.font}", sans-serif`;
-      ctx.fillStyle = layer.color;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(layer.text, 0, 0, width * 0.92);
+      const fx = clampFx({ arc: layer.arc, outline: layer.outline, tracking: layer.tracking });
+      if (isFlatText(fx)) {
+        ctx.fillStyle = layer.color;
+        ctx.fillText(layer.text, 0, 0, width * 0.92);
+      } else {
+        drawCurvedText(ctx, layer.text, fx, layer.color, px);
+      }
     } else {
       const image = images[index];
       if (image) {
@@ -82,4 +88,28 @@ function draw(
     ctx.restore();
   });
   return canvas.toDataURL("image/png");
+}
+
+function drawCurvedText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  fx: ReturnType<typeof clampFx>,
+  color: string,
+  px: number,
+) {
+  const cells = arcLayout(text, fx);
+  if (fx.outline) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(1, px * 0.08);
+  } else {
+    ctx.fillStyle = color;
+  }
+  for (const cell of cells) {
+    ctx.save();
+    ctx.translate(cell.along * px, cell.lift * px);
+    ctx.rotate((cell.rotate * Math.PI) / 180);
+    if (fx.outline) ctx.strokeText(cell.char, 0, 0);
+    else ctx.fillText(cell.char, 0, 0);
+    ctx.restore();
+  }
 }

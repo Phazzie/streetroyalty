@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ShopWindow, ShutWindow } from "@/components/makers/shop-window";
 import { FollowButton } from "@/components/rack/follow-button";
+import { ReportLink } from "@/components/rack/report-link";
 import { RackCard } from "@/components/rack/rack-card";
 import { Note, StudioShell } from "@/components/studio/shell";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -129,6 +130,11 @@ function MakerPage() {
               </div>
             )}
           </section>
+          {shop.maker.isMe ? null : (
+            <div className="mt-10 flex justify-end border-t border-line pt-3">
+              <ReportLink kind="maker" handle={shop.maker.handle} />
+            </div>
+          )}
         </>
       ) : null}
     </StudioShell>
