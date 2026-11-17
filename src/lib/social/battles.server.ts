@@ -19,7 +19,7 @@ import {
 /** Enough pieces to keep every pair fresh without loading the whole rack into memory. */
 const RING_SIZE = 400;
 /** How many pairs a viewer can ask to step past in one request. */
-const MAX_SKIP = 60;
+const MAX_SKIP = 24;
 
 type PieceRow = {
   id: string;

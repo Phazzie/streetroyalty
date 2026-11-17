@@ -16,6 +16,8 @@ type Phase = "loading" | "enter" | "ready" | "voting" | "reveal" | "leave" | "ov
 const REVEAL_MS = 2800;
 const ENTER_MS = 720;
 const LEAVE_MS = 260;
+/** Pairs a viewer stepped past that are remembered, so "another pair" really is another. */
+const MAX_STEPPED = 12;
 /** The seam never closes a side completely, however one-sided the vote. */
 const MIN_SHARE = 32;
 
@@ -93,6 +95,7 @@ function Side({
       data-lost={revealed && lost ? "true" : undefined}
       data-picked={picked ? "true" : undefined}
       aria-disabled={busy || undefined}
+      aria-keyshortcuts={name === "left" ? "ArrowLeft" : "ArrowRight"}
       aria-label={
         revealed
           ? `${side.title} by ${side.maker.name}: ${share} percent`
@@ -181,6 +184,8 @@ export function Arena({ onVoted }: { onVoted?: () => void }) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const alive = useRef(true);
   const signInRef = useRef<HTMLAnchorElement | null>(null);
+  const arenaRef = useRef<HTMLDivElement | null>(null);
+  const refocus = useRef<SideName | null>(null);
 
   const setPhase = useCallback((next: Phase) => {
     phaseRef.current = next;
@@ -197,6 +202,14 @@ export function Arena({ onVoted }: { onVoted?: () => void }) {
 
   const show = useCallback(
     (next: NextBattle) => {
+      // Each pair gets fresh buttons, so remember which side the keyboard was on.
+      const held = document.activeElement;
+      refocus.current =
+        held instanceof HTMLElement && arenaRef.current?.contains(held)
+          ? held.classList.contains("btl-side-right")
+            ? "right"
+            : "left"
+          : null;
       battleRef.current = next;
       pickedRef.current = null;
       setBattle(next);
@@ -293,7 +306,7 @@ export function Arena({ onVoted }: { onVoted?: () => void }) {
   const skip = useCallback(() => {
     const pair = battleRef.current?.pair;
     if (phaseRef.current !== "ready" || !pair) return;
-    stepped.current = [...stepped.current, pair.key].slice(-40);
+    stepped.current = [...stepped.current, pair.key].slice(-MAX_STEPPED);
     upNext.current = null;
     bringNext();
   }, [bringNext]);
@@ -327,6 +340,15 @@ export function Arena({ onVoted }: { onVoted?: () => void }) {
   }, [reload]);
 
   useEffect(() => {
+    const side = refocus.current;
+    refocus.current = null;
+    if (!side) return;
+    arenaRef.current
+      ?.querySelector<HTMLElement>(`.btl-side-${side}`)
+      ?.focus({ preventScroll: true });
+  }, [battle]);
+
+  useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
@@ -347,14 +369,18 @@ export function Arena({ onVoted }: { onVoted?: () => void }) {
 
   const pair = battle?.pair ?? null;
   const signedIn = battle?.signedIn ?? false;
-  const revealed = (phase === "reveal" || phase === "leave") && tally !== null && picked !== null;
-  const busy = phase === "voting";
+  // While a switched pick is on its way the last split stays up, so nothing blinks.
+  const revealed =
+    (phase === "reveal" || phase === "leave" || phase === "voting") &&
+    tally !== null &&
+    picked !== null;
+  const busy = phase === "voting" && !revealed;
 
   let leftShare = 50;
   let rightShare = 50;
-  if (revealed && tally && picked) {
-    const [mine, theirs] = splitPercent(tally.winnerVotes, tally.loserVotes);
-    leftShare = picked === "left" ? mine : theirs;
+  if (revealed && tally && pair) {
+    const [winner, loser] = splitPercent(tally.winnerVotes, tally.loserVotes);
+    leftShare = tally.winnerId === pair.left.id ? winner : loser;
     rightShare = 100 - leftShare;
   }
   const leftGrow = Math.min(100 - MIN_SHARE, Math.max(MIN_SHARE, leftShare));
@@ -383,6 +409,7 @@ export function Arena({ onVoted }: { onVoted?: () => void }) {
       {pair && phase !== "loading" && phase !== "failed" && phase !== "over" ? (
         <>
           <div
+            ref={arenaRef}
             className="btl-arena"
             data-phase={phase}
             style={{
@@ -391,6 +418,7 @@ export function Arena({ onVoted }: { onVoted?: () => void }) {
             }}
           >
             <Side
+              key={`${pair.key}-left`}
               name="left"
               side={pair.left}
               share={leftShare}
@@ -405,6 +433,7 @@ export function Arena({ onVoted }: { onVoted?: () => void }) {
               <span className="btl-vs display">VS</span>
             </div>
             <Side
+              key={`${pair.key}-right`}
               name="right"
               side={pair.right}
               share={rightShare}

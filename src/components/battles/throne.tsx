@@ -157,7 +157,7 @@ export function Throne({ rows, error }: { rows: ThroneRow[] | null; error: strin
                   params={{ slug: row.slug }}
                   className="flex min-h-11 items-center font-display uppercase underline decoration-2 underline-offset-4"
                 >
-                  <span className="truncate">{row.title}</span>
+                  <span className="clamp-2">{row.title}</span>
                 </Link>
                 <Maker row={row} />
               </div>

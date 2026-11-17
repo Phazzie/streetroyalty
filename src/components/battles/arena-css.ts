@@ -59,13 +59,13 @@ export const ARENA_CSS = `
   box-shadow: inset 0 0 0 2px #14081c;
   pointer-events: none;
 }
+/* Each picture is pinned to the outer edge of its side, so it holds still while the seam moves. */
 .btl-shot {
   position: absolute;
-  top: 0;
-  left: 50%;
+  bottom: var(--btl-plate);
+  left: 0;
   width: 100cqw;
   height: calc(50cqh - var(--btl-plate) - var(--btl-seam) / 2);
-  transform: translateX(-50%);
   transition:
     filter 520ms ease,
     transform 520ms var(--ease-out-expo);
@@ -141,8 +141,8 @@ export const ARENA_CSS = `
 }
 /* Stacked, the first piece wears its name plate on top, so the seam runs between the two pictures. */
 .btl-side-left .btl-shot {
-  top: auto;
-  bottom: 0;
+  top: var(--btl-plate);
+  bottom: auto;
 }
 .btl-side-left .btl-plate {
   inset: 0 0 auto 0;
@@ -173,7 +173,12 @@ export const ARENA_CSS = `
   font-size: clamp(4rem, 23cqw, 7rem);
   color: var(--color-fg);
   text-shadow: 5px 5px 0 var(--color-pipe);
-  animation: btl-slam 520ms var(--ease-out-expo) both;
+  /*
+   * The number lands by counting up and by its shadow stepping out. It is not scaled or
+   * faded in: a transform here made Chromium repaint the name plate in the wrong place
+   * while the seam was still moving.
+   */
+  animation: btl-land 620ms var(--ease-out-expo) both;
 }
 .btl-pct small {
   font-size: 0.42em;
@@ -182,6 +187,7 @@ export const ARENA_CSS = `
 .btl-side[data-lost="true"] .btl-pct {
   color: var(--color-subtle);
   text-shadow: none;
+  animation: none;
 }
 .btl-seam {
   position: relative;
@@ -288,9 +294,9 @@ export const ARENA_CSS = `
   35% { transform: scale(1.014); }
   100% { transform: none; }
 }
-@keyframes btl-slam {
-  from { opacity: 0; transform: scale(2.3) rotate(-6deg); }
-  to { opacity: 1; transform: none; }
+@keyframes btl-land {
+  from { text-shadow: 0 0 0 var(--color-pipe); letter-spacing: 0.08em; }
+  to { text-shadow: 5px 5px 0 var(--color-pipe); letter-spacing: -0.012em; }
 }
 @keyframes btl-tape {
   from { opacity: 0; transform: rotate(-14deg) translateY(-140%); }
@@ -305,7 +311,7 @@ export const ARENA_CSS = `
 }
 
 @media (hover: hover) {
-  .btl-arena[data-phase="ready"] .btl-side:hover .btl-shot { transform: translateX(-50%) scale(1.045); }
+  .btl-arena[data-phase="ready"] .btl-side:hover .btl-shot { transform: scale(1.045); }
   .btl-arena[data-phase="ready"] .btl-side:hover .btl-go {
     transform: translate(-1px, -2px);
     box-shadow: 5px 5px 0 var(--color-pipe);
@@ -318,13 +324,19 @@ export const ARENA_CSS = `
     height: clamp(24rem, 56dvh, 38rem);
   }
   .btl-shot {
+    top: 0;
+    right: 0;
+    bottom: auto;
+    left: auto;
     width: calc(50cqw - var(--btl-seam) / 2);
     height: calc(100cqh - var(--btl-plate));
   }
   .btl-pct { font-size: clamp(5rem, 15cqw, 11rem); }
   .btl-side-left .btl-shot {
     top: 0;
+    right: auto;
     bottom: auto;
+    left: 0;
   }
   .btl-side-left .btl-plate {
     inset: auto 0 0 0;

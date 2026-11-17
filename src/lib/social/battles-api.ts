@@ -23,7 +23,7 @@ export const nextBattle = createServerFn({ method: "GET" })
     skip: Array.isArray(input?.skip)
       ? input.skip
           .filter((key): key is string => typeof key === "string" && key.length <= 200)
-          .slice(-60)
+          .slice(-24)
       : [],
     after: typeof input?.after === "string" ? input.after.slice(0, 200) : "",
   }))
