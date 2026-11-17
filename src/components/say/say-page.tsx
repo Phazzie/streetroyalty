@@ -316,7 +316,13 @@ export function SayPage() {
           await navigate({ to: "/studio", search: { design: saved.id } });
         } else {
           const art = await renderArt(intentRef.current);
-          sessionStorage.setItem("sr-print-art", art);
+          try {
+            sessionStorage.setItem("sr-print-art", art);
+          } catch {
+            throw new Error(
+              "This browser would not hold the picture. Sign in and it goes over as words instead.",
+            );
+          }
           await navigate({ to: "/studio" });
         }
       } catch (error) {
@@ -571,14 +577,19 @@ export function SayPage() {
           {!hasWords ? (
             <p className="text-muted">Say the words you want on it first.</p>
           ) : signedOut ? (
-            <p className="text-muted">
-              You are not signed in, so the words go to the studio as a picture on the house tee.{" "}
-              <Link to="/login" className="font-bold text-fg underline underline-offset-4">
+            <div className="flex flex-col items-start gap-2">
+              <p className="text-muted">
+                You are not signed in, so the words go to the studio as a picture on the house tee.
+                With an account it keeps the blank, the colour and words you can still edit. This
+                piece will wait here while you sign in.
+              </p>
+              <Link
+                to="/login"
+                className="inline-flex min-h-11 items-center border-2 border-ink bg-surface px-4 font-bold text-fg underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-fg"
+              >
                 Sign in first
-              </Link>{" "}
-              and come back here to keep the blank, the colour and words you can still edit. This
-              piece will wait.
-            </p>
+              </Link>
+            </div>
           ) : (
             <p className="text-muted">
               Saves it to your account as a draft, then opens it in the studio with every word still

@@ -136,9 +136,17 @@ function cleanText(text: string): string {
     .trim();
 }
 
+/** Words that can follow a colour when the colour is an instruction: "in pink on the back", "in pink, big". */
+const AFTER_COLOR =
+  "on|across|onto|over|down|and|then|but|please|thanks|letters|lettering|text|words|writing|print|ink|type|font|colou?r|big|bigger|huge|massive|giant|small|smaller|tiny|medium|large|larger|tilted|tilt|slanted|sideways|bold|plain|all|in|with|at|lower ?case|upper ?case|caps|capitals|though|too|instead";
+
 const STOPS: RegExp[] = [
   /,/,
-  new RegExp(`\\s+(?:in|with|using)\\s+(?:a\\s+|the\\s+)?(?:${COLOR_PATTERN})\\b`, "i"),
+  // "free world in blue" ends at the colour. "born in red clay" does not: the colour is part of the words.
+  new RegExp(
+    `\\s+(?:in|with|using)\\s+(?:a\\s+|the\\s+)?(?:${COLOR_PATTERN})(?=\\s*(?:$|[,.;!?|])|\\s+(?:${AFTER_COLOR})\\b)`,
+    "i",
+  ),
   /\s+(?:on|across|onto|over|down)\s+(?:the|a|an|my|it|its|this|that|your|both)\b/i,
   /\s+(?:and|then|but)\s+(?:make|put|tilt|turn|change|add|keep|give|move)\b/i,
   /\s+(?:in|all)\s+(?:lower ?case|upper ?case|caps|capitals|small letters|big letters|huge letters|bold)\b/i,
@@ -168,6 +176,33 @@ type Pulled = {
 function ordinalIndex(word: string): number | null {
   for (const [pattern, index] of ORDINALS) if (pattern.test(word)) return index;
   return null;
+}
+
+const SWAPPED =
+  /\b(?:change|switch|swap)\s+(?:the\s+|my\s+)?(?:words?|text|letters|it|that|this)\s+to\s+(?:say\s+|read\s+)?(.+)$/i;
+
+const SAID =
+  /\b(?:that\s+)?(?:says|saying|reads|reading|spells|(?:it|to|should|will|gonna|and|shirt|tee|hoodie|hat|crewneck)\s+(?:say|read)|with\s+the\s+(?:words?|text|letters|phrase|name)|the\s+(?:words?|phrase)|my\s+(?:[a-z]+(?:'s)?\s+)?name(?:\s+is)?|(?:the\s+)?name(?:\s+is)?|write|spell)\s*:?\s+(.+)$/i;
+
+/** The words after "says", "reads", "my name" and the like, with the rest of the sentence handed back. */
+function pullSaid(rest: string): { text: string; rest: string } | null {
+  // "change the words to no encore". "change it to pink" is a colour, so it is left for the scan.
+  const swapped = SWAPPED.exec(rest);
+  if (swapped) {
+    const { head, rest: after } = cutAtStop(swapped[1] ?? "");
+    const text = cleanText(head);
+    if (text && !PRONOUNS.test(text) && !styleOnly(text)) {
+      return { text, rest: `${rest.slice(0, swapped.index)} | ${after}` };
+    }
+  }
+  const trigger = SAID.exec(rest);
+  if (!trigger) return null;
+  const { head, rest: after } = cutAtStop(trigger[1] ?? "");
+  const text = cleanText(head);
+  // "make the words bigger" is about the words. "that says bigger" is a print.
+  const weak = /^the\s/i.test(trigger[0]) && styleOnly(text);
+  if (!text || PRONOUNS.test(text) || weak) return null;
+  return { text, rest: `${rest.slice(0, trigger.index)} | ${after}` };
 }
 
 function pullText(input: string): Pulled {
@@ -221,25 +256,22 @@ function pullText(input: string): Pulled {
     const { head, rest: after } = cutAtStop(rest.slice(tailStart));
     const text = cleanText(head);
     if (text && !PRONOUNS.test(text)) {
+      const before = rest.slice(0, tailStart);
+      // "a tee that says king, and under it put of nothing": two lines in one breath.
+      const first =
+        mode === 0
+          ? null
+          : pullSaid(before.replace(/[\s,|]*(?:and then|and|then|with|plus)?[\s,|]*$/i, ""));
+      if (first)
+        return { texts: [first.text, text], mode: "set", rest: `${first.rest} | ${after}` };
       // "second line pink" is a change to the line, not a line that reads PINK. The caller decides.
-      return { texts: [text], mode, rest: `${rest.slice(0, tailStart)} ${after}` };
+      return { texts: [text], mode, rest: `${before} ${after}` };
     }
     return { texts, mode, rest };
   }
 
-  const trigger =
-    /\b(?:that\s+)?(?:says|saying|reads|reading|spells|(?:it|to|should|will|gonna|and|shirt|tee|hoodie|hat|crewneck)\s+(?:say|read)|with\s+the\s+(?:words?|text|letters|phrase|name)|the\s+(?:words?|phrase)|my\s+name(?:\s+is)?|(?:the\s+)?name(?:\s+is)?|write|spell)\s*:?\s+(.+)$/i.exec(
-      rest,
-    );
-  if (trigger) {
-    const { head, rest: after } = cutAtStop(trigger[1] ?? "");
-    const text = cleanText(head);
-    // "make the words bigger" is about the words. "that says bigger" is a print.
-    const weak = /^the\s/i.test(trigger[0]) && styleOnly(text);
-    if (text && !PRONOUNS.test(text) && !weak) {
-      return { texts: [text], mode, rest: `${rest.slice(0, trigger.index)} | ${after}` };
-    }
-  }
+  const said = pullSaid(rest);
+  if (said) return { texts: [said.text], mode, rest: said.rest };
 
   // "a white hoodie with DO BETTER on the back".
   const carried = /\bwith\s+(.+?)\s+(on|across|down|over)\s+(?:the|it|its|both)\b/i.exec(rest);

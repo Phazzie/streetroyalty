@@ -418,3 +418,91 @@ describe("the picture for the road without an account", () => {
     expect(layoutArt([], 1200, 900, measure)).toEqual([]);
   });
 });
+
+describe("things people said that it used to miss", () => {
+  it("keeps a colour word that is part of the words", () => {
+    const { intent, unsure } = say("a hoodie that says born in red clay");
+    expect(intent.lines.map((line) => line.text)).toEqual(["BORN IN RED CLAY"]);
+    expect(describeIntent(intent)).toContain("BORN IN RED CLAY in white, medium");
+    expect(unsure).toEqual([]);
+  });
+
+  it("still ends the words at a colour that is an instruction", () => {
+    expect(describeIntent(say("a tee that says free world in blue").intent)).toContain(
+      "FREE WORLD in blue, medium",
+    );
+    expect(describeIntent(say("tee that says do better in hot pink on the back").intent)).toEqual([
+      "Black tee",
+      "Back",
+      "DO BETTER in hot pink, medium",
+    ]);
+    expect(describeIntent(say("tee that says do better in pink big").intent)).toContain(
+      "DO BETTER in pink, big",
+    );
+    expect(describeIntent(say("tee that says do better in red and make it huge").intent)).toContain(
+      "DO BETTER in red, huge",
+    );
+  });
+
+  it("takes two lines said in one breath", () => {
+    const comma = say("black tee that says king, and under it put of nothing");
+    expect(comma.intent.lines.map((line) => line.text)).toEqual(["KING", "OF NOTHING"]);
+    expect(comma.unsure).toEqual([]);
+    const plain = say("a hoodie that says stay up and add a line that says stay down in pink");
+    expect(plain.intent.lines.map((line) => line.text)).toEqual(["STAY UP", "STAY DOWN"]);
+    expect(plain.intent.blank).toBe("hoodie");
+    const numbered = say("tee that says king, second line no encore");
+    expect(numbered.intent.lines.map((line) => line.text)).toEqual(["KING", "NO ENCORE"]);
+  });
+
+  it("replaces the current line and adds under it when a piece already has words", () => {
+    const { intent } = say("love", "make it say king and under it put of nothing");
+    expect(intent.lines.map((line) => line.text)).toEqual(["KING", "OF NOTHING"]);
+  });
+
+  it("changes the words when asked to change them", () => {
+    expect(say("hello", "change the words to goodbye").intent.lines[0]?.text).toBe("GOODBYE");
+    expect(say("hello", "change it to no encore").intent.lines[0]?.text).toBe("NO ENCORE");
+    expect(say("hello", "change it to say no encore").intent.lines[0]?.text).toBe("NO ENCORE");
+  });
+
+  it("does not print a colour, a garment or a size it was asked to change to", () => {
+    const pink = say("hello", "change it to pink").intent;
+    expect(pink.lines.map((line) => line.text)).toEqual(["HELLO"]);
+    expect(pink.lines[0]?.color).toBe("#ff5fa2");
+    const hoodie = say("hello", "change it to a hoodie").intent;
+    expect(hoodie.blank).toBe("hoodie");
+    expect(hoodie.lines.map((line) => line.text)).toEqual(["HELLO"]);
+    expect(say("hello", "change the words to be bigger").intent.lines[0]).toMatchObject({
+      text: "HELLO",
+      size: "big",
+    });
+  });
+
+  it("reads a name that belongs to someone else", () => {
+    const { intent, unsure } = say("put my daughter's name Aaliyah on a pink hat");
+    expect(describeIntent(intent)).toEqual(["Pink hat", "Front", "AALIYAH in white, medium"]);
+    expect(unsure).toEqual([]);
+  });
+
+  it("never throws on odd input", () => {
+    const odd: unknown[] = [
+      null,
+      undefined,
+      42,
+      {},
+      [],
+      "   ",
+      "|||",
+      '"',
+      "''",
+      "\u0000",
+      "a".repeat(5000),
+    ];
+    for (const input of odd) {
+      expect(() => applyUtterance(emptyIntent(), input as string)).not.toThrow();
+    }
+    const long = applyUtterance(emptyIntent(), `tee that says ${"word ".repeat(200)}`);
+    expect(long.intent.lines[0]?.text.length ?? 0).toBeLessThanOrEqual(60);
+  });
+});
