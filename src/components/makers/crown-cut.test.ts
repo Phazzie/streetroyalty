@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { RackPiece } from "../../lib/social/types.ts";
-import { crownCut } from "./maker-crown.tsx";
-import { awningColors } from "./shop-window.tsx";
+import { awningColors } from "./awning.ts";
+import { crownCut } from "./crown-cut.ts";
 
 function piece(palette: string[]): RackPiece {
   return { palette } as RackPiece;

@@ -127,7 +127,12 @@ export function CrownButton({
           />
         ))}
       </button>
-      <span role="status" className={problem ? "text-xs text-muted" : "sr-only"}>
+      <span
+        role="status"
+        className={
+          problem ? "max-w-44 border-2 border-ink bg-surface px-2 py-1 text-xs text-fg" : "sr-only"
+        }
+      >
         {problem}
       </span>
     </span>
