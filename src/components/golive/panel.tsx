@@ -152,9 +152,7 @@ const CSS = `
   background: var(--color-subtle);
   transform: rotate(45deg);
 }
-[data-face="covered"] .gl-lamp {
-  background: repeating-linear-gradient(135deg, var(--color-line) 0 3px, var(--color-bg) 3px 6px);
-}
+[data-face="covered"] .gl-lamp { display: none; }
 .gl-state {
   display: inline-flex;
   align-items: center;
@@ -363,7 +361,7 @@ function Gauge({ on, total, covered }: { on: number; total: number; covered: boo
   const ticks = Array.from({ length: total + 1 }, (_, index) => -62 + (index / total) * 124);
   return (
     <svg
-      viewBox="0 0 220 124"
+      viewBox="0 0 220 150"
       className="h-auto w-full max-w-[15rem]"
       role="img"
       aria-label={
@@ -374,7 +372,7 @@ function Gauge({ on, total, covered }: { on: number; total: number; covered: boo
         x="1"
         y="1"
         width="218"
-        height="122"
+        height="148"
         fill="var(--color-bg)"
         stroke="var(--color-ink)"
         strokeWidth="2"
@@ -393,7 +391,7 @@ function Gauge({ on, total, covered }: { on: number; total: number; covered: boo
       ))}
       <text
         x="110"
-        y="76"
+        y="139"
         textAnchor="middle"
         fill="var(--color-muted)"
         style={{ fontFamily: "var(--font-display)", fontSize: 9, letterSpacing: "0.16em" }}
