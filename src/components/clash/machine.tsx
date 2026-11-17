@@ -231,6 +231,10 @@ export function ClashMachine({ colors, onChange }: Props) {
 
   function nudge(direction: "louder" | "quieter") {
     if (rolling) return;
+    if (allLocked) {
+      setNote("All three are locked. Unlock one and try again.");
+      return;
+    }
     const palette = paletteOf(colors);
     const held = REEL_KEYS.map((key) => locked[key]);
     const moved = direction === "louder" ? louder(palette, held) : quieter(palette, held);
@@ -327,6 +331,7 @@ export function ClashMachine({ colors, onChange }: Props) {
                 id={key}
                 reel={reels[key]}
                 hex={colors[key]}
+                landed={shown[key]}
                 locked={locked[key]}
                 disabled={rolling}
                 onStep={(by) => step(key, by)}
@@ -384,7 +389,7 @@ export function ClashMachine({ colors, onChange }: Props) {
             ))}
           </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
             <Button
               variant="ghost"
               disabled={rolling || isKept}
@@ -490,6 +495,7 @@ function ReelColumn({
   id,
   reel,
   hex,
+  landed,
   locked,
   disabled,
   onStep,
@@ -499,6 +505,8 @@ function ReelColumn({
   id: ReelKey;
   reel: Reel;
   hex: string;
+  /** The colour the reel last stopped on. The name follows this, so a spin does not give the ending away. */
+  landed: string;
   locked: boolean;
   disabled: boolean;
   onStep: (by: 1 | -1) => void;
@@ -506,7 +514,7 @@ function ReelColumn({
   onPick: (hex: string) => void;
 }) {
   const label = REEL_LABEL[id];
-  const name = colorName(hex);
+  const name = colorName(landed);
   const [draft, setDraft] = useState<string | null>(null);
   const timer = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(timer.current), []);
