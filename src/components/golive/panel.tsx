@@ -25,6 +25,9 @@ const STATE_WORD: Record<Face, string> = {
   covered: "Cover on",
 };
 
+/** Short enough for a tile the size of a thumb. */
+const TILE_WORD: Record<Face, string> = { on: "On", partly: "Part", off: "Off", covered: "" };
+
 const CSS = `
 .gl-box {
   position: relative;
@@ -108,7 +111,7 @@ const CSS = `
     repeating-linear-gradient(180deg, transparent 0 4px, rgb(20 8 28 / 55%) 4px 6px),
     var(--gl-fill, var(--color-line));
   transform: translateY(var(--gl-y, 22px));
-  animation: gl-throw 620ms var(--ease-out-expo) both;
+  animation: gl-throw 620ms cubic-bezier(0.3, 0, 0.2, 1) both;
   animation-delay: calc(var(--gl-i, 0) * 80ms + 200ms);
 }
 [data-face="on"] .gl-handle { --gl-y: 0px; --gl-fill: var(--color-fg); }
@@ -259,11 +262,43 @@ const CSS = `
   font-family: var(--font-display);
   font-size: 0.7rem;
 }
+.gl-tile {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  min-height: 3rem;
+  padding: 0.25rem 0.4rem;
+  border: 2px solid var(--color-ink);
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-size: 1.5rem;
+  transition: transform 160ms ease;
+}
+.gl-tile:hover { transform: translateY(-2px); }
+.gl-tile small {
+  font-family: var(--font-display);
+  font-style: normal;
+  font-stretch: normal;
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+}
+.gl-tile[data-face="on"] { background: var(--color-cyan); color: #14081c; }
+.gl-tile[data-face="partly"] {
+  background: linear-gradient(90deg, var(--color-amber) 0 50%, var(--color-bg) 50%);
+}
+.gl-tile[data-face="partly"] small { color: var(--color-fg); }
+.gl-tile[data-face="partly"] > span { color: #14081c; }
+.gl-tile[data-face="covered"] {
+  background: repeating-linear-gradient(135deg, var(--color-line) 0 4px, var(--color-bg) 4px 9px);
+}
+.gl-tile[data-face="covered"] > span,
+.gl-tile[data-face="covered"] small { background: var(--color-bg); padding: 0 0.15rem; }
 .gl-needle {
   transform-box: view-box;
   transform-origin: 110px 108px;
   transform: rotate(var(--gl-angle, -62deg));
-  animation: gl-swing 1100ms var(--ease-out-expo) both;
+  animation: gl-swing 1200ms cubic-bezier(0.3, 0, 0.2, 1) both;
   animation-delay: 250ms;
 }
 .gl-caps th,
@@ -272,8 +307,17 @@ const CSS = `
 @keyframes gl-flow { to { background-position: 0 14px; } }
 @keyframes gl-spin { to { transform: rotate(360deg); } }
 @keyframes gl-blink { 0%, 60% { opacity: 1; } 61%, 100% { opacity: 0.35; } }
-@keyframes gl-throw { from { transform: translateY(22px); } }
-@keyframes gl-swing { from { transform: rotate(-62deg); } }
+@keyframes gl-throw {
+  0% { transform: translateY(22px); }
+  62% { transform: translateY(calc(var(--gl-y, 22px) - 4px)); }
+  100% { transform: translateY(var(--gl-y, 22px)); }
+}
+@keyframes gl-swing {
+  0% { transform: rotate(-62deg); }
+  58% { transform: rotate(calc(var(--gl-angle, -62deg) + 7deg)); }
+  80% { transform: rotate(calc(var(--gl-angle, -62deg) - 3deg)); }
+  100% { transform: rotate(var(--gl-angle, -62deg)); }
+}
 @media (min-width: 640px) {
   .gl-row { padding: 1.4rem 1.25rem 1.6rem; }
   .gl-row::before { left: calc(1.25rem + 1.375rem - 3px); }
@@ -286,9 +330,11 @@ const CSS = `
   .gl-lamp,
   .gl-lamp::after,
   .gl-row::before { animation: none !important; }
-  .gl-copy { transition: none; }
+  .gl-copy,
+  .gl-tile { transition: none; }
   .gl-copy:hover,
-  .gl-copy:active { transform: none; }
+  .gl-copy:active,
+  .gl-tile:hover { transform: none; }
 }
 `;
 
@@ -548,6 +594,18 @@ export function GoLivePanel({ view }: { view: PanelView }) {
   >;
   const onCount = board ? board.services.filter((service) => service.lamp === "on").length : 0;
   const nextId: ServiceId | null = board ? board.next : "admins";
+  const tiles: { id: string; name: string; face: Face }[] = [
+    ...SERVICES.map((spec) => ({
+      id: spec.id,
+      name: spec.name,
+      face: (board?.services.find((service) => service.id === spec.id)?.lamp ?? "covered") as Face,
+    })),
+    {
+      id: "test",
+      name: "The test order",
+      face: board ? (board.canPay ? "on" : "off") : "covered",
+    },
+  ];
   const verdict = board
     ? board.canPay
       ? "People can pay."
@@ -610,6 +668,23 @@ export function GoLivePanel({ view }: { view: PanelView }) {
             ) : null}
           </div>
         </div>
+        <nav aria-label="Jump to a switch" className="border-t-2 border-ink p-3 sm:p-4">
+          <ul className="grid grid-cols-4 gap-2 sm:grid-cols-8">
+            {tiles.map((tile, index) => (
+              <li key={tile.id}>
+                <a
+                  href={`#sw-${tile.id}`}
+                  className="gl-tile display"
+                  data-face={tile.face}
+                  aria-label={`Switch ${String(index).padStart(2, "0")}, ${tile.name}: ${STATE_WORD[tile.face]}`}
+                >
+                  <span aria-hidden="true">{String(index).padStart(2, "0")}</span>
+                  <small aria-hidden="true">{TILE_WORD[tile.face]}</small>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </section>
 
       <section className="paper mt-6 border-2 border-ink p-5 sm:p-7" aria-labelledby="gl-first">
