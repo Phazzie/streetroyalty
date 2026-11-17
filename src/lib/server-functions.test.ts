@@ -36,6 +36,9 @@ const OPEN: Record<string, string> = {
   startRunway: "AI video, capped",
   pollRunway: "reads a run the visitor started",
   getConnectorReadiness: "template plumbing; reports readiness only",
+  // Street scans: a stranger who scans a tag is not signed in.
+  countTagScan: "counts one scan of a public piece; same-site only, capped per piece per day",
+  tagScans: "a public count on a public rack page",
 };
 
 function sourceFiles(dir: string): string[] {

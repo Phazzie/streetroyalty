@@ -23,6 +23,14 @@ exports[`the database handle > has the tables and columns the app reads 1`] = `
     "day: text",
     "kind: text",
   ],
+  "battle_votes": [
+    "created_at: timestamp with time zone",
+    "id: text",
+    "loser_id: text",
+    "pair_key: text",
+    "voter_id: text",
+    "winner_id: text",
+  ],
   "cart_items": [
     "created_at: timestamp with time zone",
     "design_id: text",
@@ -37,6 +45,17 @@ exports[`the database handle > has the tables and columns the app reads 1`] = `
     "id: text",
     "name: text",
     "user_id: text",
+  ],
+  "crowns": [
+    "created_at: timestamp with time zone",
+    "design_id: text",
+    "user_id: text",
+  ],
+  "design_lineage": [
+    "created_at: timestamp with time zone",
+    "design_id: text",
+    "parent_id: text",
+    "root_id: text",
   ],
   "designs": [
     "collection_id: text",
@@ -63,6 +82,11 @@ exports[`the database handle > has the tables and columns the app reads 1`] = `
     "user_id: text",
     "variant_id: text",
     "variant_label: text",
+  ],
+  "follows": [
+    "created_at: timestamp with time zone",
+    "follower_id: text",
+    "maker_id: text",
   ],
   "orders": [
     "created_at: timestamp with time zone",
@@ -95,6 +119,25 @@ exports[`the database handle > has the tables and columns the app reads 1`] = `
     "mime: text",
     "user_id: text",
   ],
+  "profiles": [
+    "bio: text",
+    "created_at: timestamp with time zone",
+    "display_name: text",
+    "handle: text",
+    "user_id: text",
+  ],
+  "reports": [
+    "created_at: timestamp with time zone",
+    "id: text",
+    "kind: text",
+    "note: text",
+    "reason: text",
+    "reporter_id: text",
+    "resolved_at: timestamp with time zone",
+    "resolved_by: text",
+    "status: text",
+    "target_id: text",
+  ],
   "session": [
     "createdAt: timestamp with time zone",
     "expiresAt: timestamp with time zone",
@@ -104,6 +147,11 @@ exports[`the database handle > has the tables and columns the app reads 1`] = `
     "updatedAt: timestamp with time zone",
     "userAgent: text",
     "userId: text",
+  ],
+  "tag_scans": [
+    "day: text",
+    "design_id: text",
+    "scans: integer",
   ],
   "user": [
     "createdAt: timestamp with time zone",
