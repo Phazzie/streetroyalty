@@ -125,7 +125,7 @@ export function Throne({ rows, error }: { rows: ThroneRow[] | null; error: strin
               <Link
                 to="/rack/$slug"
                 params={{ slug: king.slug }}
-                className="underline decoration-[3px] underline-offset-[6px]"
+                className="inline-block py-2 underline decoration-[3px] underline-offset-[6px]"
               >
                 {king.title}
               </Link>
