@@ -227,7 +227,7 @@ export function hslToHex(hue: number, saturation: number, lightness: number): st
 
 /**
  * Loud colours that fight each other: hues thrown far apart, full saturation,
- * and light against dark so every slot still reads.
+ * and light set against dark by how bright the eye sees them, so every slot reads.
  */
 export function clashColors(seed: number, count: number): string[] {
   const random = mulberry32(seed);
@@ -236,9 +236,18 @@ export function clashColors(seed: number, count: number): string[] {
   const darkFirst = random() < 0.5;
   return Array.from({ length: Math.max(1, count) }, (_, index) => {
     const hue = start + index * jump + (random() - 0.5) * 30;
+    const saturation = 0.92 + random() * 0.08;
     const dark = (index % 2 === 0) === darkFirst;
-    const lightness = dark ? 0.3 + random() * 0.14 : 0.58 + random() * 0.14;
-    return hslToHex(hue, 0.92 + random() * 0.08, lightness);
+    const target = dark ? 0.1 + random() * 0.1 : 0.52 + random() * 0.22;
+    // brightness climbs with lightness, so close in on the lightness that hits the target
+    let low = 0.08;
+    let high = 0.92;
+    for (let step = 0; step < 14; step += 1) {
+      const middle = (low + high) / 2;
+      if (luminance(hslToHex(hue, saturation, middle)) < target) low = middle;
+      else high = middle;
+    }
+    return hslToHex(hue, saturation, (low + high) / 2);
   });
 }
 
