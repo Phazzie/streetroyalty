@@ -54,6 +54,33 @@ const PROCESS = [
   },
 ];
 
+/** The newer rooms, listed like the back of a record. */
+const SIDE_B = [
+  { to: "/battles", title: "Battles", line: "Two pieces, one vote. The throne keeps score." },
+  { to: "/say", title: "Say it", line: "Say what you want on it. It lays the piece out for you." },
+  { to: "/clash", title: "Clash machine", line: "Pull the lever. Keep the colours that fight." },
+  {
+    to: "/patterns",
+    title: "Pattern lab",
+    line: "Chain link, flames, bandana. Drawn fresh on every roll.",
+  },
+  {
+    to: "/rack",
+    title: "Makers",
+    line: "Every piece on the rack carries its maker's name. Follow the ones you rate.",
+  },
+  {
+    to: "/episodes",
+    title: "The show",
+    line: "Episodes where the cast wears the rack. Off air for now.",
+  },
+  {
+    to: "/made",
+    title: "How it's made",
+    line: "Printing, in plain words. And where the money goes.",
+  },
+] as const;
+
 const SCENES = [
   {
     src: "/wild/scene-moon.mp4",
@@ -317,6 +344,39 @@ export function HomePage({ catalog }: { catalog: StoreCatalog }) {
               </Reveal>
             ))}
           </ul>
+        </div>
+      </section>
+
+      <section className="paper">
+        <div className="mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
+          <SectionHead eyebrow="Side B" title="The street decides">
+            <p className="max-w-sm text-muted">
+              Seven more doors. Every one works without knowing a thing about design.
+            </p>
+          </SectionHead>
+          <ol className="mt-10 border-t-2 border-ink">
+            {SIDE_B.map((track, index) => (
+              <Reveal as="li" key={track.to} delay={index * 50}>
+                <Link
+                  to={track.to}
+                  className="group grid grid-cols-[2.75rem_1fr_auto] items-baseline gap-x-3 border-b-2 border-ink py-4 transition-colors duration-150 hover:bg-fg hover:text-bg focus-visible:bg-fg focus-visible:text-bg sm:grid-cols-[4rem_minmax(0,22rem)_1fr_auto] sm:px-3 sm:py-5"
+                >
+                  <span className="font-display text-sm tracking-widest text-subtle tabular-nums group-hover:text-bg group-focus-visible:text-bg">
+                    B{index + 1}
+                  </span>
+                  <span className="display text-4xl sm:text-5xl">{track.title}</span>
+                  <span className="col-start-2 text-muted group-hover:text-bg group-focus-visible:text-bg sm:col-start-3">
+                    {track.line}
+                  </span>
+                  <ArrowRight
+                    className="col-start-3 row-start-1 h-5 w-5 self-center transition-transform duration-200 group-hover:translate-x-1 sm:col-start-4"
+                    strokeWidth={3}
+                    aria-hidden="true"
+                  />
+                </Link>
+              </Reveal>
+            ))}
+          </ol>
         </div>
       </section>
 

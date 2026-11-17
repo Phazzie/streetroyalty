@@ -7,11 +7,24 @@ import { cn } from "@/lib/cn";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { bagCount, useBag } from "@/lib/storefront/bag";
 
+/** `wide` links only fit the bar on a laptop. The phone menu always shows every one. */
 const NAV = [
-  { to: "/shop", label: "Shop" },
-  { to: "/lab", label: "Outfit Lab" },
-  { to: "/studio", label: "Studio" },
-  { to: "/rack", label: "The Rack" },
+  { to: "/shop", label: "Shop", wide: false },
+  { to: "/lab", label: "Outfit Lab", wide: false },
+  { to: "/studio", label: "Studio", wide: false },
+  { to: "/rack", label: "The Rack", wide: false },
+  { to: "/battles", label: "Battles", wide: true },
+  { to: "/episodes", label: "The Show", wide: true },
+] as const;
+
+/** Smaller doors, shown under the big ones in the phone menu. */
+const MORE = [
+  { to: "/say", label: "Say it" },
+  { to: "/patterns", label: "Pattern lab" },
+  { to: "/clash", label: "Clash machine" },
+  { to: "/made", label: "How it's made" },
+  { to: "/math", label: "Do the math" },
+  { to: "/me", label: "Your page" },
 ] as const;
 
 export function Crown({ className }: { className?: string }) {
@@ -111,20 +124,32 @@ function MobileMenu() {
               </button>
             </Dialog.Close>
           </div>
-          <nav className="mt-10 flex flex-col gap-1" aria-label="Site">
+          <nav className="mt-6 flex flex-col gap-1" aria-label="Site">
             {NAV.map((item, index) => (
               <Link
                 key={item.to}
                 to={item.to}
                 onClick={() => setOpen(false)}
-                className="display hero-fade border-b border-line py-4 text-5xl text-fg"
+                className="display hero-fade border-b border-line py-3 text-5xl text-fg"
                 style={{ "--line-delay": `${60 + index * 50}ms` } as React.CSSProperties}
               >
                 {item.label}
               </Link>
             ))}
           </nav>
-          <div className="mt-auto flex flex-wrap gap-x-6 gap-y-2 pt-10 text-muted">
+          <nav className="mt-6 flex flex-wrap gap-2" aria-label="More">
+            {MORE.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                onClick={() => setOpen(false)}
+                className="inline-flex min-h-11 items-center border border-line px-3.5 font-display text-xs tracking-widest text-fg uppercase"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="mt-auto flex flex-wrap gap-x-6 gap-y-2 pt-8 text-muted">
             <Link to="/gallery" onClick={() => setOpen(false)}>
               Saved pieces
             </Link>
@@ -171,7 +196,10 @@ export function SiteHeader({ overlay = false }: { overlay?: boolean }) {
             <Link
               key={item.to}
               to={item.to}
-              className="rounded-full px-3.5 py-2 font-display text-xs tracking-widest text-fg uppercase transition-colors duration-150 hover:bg-fg/10"
+              className={cn(
+                "rounded-full px-3.5 py-2 font-display text-xs tracking-widest text-fg uppercase transition-colors duration-150 hover:bg-fg/10",
+                item.wide && "hidden lg:inline-flex",
+              )}
               activeProps={{ className: "bg-fg/10 text-accent" }}
             >
               {item.label}
@@ -191,7 +219,7 @@ export function SiteHeader({ overlay = false }: { overlay?: boolean }) {
 export function SiteFooter() {
   return (
     <footer className="night border-t border-line">
-      <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+      <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
         <div>
           <Wordmark />
           <p className="mt-4 max-w-xs text-muted">Crown never came off. Just dressing it.</p>
@@ -201,6 +229,7 @@ export function SiteFooter() {
           links={[
             { to: "/shop", label: "The drop" },
             { to: "/rack", label: "The rack" },
+            { to: "/battles", label: "Battles" },
             { to: "/orders", label: "Orders" },
           ]}
         />
@@ -209,10 +238,27 @@ export function SiteFooter() {
           links={[
             { to: "/lab", label: "Outfit Lab" },
             { to: "/studio", label: "Design studio" },
+            { to: "/say", label: "Say it" },
+            { to: "/patterns", label: "Pattern lab" },
+            { to: "/clash", label: "Clash machine" },
             { to: "/gallery", label: "Saved pieces" },
           ]}
         />
-        <FooterColumn title="Account" links={[{ to: "/login", label: "Sign in" }]} />
+        <FooterColumn
+          title="Know"
+          links={[
+            { to: "/made", label: "How it's made" },
+            { to: "/math", label: "Do the math" },
+            { to: "/episodes", label: "The show" },
+          ]}
+        />
+        <FooterColumn
+          title="Account"
+          links={[
+            { to: "/login", label: "Sign in" },
+            { to: "/me", label: "Your page" },
+          ]}
+        />
       </div>
       <div className="border-t border-line">
         <p className="mx-auto w-full max-w-7xl px-4 py-5 text-sm text-subtle sm:px-6">
@@ -229,7 +275,22 @@ function FooterColumn({
 }: {
   title: string;
   links: {
-    to: "/shop" | "/rack" | "/orders" | "/lab" | "/studio" | "/gallery" | "/login";
+    to:
+      | "/shop"
+      | "/rack"
+      | "/orders"
+      | "/lab"
+      | "/studio"
+      | "/gallery"
+      | "/login"
+      | "/battles"
+      | "/say"
+      | "/patterns"
+      | "/clash"
+      | "/made"
+      | "/math"
+      | "/episodes"
+      | "/me";
     label: string;
   }[];
 }) {

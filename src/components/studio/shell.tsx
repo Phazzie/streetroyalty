@@ -6,12 +6,18 @@ import { SiteFooter, SiteHeader } from "@/components/site/shell";
 import { SignedOut, UserButton } from "@/lib/auth/gates";
 import { getStudioConfig } from "@/lib/studio/api";
 
+/** Three short rows of doors: what you make with, what you look at, what is yours. */
 const LINKS = [
   { to: "/studio", label: "Studio", tone: "chip-pink" },
-  { to: "/gallery", label: "Gallery", tone: "chip-violet" },
+  { to: "/say", label: "Say it", tone: "chip-pink" },
+  { to: "/patterns", label: "Patterns", tone: "chip-pink" },
+  { to: "/clash", label: "Clash", tone: "chip-pink" },
   { to: "/rack", label: "Rack", tone: "chip-orange" },
+  { to: "/battles", label: "Battles", tone: "chip-orange" },
+  { to: "/gallery", label: "Gallery", tone: "chip-violet" },
   { to: "/cart", label: "Cart", tone: "chip-blue" },
   { to: "/orders", label: "Orders", tone: "" },
+  { to: "/me", label: "You", tone: "" },
 ] as const;
 
 export function StudioShell({ current, children }: { current: string; children: ReactNode }) {
@@ -35,13 +41,17 @@ export function StudioShell({ current, children }: { current: string; children: 
       <div className="border-b-2 border-pipe bg-bg">
         <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-wrap items-center gap-3 px-4 py-3">
           <span className="tag">{mode === "live" ? "Live print" : "Sandbox"}</span>
-          <nav className="flex flex-wrap gap-2" aria-label="Studio">
+          {/* On a phone the doors sit on one line that slides, so the work starts higher up the screen. */}
+          <nav
+            className="no-scrollbar order-last -mx-4 flex w-[calc(100%+2rem)] gap-2 overflow-x-auto px-4 py-1 sm:order-none sm:mx-0 sm:w-auto sm:flex-wrap sm:overflow-visible sm:px-0 sm:py-0"
+            aria-label="Studio"
+          >
             {LINKS.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
                 aria-current={current === link.to ? "page" : undefined}
-                className={`chip ${current === link.to ? "" : link.tone}`}
+                className={`chip shrink-0 ${current === link.to ? "" : link.tone}`}
               >
                 {link.label}
               </Link>
