@@ -47,6 +47,7 @@ const AMBIENT = [
 /** Module-level caches the app keeps on globalThis so they survive hot reloads. */
 const CACHES = [
   "__srStorefront__",
+  "__srStorefrontDown__",
   "__srProductPhotos__",
   "__srAiUsage__",
   "__srSandboxOrders",
