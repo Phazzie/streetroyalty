@@ -204,12 +204,27 @@ describe("the next battle", () => {
     await seedDesign("bo", { title: "Bo Tee", published: true });
     await seedDesign("cy", { title: "Cy Tee", published: true });
     const first = await nextBattle(null);
-    const second = await nextBattle(null, [first.pair?.key ?? ""]);
+    const second = await nextBattle(null, { skip: [first.pair?.key ?? ""] });
     expect(second.pair?.key).not.toBe(first.pair?.key);
-    const third = await nextBattle(null, [first.pair?.key ?? "", second.pair?.key ?? ""]);
+    const third = await nextBattle(null, {
+      skip: [first.pair?.key ?? "", second.pair?.key ?? ""],
+    });
     expect([first.pair?.key, second.pair?.key]).not.toContain(third.pair?.key);
     const all = [first.pair?.key ?? "", second.pair?.key ?? "", third.pair?.key ?? ""];
-    expect((await nextBattle(null, all)).reason).toBe("ready");
+    expect((await nextBattle(null, { skip: all })).reason).toBe("ready");
+  });
+
+  it("rests the two pieces that were just on screen when four are on the rack", async () => {
+    for (const maker of ["ada", "bo", "cy", "dee"]) {
+      await seedDesign(maker, { title: `${maker} tee`, published: true });
+    }
+    for (let run = 0; run < 8; run += 1) {
+      const first = await nextBattle(null);
+      const second = await nextBattle(null, { after: first.pair?.key });
+      const before = [first.pair?.left.id, first.pair?.right.id];
+      expect(before).not.toContain(second.pair?.left.id);
+      expect(before).not.toContain(second.pair?.right.id);
+    }
   });
 });
 

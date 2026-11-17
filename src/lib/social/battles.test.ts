@@ -183,6 +183,20 @@ describe("pickPair", () => {
     expect(pickPair(rack, judged)).toBeNull();
   });
 
+  it("rests the pieces that were just on screen while others are free", () => {
+    const rack = [piece("a", "ada"), piece("b", "bo"), piece("c", "cy", 4), piece("d", "dee", 4)];
+    for (let run = 0; run < 20; run += 1) {
+      const pair = pickPair(rack, new Set(), Math.random, new Set(["a", "b"]));
+      expect(pair?.map((item) => item.id).sort()).toEqual(["c", "d"]);
+    }
+  });
+
+  it("still uses a rested piece when it is the only way to make a pair", () => {
+    const rack = [piece("a", "ada"), piece("b", "bo"), piece("c", "cy")];
+    const pair = pickPair(rack, new Set(["a:c", "b:c"]), Math.random, new Set(["a", "b"]));
+    expect(pair?.map((item) => item.id).sort()).toEqual(["a", "b"]);
+  });
+
   it("tosses a coin for which side each piece stands on", () => {
     const rack = [piece("a", "ada"), piece("b", "bo", 1)];
     const heads = pickPair(rack, new Set(), replay([0.1]));

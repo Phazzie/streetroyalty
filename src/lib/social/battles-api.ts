@@ -19,16 +19,17 @@ const optionalUser = createMiddleware({ type: "function" })
  */
 export const nextBattle = createServerFn({ method: "GET" })
   .middleware([optionalUser])
-  .validator((input: { skip?: unknown } | undefined) => ({
+  .validator((input: { skip?: unknown; after?: unknown } | undefined) => ({
     skip: Array.isArray(input?.skip)
       ? input.skip
           .filter((key): key is string => typeof key === "string" && key.length <= 200)
           .slice(-60)
       : [],
+    after: typeof input?.after === "string" ? input.after.slice(0, 200) : "",
   }))
   .handler(async ({ data, context }) => {
     const server = await import("./battles.server.ts");
-    return server.nextBattle(context.userId, data.skip);
+    return server.nextBattle(context.userId, data);
   });
 
 export const castVote = createServerFn({ method: "POST" })

@@ -149,15 +149,21 @@ function shuffled<T>(items: readonly T[], random: () => number): T[] {
 /**
  * Pick the next pair. The piece that has been seen least goes first, and it meets the
  * least-seen piece it has not already been judged against, from a different maker when
- * there is one. Which side each stands on is a coin toss. Null when no pair is left.
+ * there is one. Pieces in `rested` were on screen a moment ago and wait at the back, so
+ * the same piece does not fight twice in a row while others are free. Which side each
+ * stands on is a coin toss. Null when no pair is left.
  */
 export function pickPair<T extends Contender>(
   contenders: readonly T[],
   judged: ReadonlySet<string>,
   random: () => number = Math.random,
+  rested: ReadonlySet<string> = new Set(),
 ): [T, T] | null {
+  const tired = (item: T) => (rested.has(item.id) ? 1 : 0);
   // Shuffle first, then a stable sort: pieces that are level come out in a random order.
-  const order = shuffled(contenders, random).sort((a, b) => a.battles - b.battles);
+  const order = shuffled(contenders, random).sort(
+    (a, b) => tired(a) - tired(b) || a.battles - b.battles,
+  );
   for (const first of order) {
     let rival: T | null = null;
     let rivalIsStranger = false;

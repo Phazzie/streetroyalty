@@ -43,14 +43,20 @@ function toSide(row: PieceRow): BattleSide {
   };
 }
 
+export type NextBattleOptions = {
+  /** Pair keys the viewer has just stepped past. Avoided while anything else is left. */
+  skip?: readonly string[];
+  /** The pair key that was on screen last. Its two pieces sit the next round out when they can. */
+  after?: string;
+};
+
 /**
  * The next pair for this viewer: two published pieces they have not judged against each
- * other, never one of their own, least-seen pieces first. `skip` holds pair keys the
- * viewer has just stepped past; they are avoided while anything else is left.
+ * other, never one of their own, least-seen pieces first.
  */
 export async function nextBattle(
   userId: string | null,
-  skip: readonly string[] = [],
+  options: NextBattleOptions = {},
   random: () => number = Math.random,
 ): Promise<NextBattle> {
   const sql = await getSql();
@@ -96,10 +102,17 @@ export async function nextBattle(
       )
     : null;
 
-  const stepped = skip.slice(0, MAX_SKIP).map(String);
+  const stepped = (options.skip ?? []).slice(-MAX_SKIP).map(String);
+  const rested = new Set(
+    String(options.after ?? "")
+      .split(":")
+      .filter(Boolean)
+      .slice(0, 2),
+  );
   const picked =
-    (stepped.length > 0 ? pickPair(contenders, new Set([...judged, ...stepped]), random) : null) ??
-    pickPair(contenders, judged, random);
+    (stepped.length > 0
+      ? pickPair(contenders, new Set([...judged, ...stepped]), random, rested)
+      : null) ?? pickPair(contenders, judged, random, rested);
   if (!picked) return { pair: null, reason: "done", signedIn, pairsLeft: 0 };
 
   const [first, second] = picked;
