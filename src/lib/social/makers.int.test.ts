@@ -47,10 +47,48 @@ describe("a maker profile made on first need", () => {
     await namedUser("u1", "Admin");
     await namedUser("u2", "Rack");
     await namedUser("u3", "");
-    expect((await ensureProfile("u1")).handle).toBe("admin2");
+    // An account called Admin does not become @admin2. It starts as a plain maker.
+    expect(await ensureProfile("u1")).toMatchObject({ handle: "maker2", display_name: "Maker" });
     expect((await ensureProfile("u2")).handle).toBe("rack2");
-    // "maker" is kept back too, so a nameless account starts at maker2.
-    expect(await ensureProfile("u3")).toMatchObject({ handle: "maker2", display_name: "Maker" });
+    // "maker" is kept back too, so a nameless account starts at the next free maker number.
+    expect(await ensureProfile("u3")).toMatchObject({ handle: "maker3", display_name: "Maker" });
+  });
+
+  it("never passes an account off as the house", async () => {
+    await namedUser("u1", "Street Royalty");
+    await namedUser("u2", "STREET-ROYALTY official");
+    expect(await ensureProfile("u1")).toMatchObject({ handle: "maker2", display_name: "Maker" });
+    expect(await ensureProfile("u2")).toMatchObject({ handle: "maker3", display_name: "Maker" });
+  });
+
+  it("never turns a sign-up email into a public name or handle", async () => {
+    const sql = await getSql();
+    // The login page names an account after the mailbox when no name is typed.
+    await sql`
+      insert into "user" ("id", "name", "email", "emailVerified")
+      values ('u1', 'jane.doe', 'Jane.Doe@example.com', true),
+             ('u2', 'someone@example.com', 'someone@example.com', true)
+    `;
+    for (const id of ["u1", "u2"]) {
+      const profile = await ensureProfile(id);
+      expect(profile.display_name).toBe("Maker");
+      expect(profile.handle).toMatch(/^maker\d+$/);
+    }
+  });
+
+  it("still finds a handle when the counted ones are all gone", async () => {
+    const sql = await getSql();
+    for (let index = 0; index < 12; index += 1) {
+      await namedUser(`crowd${index}`, "Ada Royal");
+      await sql`
+        insert into profiles (user_id, handle, display_name)
+        values (${`crowd${index}`}, ${index === 0 ? "ada_royal" : `ada_royal${index + 1}`}, 'Ada Royal')
+      `;
+    }
+    await namedUser("late", "Ada Royal");
+    const profile = await ensureProfile("late");
+    expect(profile.handle).toMatch(/^ada_royal\d{3,}$/);
+    expect(profile.handle.length).toBeLessThanOrEqual(20);
   });
 
   it("refuses an account that does not exist", async () => {
@@ -96,7 +134,12 @@ describe("editing a profile", () => {
       "kept back",
     );
     await expect(updateProfile("u1", { ...base, handle: "a b" })).rejects.toThrow("letters");
+    await expect(updateProfile("u1", { ...base, handle: "admin_2" })).rejects.toThrow("kept back");
     await expect(updateProfile("u1", { ...base, name: "A" })).rejects.toThrow("at least 2");
+    await expect(updateProfile("u1", { ...base, name: "Street Royalty" })).rejects.toThrow(
+      "belongs to the house",
+    );
+    expect(await myProfile("u1")).toMatchObject({ name: "Ada Royal", handle: "ada_royal" });
     await expect(updateProfile("u1", { ...base, bio: "x".repeat(161) })).rejects.toThrow("160");
   });
 
@@ -168,8 +211,8 @@ describe("following", () => {
 
 describe("a maker's page", () => {
   it("counts published pieces and the crowns on them, and lists no drafts", async () => {
-    await seedUser("ada");
-    await seedUser("bo");
+    await seedUser("ada", "a1@example.com");
+    await seedUser("bo", "b1@example.com");
     await ensureProfile("ada");
     await ensureProfile("bo");
     const one = await seedDesign("ada", { title: "On The Rack", published: true });

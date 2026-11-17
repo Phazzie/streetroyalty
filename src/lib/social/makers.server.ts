@@ -5,6 +5,7 @@ import {
   checkHandle,
   handleCandidate,
   handleFromName,
+  isHouseName,
   isReservedHandle,
   normalizeHandle,
   NAME_MAX,
@@ -42,18 +43,34 @@ export async function ensureProfile(userId: string): Promise<ProfileRow> {
   const existing = await profileOf(sql, userId);
   if (existing) return existing;
 
-  const users = await sql<{ name: string | null }>`
-    select "name" from "user" where "id" = ${userId}
+  const users = await sql<{ name: string | null; email: string | null }>`
+    select "name", "email" from "user" where "id" = ${userId}
   `;
   const user = users[0];
   if (!user) throw new Error("That account does not exist.");
-  const rawName = String(user.name ?? "").trim();
-  const base = handleFromName(rawName);
+  const accountName = String(user.name ?? "").trim();
+  // Sign-up falls back to the part of the email before the @ when no name is typed. That
+  // is private, so it never becomes a public name or handle. The maker picks one on /me.
+  const mailbox = String(user.email ?? "")
+    .split("@")[0]
+    ?.trim()
+    .toLowerCase();
+  const fromEmail =
+    accountName.includes("@") || (Boolean(mailbox) && accountName.toLowerCase() === mailbox);
+  const rawName = fromEmail ? "" : accountName;
   const named = checkDisplayName(rawName.slice(0, NAME_MAX));
   const displayName = named.ok ? named.value : "Maker";
+  // An account called "Admin" or "Street Royalty" does not get @admin2: it starts as a plain maker.
+  const derived = handleFromName(rawName);
+  const base = isHouseName(derived) ? "maker" : derived;
 
-  for (let attempt = 0; attempt < 400; attempt += 1) {
-    const handle = handleCandidate(base, attempt);
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    // The first tries count up (ada, ada2, ada3). After that the number is drawn at random,
+    // so a crowded name like "maker" still lands in a try or two however many there are.
+    const handle =
+      attempt < 8
+        ? handleCandidate(base, attempt)
+        : handleCandidate(base, 99 + Math.floor(Math.random() * 999_900));
     if (isReservedHandle(handle)) continue;
     const made = await sql<ProfileRow>`
       insert into profiles (user_id, handle, display_name)

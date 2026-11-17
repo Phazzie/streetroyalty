@@ -67,6 +67,13 @@ function MePage() {
             {profile.followers === 1 ? "follower" : "followers"}, {profile.crowns}{" "}
             {profile.crowns === 1 ? "crown" : "crowns"}.
           </p>
+          {profile.name === "Maker" && /^maker\d*$/.test(profile.handle) ? (
+            <div className="mb-5">
+              <Note>
+                You are on the rack as Maker for now. Pick a name and a handle of your own below.
+              </Note>
+            </div>
+          ) : null}
           <ProfileForm profile={profile} onSaved={setProfile} />
         </div>
       ) : null}

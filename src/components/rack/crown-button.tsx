@@ -96,7 +96,10 @@ export function CrownButton({
 
   return (
     <span className={cn("inline-flex flex-col items-end gap-1", className)}>
-      <style>{STYLE}</style>
+      {/* One copy in the page however many crowns are on it. */}
+      <style href="sr-crown-button" precedence="default">
+        {STYLE}
+      </style>
       <button
         type="button"
         aria-pressed={state.crowned}

@@ -88,7 +88,7 @@ export function checkHandle(raw: string): Checked {
     return { ok: false, error: `A handle can be ${HANDLE_MAX} characters at most.` };
   if (!/^[a-z0-9_]+$/.test(handle))
     return { ok: false, error: "Use letters, numbers and underscores only." };
-  if (isReservedHandle(handle))
+  if (isReservedHandle(handle) || isHouseName(handle))
     return { ok: false, error: "That handle is kept back. Try another." };
   return { ok: true, value: handle };
 }
@@ -146,12 +146,20 @@ const HOUSE_NAMES: ReadonlySet<string> = new Set([
   "moderator",
 ]);
 
-/** True when a display name would pass for Street Royalty itself, however it is spaced or cased. */
-export function isHouseName(name: string): boolean {
-  const flat = String(name ?? "")
+function houseFlat(text: string): string {
+  return String(text ?? "")
     .normalize("NFKD")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "");
+    .replace(/[^a-z0-9]+/g, "")
+    .replace(/\d+$/, "");
+}
+
+/**
+ * True when a name or handle would pass for Street Royalty itself or its staff, however
+ * it is spaced, cased or numbered: "Street Royalty", "street_royalty2", "Admin 2".
+ */
+export function isHouseName(name: string): boolean {
+  const flat = houseFlat(name);
   return flat.includes("streetroyalty") || HOUSE_NAMES.has(flat);
 }
 

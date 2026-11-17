@@ -90,8 +90,21 @@ describe("a display name and a bio", () => {
     });
   });
 
+  it("keeps back handles that pass for the house, numbered or spaced out", () => {
+    for (const handle of [
+      "admin2",
+      "street_royalty",
+      "streetroyalty_shop",
+      "support_9",
+      "official1",
+    ])
+      expect(checkHandle(handle).ok, handle).toBe(false);
+    for (const handle of ["rack2", "royal_ada", "street_sweeper", "adminah"])
+      expect(checkHandle(handle).ok, handle).toBe(true);
+  });
+
   it("will not let a maker trade under the house's name", () => {
-    for (const name of ["Street Royalty", "STREET  ROYALTY", "street.royalty official", "Admin"])
+    for (const name of ["Street Royalty", "STREET  ROYALTY", "street.royalty official", "Admin 2"])
       expect(checkDisplayName(name).ok, name).toBe(false);
     expect(isHouseName("Str\u00e9et Royalty")).toBe(true);
     for (const name of ["Royal Ada", "Street Sweeper", "Adminah"])

@@ -18,9 +18,10 @@ async function agedMinutes(designId: string, minutes: number): Promise<void> {
 
 beforeEach(async () => {
   await truncateAll();
-  await seedUser("ada");
-  await seedUser("bo");
-  await seedUser("cy");
+  // Their own emails, so the name is not the mailbox: a mailbox never becomes a handle.
+  await seedUser("ada", "a1@example.com");
+  await seedUser("bo", "b1@example.com");
+  await seedUser("cy", "c1@example.com");
 });
 
 describe("the palette of a piece", () => {
