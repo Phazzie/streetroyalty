@@ -5,6 +5,9 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { listReports, resolveReport } from "@/lib/social/reports-api";
 import {
   REPORT_MESSAGES,
+  pileChoices,
+  pileName,
+  plural,
   reasonLabel,
   waitingFor,
   type ReportAction,
@@ -31,63 +34,6 @@ const REASON_COLOR: Record<ReportReason, string> = {
 
 const TILTS = ["-0.7deg", "0.5deg", "-0.3deg", "0.8deg"];
 const SLIPS_SHOWN = 4;
-
-function plural(count: number, one: string, many: string): string {
-  return `${count} ${count === 1 ? one : many}`;
-}
-
-function nameOf(group: ReportGroup): string {
-  if (group.piece) return group.piece.title || "This piece";
-  if (group.maker) return `@${group.maker.handle}`;
-  return group.kind === "piece" ? "A deleted piece" : "A maker with no page";
-}
-
-/** What the two buttons say and do for this pile. A pile with nothing left to act on only clears. */
-function choices(group: ReportGroup): {
-  keep: string | null;
-  remove: string;
-  confirm: string | null;
-  yes: string;
-  stamp: string;
-} {
-  if (group.kind === "piece") {
-    if (!group.piece || !group.piece.onRack) {
-      return {
-        keep: null,
-        remove: "Clear these reports",
-        confirm: null,
-        yes: "",
-        stamp: "Cleared",
-      };
-    }
-    return {
-      keep: "Keep it",
-      remove: "Take it off the rack",
-      confirm: "Take it down for everyone? Its maker keeps it as a draft.",
-      yes: "Yes, take it off the rack",
-      stamp: "Off the rack",
-    };
-  }
-  if (!group.maker) {
-    return { keep: null, remove: "Clear these reports", confirm: null, yes: "", stamp: "Cleared" };
-  }
-  if (!group.maker.bio) {
-    return {
-      keep: "Keep",
-      remove: "Clear these reports",
-      confirm: null,
-      yes: "",
-      stamp: "Cleared",
-    };
-  }
-  return {
-    keep: "Keep",
-    remove: "Clear the bio",
-    confirm: "Clear what they wrote about themselves? The account and the pieces stay.",
-    yes: "Yes, clear the bio",
-    stamp: "Bio cleared",
-  };
-}
 
 export function ReportsQueue() {
   const { user, isPending } = useCurrentUserState();
@@ -254,8 +200,8 @@ function Docket({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [all, setAll] = useState(false);
-  const choice = choices(group);
-  const name = nameOf(group);
+  const choice = pileChoices(group);
+  const name = pileName(group);
   const slips = all ? group.slips : group.slips.slice(0, SLIPS_SHOWN);
 
   async function settle(action: ReportAction) {

@@ -118,3 +118,53 @@ export function waitingFor(sinceIso: string, now: Date = new Date()): string {
   const days = Math.floor(hours / 24);
   return days === 1 ? "1 day" : `${days} days`;
 }
+
+export function plural(count: number, one: string, many: string): string {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
+/** What a pile is called on its docket and when it is read out. */
+export function pileName(group: Pick<ReportGroup, "kind" | "piece" | "maker">): string {
+  if (group.piece) return group.piece.title || "This piece";
+  if (group.maker) return `@${group.maker.handle}`;
+  return group.kind === "piece" ? "A deleted piece" : "A maker with no page";
+}
+
+export type PileChoices = {
+  /** The label for leaving things as they are, or null when there is nothing left to keep. */
+  keep: string | null;
+  remove: string;
+  /** Asked before the remove goes through. Null when removing changes nothing anyone can see. */
+  confirm: string | null;
+  yes: string;
+  /** What the stamp says once it is removed. */
+  stamp: string;
+};
+
+const CLEAR_ONLY = { remove: "Clear these reports", confirm: null, yes: "", stamp: "Cleared" };
+
+/**
+ * What the buttons on a pile say. A piece that is already off the rack, or a maker
+ * with an empty bio, has nothing to take away, so the pile can only be cleared.
+ */
+export function pileChoices(group: Pick<ReportGroup, "kind" | "piece" | "maker">): PileChoices {
+  if (group.kind === "piece") {
+    if (!group.piece || !group.piece.onRack) return { keep: null, ...CLEAR_ONLY };
+    return {
+      keep: "Keep it",
+      remove: "Take it off the rack",
+      confirm: "Take it down for everyone? Its maker keeps it as a draft.",
+      yes: "Yes, take it off the rack",
+      stamp: "Off the rack",
+    };
+  }
+  if (!group.maker) return { keep: null, ...CLEAR_ONLY };
+  if (!group.maker.bio) return { keep: "Keep", ...CLEAR_ONLY };
+  return {
+    keep: "Keep",
+    remove: "Clear the bio",
+    confirm: "Clear what they wrote about themselves? The account and the pieces stay.",
+    yes: "Yes, clear the bio",
+    stamp: "Bio cleared",
+  };
+}

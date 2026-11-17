@@ -97,6 +97,12 @@ export function ReportLink(props: ReportTarget) {
           <Dialog.Content
             className="night sr-rep-sheet relative w-full max-w-md border-2 border-ink bg-surface p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-fg focus:outline-none sm:pb-5"
             aria-describedby={undefined}
+            onOpenAutoFocus={(event) => {
+              // Start on the first reason, not on the close button.
+              if (done || !firstReason.current) return;
+              event.preventDefault();
+              firstReason.current.focus();
+            }}
           >
             <ReportStyles />
             <div className="flex items-start justify-between gap-3">

@@ -5,6 +5,9 @@ import {
   cleanNote,
   isReportReason,
   noteLength,
+  pileChoices,
+  pileName,
+  plural,
   reasonLabel,
   tallyReasons,
   waitingFor,
@@ -92,5 +95,64 @@ describe("how long a pile has waited", () => {
     ["not a date", "just now"],
   ])("%s reads as %s", (since, expected) => {
     expect(waitingFor(since, now)).toBe(expected);
+  });
+});
+
+describe("what a pile offers", () => {
+  const piece = { slug: "loud-hoodie", title: "Loud Hoodie", mockupUrl: null, maker: null };
+  const maker = { handle: "ada", name: "Ada" };
+
+  it("a piece on the rack can be kept or taken down, and taking down asks first", () => {
+    const choice = pileChoices({ kind: "piece", piece: { ...piece, onRack: true }, maker: null });
+    expect(choice.keep).toBe("Keep it");
+    expect(choice.remove).toBe("Take it off the rack");
+    expect(choice.confirm).toMatch(/keeps it as a draft/);
+    expect(choice.stamp).toBe("Off the rack");
+  });
+
+  it("a piece already off the rack, or deleted, can only be cleared", () => {
+    for (const gone of [{ ...piece, onRack: false }, null]) {
+      const choice = pileChoices({ kind: "piece", piece: gone, maker: null });
+      expect(choice).toMatchObject({ keep: null, remove: "Clear these reports", confirm: null });
+    }
+  });
+
+  it("a maker with a bio can be kept or have the bio cleared, and clearing asks first", () => {
+    const choice = pileChoices({ kind: "maker", piece: null, maker: { ...maker, bio: "Hi." } });
+    expect(choice.keep).toBe("Keep");
+    expect(choice.remove).toBe("Clear the bio");
+    expect(choice.confirm).toMatch(/account and the pieces stay/);
+    expect(choice.stamp).toBe("Bio cleared");
+  });
+
+  it("a maker with an empty bio has nothing to clear but the reports", () => {
+    const choice = pileChoices({ kind: "maker", piece: null, maker: { ...maker, bio: "" } });
+    expect(choice).toMatchObject({ keep: "Keep", remove: "Clear these reports", confirm: null });
+    expect(pileChoices({ kind: "maker", piece: null, maker: null }).keep).toBeNull();
+  });
+
+  it("never offers to delete anything", () => {
+    const every = [
+      pileChoices({ kind: "piece", piece: { ...piece, onRack: true }, maker: null }),
+      pileChoices({ kind: "piece", piece: null, maker: null }),
+      pileChoices({ kind: "maker", piece: null, maker: { ...maker, bio: "Hi." } }),
+      pileChoices({ kind: "maker", piece: null, maker: null }),
+    ];
+    expect(JSON.stringify(every)).not.toMatch(/delete|ban|remove the account/i);
+  });
+
+  it("names a pile by its piece, its maker, or what is left of it", () => {
+    expect(pileName({ kind: "piece", piece: { ...piece, onRack: true }, maker: null })).toBe(
+      "Loud Hoodie",
+    );
+    expect(pileName({ kind: "maker", piece: null, maker: { ...maker, bio: "" } })).toBe("@ada");
+    expect(pileName({ kind: "piece", piece: null, maker: null })).toBe("A deleted piece");
+    expect(pileName({ kind: "maker", piece: null, maker: null })).toBe("A maker with no page");
+  });
+
+  it("counts in plain words", () => {
+    expect(plural(1, "report", "reports")).toBe("1 report");
+    expect(plural(0, "report", "reports")).toBe("0 reports");
+    expect(plural(12, "pile", "piles")).toBe("12 piles");
   });
 });

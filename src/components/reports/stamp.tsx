@@ -32,14 +32,14 @@ const CSS = `
   text-transform: uppercase;
   white-space: nowrap;
   transform: rotate(-9deg);
-  /* Worn ink: the stamp never lands evenly. */
+  /* Worn ink: the stamp never lands evenly. The wear stays at the corners so the word still reads. */
   -webkit-mask-image:
-    radial-gradient(circle at 18% 30%, transparent 0 5%, #000 6%),
-    radial-gradient(circle at 72% 78%, transparent 0 7%, #000 8%),
+    radial-gradient(circle at 9% 22%, transparent 0 2%, #000 2.6%),
+    radial-gradient(circle at 93% 84%, transparent 0 2.4%, #000 3%),
     repeating-linear-gradient(97deg, #000 0 7px, rgb(0 0 0 / 72%) 7px 9px);
   mask-image:
-    radial-gradient(circle at 18% 30%, transparent 0 5%, #000 6%),
-    radial-gradient(circle at 72% 78%, transparent 0 7%, #000 8%),
+    radial-gradient(circle at 9% 22%, transparent 0 2%, #000 2.6%),
+    radial-gradient(circle at 93% 84%, transparent 0 2.4%, #000 3%),
     repeating-linear-gradient(97deg, #000 0 7px, rgb(0 0 0 / 72%) 7px 9px);
   -webkit-mask-composite: source-in;
   mask-composite: intersect;
@@ -96,12 +96,14 @@ const CSS = `
 /* A settled docket folds shut after the stamp lands. */
 .sr-rep-docket { transition: opacity 320ms ease 900ms, transform 420ms var(--ease-out-expo) 900ms; }
 .sr-rep-docket[data-settled="true"] { opacity: 0; transform: translateX(2rem) rotate(1.2deg); }
-.sr-rep-docket-in { animation: sr-rep-rise 520ms var(--ease-out-expo) both; animation-delay: var(--sr-rep-delay, 0ms); }
+/* Backwards only: once a docket has risen, the animation lets go so the fold above can run. */
+.sr-rep-docket-in { animation: sr-rep-rise 520ms var(--ease-out-expo) backwards; animation-delay: var(--sr-rep-delay, 0ms); }
 
 @media (prefers-reduced-motion: reduce) {
   .sr-rep-stamp, .sr-rep-scrim, .sr-rep-sheet, .sr-rep-docket-in { animation: none; }
   .sr-rep-reason, .sr-rep-docket { transition: none; }
-  .sr-rep-docket[data-settled="true"] { transform: none; }
+  /* No fold: the stamp stays readable until the docket leaves the list. */
+  .sr-rep-docket[data-settled="true"] { opacity: 1; transform: none; }
 }
 `;
 
