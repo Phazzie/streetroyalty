@@ -156,8 +156,9 @@ function palette(hex: string): Palette {
     ribLine: dark ? mix(base, WHITE, 0.24) : mix(base, NIGHT, 0.34),
     inner: dark ? mix(base, [0, 0, 0], 0.55) : mix(base, NIGHT, 0.48),
     trim: pale ? INK : PAPER,
+    label: "#fffaf2",
     metal: "#cfc8dc",
-    cord: pale ? mix(base, NIGHT, 0.16) : PAPER,
+    cord: pale ? mix(base, NIGHT, 0.34) : PAPER,
     seam: dark ? mix(base, WHITE, 0.2) : mix(base, NIGHT, 0.5),
     stitch: dark ? mix(base, WHITE, 0.4) : mix(base, NIGHT, 0.46),
     edge: dark ? mix(base, WHITE, 0.3) : mix(base, NIGHT, 0.55),
@@ -277,7 +278,7 @@ function compose(options: {
   const folds = drawing.folds.join("");
   const lights = drawing.lights.join("");
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${view}">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${view}" width="480" height="${options.square ? 480 : 600}">
 <defs>
 <radialGradient id="b" cx=".5" cy=".47" r=".72"><stop offset="0" stop-color="#3a2d52"/><stop offset=".5" stop-color="#20182c"/><stop offset="1" stop-color="#0b0614"/></radialGradient>
 <pattern id="d" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="1.2" cy="1.2" r=".7" fill="#f6f1ff" opacity=".06"/></pattern>
@@ -303,8 +304,8 @@ ${paintAll(drawing.behind, tones)}
 ${paintAll(drawing.under, tones)}
 ${printed}
 <path d="${drawing.sil}" fill="none" stroke="${tones.shade}" stroke-width="30" opacity="${f(tones.shadeAlpha * 0.62)}" filter="url(#w)"/>
-<path d="${folds}" fill="none" stroke="${tones.shade}" stroke-width="9" stroke-linecap="round" opacity="${f(tones.shadeAlpha * 0.7)}" filter="url(#f)"/>
-<path d="${lights}" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity="${f(tones.lightAlpha * 0.6)}" filter="url(#f)"/>
+<path d="${folds}" fill="none" stroke="${tones.shade}" stroke-width="9" stroke-linecap="round" opacity="${f(tones.shadeAlpha * 0.58)}" filter="url(#f)"/>
+<path d="${lights}" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity="${f(tones.lightAlpha * 0.5)}" filter="url(#f)"/>
 <rect width="480" height="600" fill="url(#l)"/>
 <rect width="480" height="600" filter="url(#n)" opacity="${tones.grainAlpha}"/>
 </g>

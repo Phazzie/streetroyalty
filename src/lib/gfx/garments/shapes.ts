@@ -16,7 +16,7 @@ export type GarmentView = "front" | "back" | "sleeve_left" | "sleeve_right";
 /** A print area on the table. `rot` turns it about its own centre, for a sleeve. */
 export type PrintWindow = { x: number; y: number; w: number; h: number; rot: number };
 
-export type Tone = "base" | "rib" | "inner" | "trim" | "metal" | "cord";
+export type Tone = "base" | "rib" | "inner" | "trim" | "label" | "metal" | "cord";
 
 export type Part =
   | { kind: "fill"; d: string; tone: Tone }
@@ -360,7 +360,7 @@ function top(kind: TopKind, view: GarmentView): Drawing {
         [255, 217],
         [
           {
-            to: [257, 296],
+            to: [260, 282],
             c: [
               [261, 244],
               [251, 268],
@@ -372,7 +372,7 @@ function top(kind: TopKind, view: GarmentView): Drawing {
         [225, 217],
         [
           {
-            to: [221, 306],
+            to: [219, 290],
             c: [
               [219, 248],
               [230, 274],
@@ -384,7 +384,7 @@ function top(kind: TopKind, view: GarmentView): Drawing {
       over.push({ kind: "band", d: cordR + cordL, width: 3.4, tone: "cord" });
       over.push({
         kind: "band",
-        d: `M257 296l.4 9M221 306l-.5 9`,
+        d: `M260 282l.6 9M219 290l-.7 9`,
         width: 4,
         tone: "metal",
       });
@@ -471,7 +471,7 @@ function top(kind: TopKind, view: GarmentView): Drawing {
         width: 8,
       });
       // The neck label.
-      under.push({ kind: "fill", d: rect(CX - 9, 163, 18, 9), tone: "trim" });
+      under.push({ kind: "fill", d: rect(CX - 9, 163, 18, 9), tone: "label" });
       under.push({ kind: "drop", d: opening, width: 6 });
       under.push({
         kind: "rib",
@@ -695,7 +695,6 @@ function top(kind: TopKind, view: GarmentView): Drawing {
   folds.push(
     both([pit[0] - 6, pit[1] + 30], [{ to: [hemCorner[0] - 6, hemY - 30], q: [pit[0] - 10, 350] }]),
   );
-  lights.push(line([CX - 40, 220], [{ to: [CX - 52, 400], q: [CX - 60, 310] }]));
 
   // Where the print goes.
   let window: PrintWindow;
@@ -725,6 +724,10 @@ function top(kind: TopKind, view: GarmentView): Drawing {
   } else {
     window = win(183.5, 206, 113, 150);
   }
+
+  // Fill the table: the whole garment, a little larger, centred.
+  const middle = hood ? 262 : jacket ? 287 : long ? 297 : 302;
+  camera ??= { x: CX, y: middle, zoom: 1.1, rot: 0 };
 
   return { sil, silBands: [], behind: [], under, over, folds, lights, window, camera, label };
 }
@@ -933,7 +936,7 @@ function jogger(view: GarmentView): Drawing {
     folds,
     lights,
     window,
-    camera: null,
+    camera: { x: CX, y: 326, zoom: 0.94, rot: 0 },
     label: back ? "BACK" : "FRONT",
   };
 }
