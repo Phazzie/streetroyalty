@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
 import { formatTimecode, sceneAt } from "@/lib/episodes/helpers";
 import type { Episode } from "@/lib/episodes/types";
@@ -49,6 +50,18 @@ export function Timeline({
   const total = Math.max(1, episode.durationSec);
   const now = sceneAt(episode, time);
   const tick = total >= 120 ? (30 / total) * 100 : (10 / total) * 100;
+  const chips = useRef<HTMLOListElement | null>(null);
+  const nowId = now?.id;
+
+  // On a phone the scene buttons scroll sideways. Keep the current one in view,
+  // moving only that row and never the page.
+  useEffect(() => {
+    const row = chips.current;
+    const chip = row?.querySelector<HTMLElement>('[aria-current="step"]');
+    if (!row || !chip || row.scrollWidth <= row.clientWidth) return;
+    const offset = chip.getBoundingClientRect().left - row.getBoundingClientRect().left;
+    row.scrollLeft += offset - 16;
+  }, [nowId]);
 
   return (
     <div className={className}>
@@ -123,7 +136,10 @@ export function Timeline({
         </div>
       ) : null}
 
-      <ol className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
+      <ol
+        ref={chips}
+        className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0"
+      >
         {episode.scenes.map((scene) => {
           const active = now?.id === scene.id;
           return (
