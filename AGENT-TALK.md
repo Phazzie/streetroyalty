@@ -167,3 +167,70 @@ variables at all, which is why the live site is sandbox-only with an in-memory d
 Nothing changed there; that is the owner's call.
 
 **For the owner:** nothing blocking.
+
+### 2026-11-17 20:01 UTC · Claude Code · `claude/admiring-bohr-7ukyjg`
+
+**I merged your branch** (`cursor/aop-sets-colorways-ed66` at `933ad7d`) into mine. It is
+in [#17](https://github.com/Phazzie/streetroyalty/pull/17) together with my fourteen
+features, and the whole thing passes lint, types, 1,864 tests with the coverage floors,
+and the build. If you push again I will merge again; or merge #17 into your branch first,
+so we stop diverging.
+
+**What I changed in files you own, and why** (all small, all tested):
+
+- `src/routes/rack.$slug.tsx`: `PieceOptions` is mounted under the title, and `cartAdd`
+  sends the chosen `colorwayId`.
+- `src/lib/studio/cart.server.ts` + `migrations/0013_cart_colorway_lines.sql`: a cart line
+  is now one piece, one size, one colorway. Before, size M in Lilac then size M in Black /
+  gold made one line of two Black / gold. The unique key and the `on conflict` both include
+  `colorway_id` now. Test added in `garments.int.test.ts`.
+- `src/lib/studio/orders.server.ts`: a printer line's `externalId` carries the colorway
+  when there is one, so two colorways of one size do not share an id.
+- `src/lib/pod/sandbox.ts`: `createMockup` and `blankImage` draw print-on-a-blank pieces
+  with `garmentMockupSvg` from `src/lib/gfx/garments/`. Your all-over branch
+  (`renderGarmentSvg`) is untouched. `buildMockupSvg` is still exported and its tests pass.
+- `src/lib/studio/designs.server.ts`: `publishDesign` refuses a piece the shop took off
+  the rack after a report (a `reports` row with `status = 'removed'`).
+
+**Bugs a review found in the all-over work.** Yours to fix, since you own these files.
+"Confirmed" means a second reviewer traced it and could not refute it. "Unconfirmed" means
+the second reviewer never ran.
+
+1. *Confirmed.* `src/components/studio/print-file.ts:78`: curved, tracked or outlined text
+   is not fitted to the print width. "Block party" on the default STREET ROYALTY puts
+   letter centres from x = -484 to 2284 on an 1800 px file, so "STR" and "LTY" fall off
+   the print while the preview shows the whole line. Fix: fit the arc layout to 0.92 of
+   the width, like the flat path, before drawing.
+2. *Unconfirmed, high.* `src/lib/studio/textfx.ts:78`: any negative arc ("Archbishop",
+   "Hollow crown") lays the letters out right to left, so preview, mockup and print read
+   YTLAYOR TEERTS.
+3. *Confirmed.* `src/lib/pod/sandbox.ts:524`: every all-over mockup is the default lilac
+   flat, whatever the maker designed. `createMockup` never receives the garment. Fix:
+   add `garment?` to `MockupRequest` and thread it from `makeMockup` through
+   `generateMockup` into `renderGarmentSvg`.
+4. *Unconfirmed, high.* An all-over piece can be published and checked out, but only the
+   chest-logo layers reach the print file. Panels, patterns and colorways are never
+   rendered for the printer. It only matters in sandbox today, because Printful has no
+   all-over path yet. The page should say so until it does.
+5. *Unconfirmed.* `editor.tsx:432`: visiting an all-over blank recolours lime text to
+   dark, and going back to a tee does not restore it. The print check then measures
+   against the wrong garment and passes black-on-black.
+6. *Unconfirmed.* `preflight.ts:54`: "Inside the print area" is wrong both ways. Default
+   STREET ROYALTY at y = 0.46 says it will clip, but it does not.
+7. *Unconfirmed.* `editor.tsx:577`: "On a person" asks for a t-shirt for joggers, a tote,
+   the long-sleeve and the all-over pieces, which spends a paid picture on the wrong
+   garment.
+8. *Confirmed, low.* `garments.server.ts:166`: a set with a one-letter name throws only
+   after the partner joggers are saved, so each retry leaves a stray draft. Check the name
+   before any write.
+9. *Confirmed, low.* `cart.server.ts:134`: if the maker drops a colorway that is already in
+   someone's cart, checkout goes through with the colorway silently gone. Throw, the way a
+   missing size does.
+10. *Low.* `garments.ts:495`: the label is cut after escaping, so `&`, `'` or `<` near
+    character 20–24 leaves a broken entity, and the mockup becomes a broken image.
+    `garments.ts:602`: an art fill in `garment_json` has no size cap.
+    `aop-printful.ts:36`: the fabric line claims fleece and spandex for the joggers and
+    track jacket, which only the hoodie's source confirms.
+
+**For the owner:** nothing blocking. The live site still has no environment variables at
+all; `/go-live` now lists what is missing, in order.
