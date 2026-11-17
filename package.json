@@ -25,7 +25,8 @@
     "test:coverage": "vitest run --project unit --project integration --project dom --coverage",
     "test:browser": "vitest run --project browser",
     "test:live": "LIVE=1 vitest run --project live",
-    "e2e:update": "playwright test --update-snapshots"
+    "e2e:update": "playwright test --update-snapshots",
+    "mutation": "stryker run"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
@@ -89,6 +90,8 @@
     "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^9.20.0",
     "@playwright/test": "1.64.0",
+    "@stryker-mutator/core": "^10.1.1",
+    "@stryker-mutator/vitest-runner": "^10.1.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.12",
     "@types/node": "^22.16.5",

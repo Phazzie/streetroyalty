@@ -113,7 +113,37 @@ Orders are created with v2 `POST /v2/orders`, which leaves them in `draft`. `POS
 
 ## Checks
 
-`npm run ci` runs lint, typecheck, tests, and the production build. Origin runs those checks through Depot: the workflow is `.depot/workflows/ci.yml`, on the Depot runner. Connect the Depot app from the Origin codebase Apps page, then put `XAI_API_KEY` in Depot if you want the review job. That job skips when the key is missing. It comments on the Origin pull request when `PR_NUMBER` is set and the Origin CLI is signed in, and otherwise leaves the review in the log.
+`npm run ci` runs lint, typecheck, the tests with their coverage floors, and the production build.
+
+| Command | What it runs | Needs |
+| --- | --- | --- |
+| `npm test` | Unit, integration and component tests | Nothing |
+| `npm run test:coverage` | The same, and fails under the coverage floors | Nothing |
+| `npm run test:browser` | The print-file exporter in real Chromium | Chromium |
+| `npm run e2e` | Journeys against the built app, at phone and laptop sizes | Chromium, and `npm run build` first |
+| `npm run test:live` | One real call to each outside service that has a key set | Keys. One tiny xAI completion per run |
+| `npm run mutation` | Plants bugs in the money code and counts how many the tests catch | A few minutes |
+
+Tests are found by file name, so a new one runs without being registered anywhere.
+
+- `*.test.ts` is a unit test of plain logic.
+- `*.int.test.ts` is an integration test. It uses the app's own database handle on in-memory Postgres with every file in `migrations/` applied, and fails on any network request that has no mock. Set `DATABASE_URL` to run the same tests on a real Postgres, after `npm run db:migrate`.
+- `*.dom.test.tsx` is a component test in happy-dom.
+- `*.browser.test.ts` runs in Chromium, for code that draws on a canvas.
+- `*.live.test.ts` calls the real services and only runs with `LIVE=1`.
+
+Shared pieces live in `src/test/`: the database and request helpers, a stand-in printer, mocked Stripe, Printful, Fourthwall and xAI, and two suites that are run against more than one thing.
+
+- `contracts/order-store.contract.ts` is every rule an order store has to keep. It runs against the in-memory store the unit tests use and the SQL store production uses, so the two cannot drift.
+- `contracts/order-lifecycle.model.ts` invents random sequences of payments, replays, printer notices and outages for one order and checks after every step that nothing printed without matching money, no status went backwards, and a charged order always says so.
+
+`e2e/` holds the browser journeys. `E2E_BASE_URL` points them at a deployment instead of the local preview. The journeys that write data need the shop in sandbox.
+
+Coverage floors are in `vitest.config.ts`: 90% of lines and 85% of branches on printing, payments, the studio's server code and the AI caps, and 50% overall.
+
+Origin runs the checks through Depot. `.depot/workflows/ci.yml` has four jobs: `verify` (`npm run ci`), `postgres` (the integration tests on Postgres 16), `e2e` (Chromium), and the Grok review. Connect the Depot app from the Origin codebase Apps page, then put `XAI_API_KEY` in Depot if you want the review job. That job skips when the key is missing. It comments on the Origin pull request when `PR_NUMBER` is set and the Origin CLI is signed in, and otherwise leaves the review in the log.
+
+`.depot/workflows/live.yml` runs the live checks and mutation testing nightly and on demand, never on a pull request. It reads `XAI_API_KEY`, `FOURTHWALL_STOREFRONT_TOKEN`, `STRIPE_TEST_SECRET_KEY`, `PRINTFUL_API_KEY` and `PRINTFUL_STORE_ID` from Depot's secrets and skips any service whose key is missing. Stripe is only ever called with a test key.
 
 ## Develop
 

@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "vitest": { "configFile": "vitest.mutation.config.ts", "related": false },
+  "mutate": [
+    "src/lib/pod/order-flow.ts",
+    "src/lib/pod/money.ts",
+    "src/lib/pod/signature.ts",
+    "src/lib/pod/print-access.ts",
+    "src/lib/pod/index.ts",
+    "src/lib/payments/stripe.ts",
+    "src/lib/studio/validate.ts",
+    "src/lib/studio/cart-qty.ts",
+    "src/lib/studio/admin.ts",
+    "src/lib/ai/limits.ts"
+  ],
+  "coverageAnalysis": "perTest",
+  "reporters": ["clear-text", "progress", "html"],
+  "htmlReporter": { "fileName": "coverage/mutation.html" },
+  "thresholds": { "high": 85, "low": 70, "break": null },
+  "tempDirName": "node_modules/.stryker-tmp",
+  "cleanTempDir": "always",
+  "concurrency": 4
+}
