@@ -1,0 +1,340 @@
+import { describe, expect, it } from "vitest";
+import { layoutArt } from "./art.ts";
+import {
+  MAX_LINES,
+  applyUtterance,
+  describeIntent,
+  emptyIntent,
+  reviveIntent,
+  type SayIntent,
+} from "./parse.ts";
+
+function say(...sentences: string[]): {
+  intent: SayIntent;
+  understood: string[];
+  unsure: string[];
+} {
+  let state = { intent: emptyIntent(), understood: [] as string[], unsure: [] as string[] };
+  for (const sentence of sentences) state = applyUtterance(state.intent, sentence);
+  return state;
+}
+
+describe("a first description", () => {
+  it("reads the brief's hoodie sentence in one go", () => {
+    const { intent, understood, unsure } = say(
+      "put DO BETTER on the back of a black hoodie in pink, big",
+    );
+    expect(intent).toEqual({
+      blank: "hoodie",
+      garmentColor: "#141414",
+      placement: "back",
+      lines: [{ text: "DO BETTER", color: "#ff5fa2", size: "big", tilt: 0 }],
+      font: "Archivo Black",
+    });
+    expect(understood).toEqual(["Black hoodie", "Back", "DO BETTER in pink, big"]);
+    expect(unsure).toEqual([]);
+  });
+
+  it("reads a tee that says something across the chest", () => {
+    const { intent, unsure } = say("a white tee that says free world in blue across the chest");
+    expect(intent.blank).toBe("tee");
+    expect(intent.garmentColor).toBe("#ffffff");
+    expect(intent.placement).toBe("front");
+    expect(intent.lines).toEqual([
+      { text: "FREE WORLD", color: "#2563eb", size: "medium", tilt: 0 },
+    ]);
+    expect(unsure).toEqual([]);
+  });
+
+  it("reads a name on a hat", () => {
+    const { intent, unsure } = say("hat with my name Dre on it");
+    expect(intent.blank).toBe("hat");
+    expect(intent.lines.map((line) => line.text)).toEqual(["DRE"]);
+    expect(unsure).toEqual([]);
+  });
+
+  it("takes quoted words exactly, stop words and all", () => {
+    const { intent } = say('a hoodie that says "born in red clay, on the back" in gold');
+    expect(intent.lines[0]?.text).toBe("BORN IN RED CLAY, ON THE BACK");
+    expect(intent.lines[0]?.color).toBe("#d4af37");
+    expect(intent.garmentColor).toBe("#141414");
+    expect(intent.placement).toBe("front");
+  });
+
+  it.each([
+    ["a crewneck saying no encore", "crewneck", "NO ENCORE"],
+    ["sweatshirt that reads stay up", "crewneck", "STAY UP"],
+    ["t-shirt with the words love is free", "tee", "LOVE IS FREE"],
+    ["make it say count me out on a cap", "hat", "COUNT ME OUT"],
+    ["write second chances on a hoody", "hoodie", "SECOND CHANCES"],
+  ])("%s", (sentence, blank, text) => {
+    const { intent } = say(sentence);
+    expect(intent.blank).toBe(blank);
+    expect(intent.lines[0]?.text).toBe(text);
+  });
+
+  it("treats bare words on an empty piece as the print", () => {
+    const { intent, understood } = say("do better");
+    expect(intent.lines.map((line) => line.text)).toEqual(["DO BETTER"]);
+    expect(understood).toHaveLength(1);
+    expect(understood[0]).toContain("DO BETTER");
+  });
+
+  it("gives the print an ink that shows on the garment", () => {
+    expect(say("a white tee that says hello").intent.lines[0]?.color).toBe("#141414");
+    expect(say("a black tee that says hello").intent.lines[0]?.color).toBe("#f6f1ff");
+  });
+});
+
+describe("colour words", () => {
+  it.each([
+    ["hot pink", "#ff2d95"],
+    ["royal blue", "#2f5bff"],
+    ["money green", "#1f6f3d"],
+    ["blood red", "#8a0303"],
+    ["lime", "#d6ff3c"],
+    ["lilac", "#7c5cff"],
+    ["mint", "#a5dccb"],
+    ["bone", "#efe6d6"],
+    ["grey", "#8a8a8a"],
+    ["gray", "#8a8a8a"],
+  ])("make it %s", (word, hex) => {
+    const { intent } = say("a tee that says hi", `make it ${word}`);
+    expect(intent.lines[0]?.color).toBe(hex);
+  });
+
+  it("puts a colour beside a garment word on the garment", () => {
+    const { intent } = say("a tee that says hi in pink", "make the tee royal blue");
+    expect(intent.garmentColor).toBe("#2f5bff");
+    expect(intent.lines[0]?.color).toBe("#ff5fa2");
+  });
+
+  it("colours the garment when there are no words yet", () => {
+    expect(say("make it lime").intent.garmentColor).toBe("#d6ff3c");
+    expect(say("hot pink hoodie").intent.garmentColor).toBe("#ff2d95");
+  });
+
+  it("keeps a starter ink visible when the garment changes under it", () => {
+    const { intent } = say("a black tee that says hi", "white tee");
+    expect(intent.garmentColor).toBe("#ffffff");
+    expect(intent.lines[0]?.color).toBe("#141414");
+  });
+
+  it("leaves a chosen clash alone", () => {
+    const { intent } = say("a tee that says hi in white", "white tee");
+    expect(intent.lines[0]?.color).toBe("#ffffff");
+  });
+});
+
+describe("follow-ups change the current piece", () => {
+  const base = "put DO BETTER on the back of a black hoodie in pink, big";
+
+  it("bigger and smaller step the size, and stop at the ends", () => {
+    expect(say(base, "bigger").intent.lines[0]?.size).toBe("huge");
+    expect(say(base, "bigger", "bigger").intent.lines[0]?.size).toBe("huge");
+    expect(say(base, "a little smaller").intent.lines[0]?.size).toBe("medium");
+    expect(say(base, "way smaller").intent.lines[0]?.size).toBe("small");
+    expect(say(base, "make it huge").intent.lines[0]?.size).toBe("huge");
+  });
+
+  it("moves the print", () => {
+    expect(say(base, "on the front").intent.placement).toBe("front");
+    expect(say(base, "put it on the sleeve").intent.placement).toBe("sleeve");
+    expect(say("a tee that says hi", "on the back").intent.placement).toBe("back");
+  });
+
+  it("adds a second line that keeps the first line's style", () => {
+    const { intent, understood } = say(base, "second line no encore");
+    expect(intent.lines).toEqual([
+      { text: "DO BETTER", color: "#ff5fa2", size: "big", tilt: 0 },
+      { text: "NO ENCORE", color: "#ff5fa2", size: "big", tilt: 0 },
+    ]);
+    expect(understood).toEqual(["NO ENCORE in pink, big"]);
+  });
+
+  it("styles only the new line when the style comes with it", () => {
+    const { intent } = say(base, "add a line that says no encore in lime");
+    expect(intent.lines.map((line) => line.color)).toEqual(["#ff5fa2", "#d6ff3c"]);
+  });
+
+  it("changes a named line, and does not print the instruction", () => {
+    const { intent } = say(base, "second line no encore", "second line lime");
+    expect(intent.lines.map((line) => line.text)).toEqual(["DO BETTER", "NO ENCORE"]);
+    expect(intent.lines.map((line) => line.color)).toEqual(["#ff5fa2", "#d6ff3c"]);
+  });
+
+  it("rewrites a line that is already there", () => {
+    const { intent } = say(base, "second line no encore", "second line one more time");
+    expect(intent.lines.map((line) => line.text)).toEqual(["DO BETTER", "ONE MORE TIME"]);
+  });
+
+  it("tilts, tilts further, flips and straightens", () => {
+    expect(say(base, "tilt it").intent.lines[0]?.tilt).toBe(-8);
+    expect(say(base, "tilt it", "tilt it").intent.lines[0]?.tilt).toBe(-16);
+    expect(say(base, "tilt it", "the other way").intent.lines[0]?.tilt).toBe(8);
+    expect(say(base, "tilt it", "straighten it").intent.lines[0]?.tilt).toBe(0);
+  });
+
+  it("lowercase sticks for the lines that follow", () => {
+    const { intent } = say(base, "lowercase", "second line no encore");
+    expect(intent.lines.map((line) => line.text)).toEqual(["do better", "no encore"]);
+    expect(say(base, "lowercase", "all caps").intent.lines[0]?.text).toBe("DO BETTER");
+  });
+
+  it("all caps is not a hat", () => {
+    expect(say(base, "all caps").intent.blank).toBe("hoodie");
+  });
+
+  it("swaps the garment and keeps the words", () => {
+    const { intent, understood } = say(base, "actually a bone crewneck");
+    expect(intent.blank).toBe("crewneck");
+    expect(intent.garmentColor).toBe("#efe6d6");
+    expect(intent.lines[0]?.text).toBe("DO BETTER");
+    expect(understood[0]).toBe("Bone crewneck");
+  });
+
+  it("takes a line off", () => {
+    const { intent } = say(base, "second line no encore", "remove the last line");
+    expect(intent.lines.map((line) => line.text)).toEqual(["DO BETTER"]);
+  });
+
+  it("changes the letters", () => {
+    expect(say(base, "plain letters").intent.font).toBe("Outfit");
+    expect(say(base, "plain letters", "bold").intent.font).toBe("Archivo Black");
+  });
+
+  it("starts over, and reads anything said after it", () => {
+    expect(say(base, "start over").intent).toEqual(emptyIntent());
+    const again = say(base, "start over, a white tee that says free world");
+    expect(again.intent.blank).toBe("tee");
+    expect(again.intent.lines.map((line) => line.text)).toEqual(["FREE WORLD"]);
+    expect(again.understood[0]).toBe("Started over");
+  });
+
+  it("stops at eight lines and says so", () => {
+    const lines = Array.from({ length: 10 }, (_item, index) => `add a line that says row ${index}`);
+    const { intent, unsure } = say("a tee that says top", ...lines);
+    expect(intent.lines).toHaveLength(MAX_LINES);
+    expect(unsure.join(" ")).toContain("eight lines is the limit");
+  });
+});
+
+describe("what it does not understand", () => {
+  it("hands back the words it missed and still applies the rest", () => {
+    const { intent, unsure } = say("a tee that says hi", "make it pink and holographic");
+    expect(intent.lines[0]?.color).toBe("#ff5fa2");
+    expect(unsure).toEqual(["holographic"]);
+  });
+
+  it("does not turn a stray sentence into print once there are words", () => {
+    const first = say("a tee that says hi");
+    const next = applyUtterance(first.intent, "what time does the shop close");
+    expect(next.intent).toEqual(first.intent);
+    expect(next.unsure.length).toBeGreaterThan(0);
+  });
+
+  it("asks for words before styling them", () => {
+    expect(say("bigger").unsure).toEqual(["size (say the words first)"]);
+  });
+
+  it.each([
+    [""],
+    ["   "],
+    ['"'],
+    ["'''"],
+    ["||||"],
+    ["second line"],
+    ["put on the"],
+    ["that says"],
+    ["\u0000\u0007 \n\t"],
+    ["x".repeat(5000)],
+    ["(((((*+?[[\\"],
+  ])("never throws on %j", (text) => {
+    const result = applyUtterance(emptyIntent(), text);
+    expect(result.intent.lines.length).toBeLessThanOrEqual(1);
+    expect(Array.isArray(result.unsure)).toBe(true);
+  });
+
+  it("survives input that is not a string", () => {
+    const result = applyUtterance(emptyIntent(), undefined as unknown as string);
+    expect(result.intent).toEqual(emptyIntent());
+  });
+
+  it("does not change the intent it was given", () => {
+    const first = say("a tee that says hi");
+    const frozen = JSON.stringify(first.intent);
+    applyUtterance(first.intent, "bigger, in lime, on the back, tilt it, lowercase");
+    expect(JSON.stringify(first.intent)).toBe(frozen);
+  });
+});
+
+describe("describeIntent", () => {
+  it("reads the piece back as plain chips", () => {
+    const { intent } = say("put DO BETTER on the back of a black hoodie in pink, big", "tilt it");
+    expect(describeIntent(intent)).toEqual([
+      "Black hoodie",
+      "Back",
+      "DO BETTER in pink, big, tilted",
+    ]);
+  });
+});
+
+describe("putting an intent away and reading it back", () => {
+  it("round trips through JSON", () => {
+    const { intent } = say("put DO BETTER on the back of a black hoodie in pink, big", "tilt it");
+    expect(reviveIntent(JSON.parse(JSON.stringify(intent)))).toEqual(intent);
+  });
+
+  it.each([
+    [null],
+    ["tee"],
+    [{}],
+    [{ ...emptyIntent(), blank: "cape" }],
+    [{ ...emptyIntent(), garmentColor: "red" }],
+    [{ ...emptyIntent(), lines: [{ text: "", color: "#ffffff", size: "big", tilt: 0 }] }],
+    [{ ...emptyIntent(), lines: [{ text: "HI", color: "url(x)", size: "big", tilt: 0 }] }],
+    [{ ...emptyIntent(), lines: [{ text: "HI", color: "#ffffff", size: "vast", tilt: 0 }] }],
+  ])("refuses %j", (input) => {
+    expect(reviveIntent(input)).toBeNull();
+  });
+});
+
+describe("the picture for the road without an account", () => {
+  const measure = (text: string, px: number) => text.length * px * 0.7;
+
+  it("keeps every line inside the picture, top to bottom", () => {
+    const { intent } = say(
+      "a tee that says the longest line anybody would ever want, huge",
+      "add a line that says two",
+      "add a line that says three",
+      "tilt it",
+    );
+    const rows = layoutArt(intent.lines, 1200, 900, measure);
+    expect(rows.map((row) => row.text)).toEqual(intent.lines.map((line) => line.text));
+    let last = 0;
+    for (const row of rows) {
+      expect(measure(row.text, row.fontPx)).toBeLessThanOrEqual(1200 * 0.94 + 0.5);
+      expect(row.y - row.fontPx / 2).toBeGreaterThanOrEqual(0);
+      expect(row.y + row.fontPx / 2).toBeLessThanOrEqual(900);
+      expect(row.y).toBeGreaterThan(last);
+      last = row.y;
+    }
+  });
+
+  it("draws big bigger than small", () => {
+    const small = layoutArt(
+      [{ text: "HI", color: "#ffffff", size: "small", tilt: 0 }],
+      1200,
+      900,
+      measure,
+    );
+    const huge = layoutArt(
+      [{ text: "HI", color: "#ffffff", size: "huge", tilt: 0 }],
+      1200,
+      900,
+      measure,
+    );
+    expect(huge[0]?.fontPx ?? 0).toBeGreaterThan((small[0]?.fontPx ?? 0) * 2);
+    expect(layoutArt([], 1200, 900, measure)).toEqual([]);
+  });
+});

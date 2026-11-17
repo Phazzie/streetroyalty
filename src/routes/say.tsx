@@ -1,8 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { SayPage } from "@/components/say/say-page";
+import { StudioShell } from "@/components/studio/shell";
 
-export const Route = createFileRoute("/say")({ component: Placeholder });
+export const Route = createFileRoute("/say")({ component: SayRoute });
 
-/** Placeholder. Replaced when the feature lands. */
-function Placeholder() {
-  return null;
+/** Describe a piece out loud or in the text box and get a real starting design. */
+function SayRoute() {
+  return (
+    <StudioShell current="/say">
+      <SayPage />
+    </StudioShell>
+  );
 }
