@@ -77,7 +77,7 @@ describe("fitting onto the sandbox catalog", () => {
         color: "#ff5fa2",
         x: 0.5,
         y: 0.48,
-        scale: 1.15,
+        scale: 1.6,
         rotation: 0,
       },
     ]);

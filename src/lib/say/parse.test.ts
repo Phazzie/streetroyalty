@@ -73,6 +73,32 @@ describe("a first description", () => {
     expect(intent.lines[0]?.text).toBe(text);
   });
 
+  it("reads words carried by with", () => {
+    const hoodie = say("pink hoodie with free world on the front in big white letters");
+    expect(hoodie.intent.blank).toBe("hoodie");
+    expect(hoodie.intent.garmentColor).toBe("#ff5fa2");
+    expect(hoodie.intent.lines).toEqual([
+      { text: "FREE WORLD", color: "#ffffff", size: "big", tilt: 0 },
+    ]);
+    expect(hoodie.unsure).toEqual([]);
+    expect(say("a white hoodie with DO BETTER on the back").intent.lines[0]?.text).toBe(
+      "DO BETTER",
+    );
+  });
+
+  it("does not print an instruction that has no words in it", () => {
+    const { intent, unsure } = say("put my name on it");
+    expect(intent.lines).toEqual([]);
+    expect(unsure).toEqual(["put my name on it"]);
+  });
+
+  it("keeps a phrase that ends in a size word", () => {
+    expect(say("a tee that says think big").intent.lines[0]).toMatchObject({
+      text: "THINK BIG",
+      size: "medium",
+    });
+  });
+
   it("treats bare words on an empty piece as the print", () => {
     const { intent, understood } = say("do better");
     expect(intent.lines.map((line) => line.text)).toEqual(["DO BETTER"]);
@@ -135,6 +161,31 @@ describe("follow-ups change the current piece", () => {
     expect(say(base, "a little smaller").intent.lines[0]?.size).toBe("medium");
     expect(say(base, "way smaller").intent.lines[0]?.size).toBe("small");
     expect(say(base, "make it huge").intent.lines[0]?.size).toBe("huge");
+  });
+
+  it("make the words bigger is about the words", () => {
+    const { intent } = say(base, "make the words bigger");
+    expect(intent.lines).toEqual([{ text: "DO BETTER", color: "#ff5fa2", size: "huge", tilt: 0 }]);
+    expect(say(base, "make the letters white").intent.lines[0]?.color).toBe("#ffffff");
+  });
+
+  it("changes what it says", () => {
+    expect(say(base, "change it to say stay up").intent.lines.map((line) => line.text)).toEqual([
+      "STAY UP",
+    ]);
+  });
+
+  it("moves the words to another garment", () => {
+    const { intent } = say("a hoodie that says hi", "put it on a white tee");
+    expect(intent.blank).toBe("tee");
+    expect(intent.lines.map((line) => line.text)).toEqual(["HI"]);
+  });
+
+  it("takes several changes in one breath", () => {
+    const { intent, unsure } = say(base, "make it lime and put it on the front and tilt it");
+    expect(intent.placement).toBe("front");
+    expect(intent.lines[0]).toMatchObject({ color: "#d6ff3c", tilt: -8 });
+    expect(unsure).toEqual([]);
   });
 
   it("moves the print", () => {

@@ -146,7 +146,9 @@ const STOPS: RegExp[] = [
 ];
 
 /** Split what follows a trigger word into the words to print and the rest of the sentence. */
-function cutAtStop(tail: string): { head: string; rest: string } {
+function cutAtStop(said: string): { head: string; rest: string } {
+  // The leading space lets a stop match at the very start: "my name on it" has no name in it.
+  const tail = ` ${said}`;
   let cut = tail.length;
   for (const stop of STOPS) {
     const match = stop.exec(tail);
@@ -232,8 +234,29 @@ function pullText(input: string): Pulled {
   if (trigger) {
     const { head, rest: after } = cutAtStop(trigger[1] ?? "");
     const text = cleanText(head);
-    if (text && !PRONOUNS.test(text)) {
+    // "make the words bigger" is about the words. "that says bigger" is a print.
+    const weak = /^the\s/i.test(trigger[0]) && styleOnly(text);
+    if (text && !PRONOUNS.test(text) && !weak) {
       return { texts: [text], mode, rest: `${rest.slice(0, trigger.index)} | ${after}` };
+    }
+  }
+
+  // "a white hoodie with DO BETTER on the back".
+  const carried = /\bwith\s+(.+?)\s+(on|across|down|over)\s+(?:the|it|its|both)\b/i.exec(rest);
+  if (carried) {
+    const text = cleanText(carried[1] ?? "");
+    if (
+      text &&
+      !PRONOUNS.test(text) &&
+      !styleOnly(text) &&
+      !/^(?:a|an|the|my|some)\b/i.test(text)
+    ) {
+      const at = carried.index + carried[0].indexOf(carried[1] ?? "");
+      return {
+        texts: [text],
+        mode,
+        rest: `${rest.slice(0, at)} | ${rest.slice(at + (carried[1] ?? "").length)}`,
+      };
     }
   }
 
@@ -244,9 +267,12 @@ function pullText(input: string): Pulled {
     );
   if (put) {
     const text = cleanText(put[1] ?? "");
-    const asStyle = scan(text, false);
-    const styleOnly = asStyle.leftover.length === 0 && !nothingFound(asStyle);
-    if (text && !PRONOUNS.test(text) && !styleOnly && !/^(?:a|an|the|my|some)\b/i.test(text)) {
+    if (
+      text &&
+      !PRONOUNS.test(text) &&
+      !styleOnly(text) &&
+      !/^(?:a|an|the|my|some)\b/i.test(text)
+    ) {
       const keep = put[0].length - (put[2] ?? "").length;
       return { texts: [text], mode, rest: ` | ${rest.slice(keep)}` };
     }
@@ -405,6 +431,12 @@ function scan(input: string, hasGarmentColorAlready: boolean): Found {
   return found;
 }
 
+/** True when the words are all instructions, like "bigger" or "in pink", and nothing to print. */
+function styleOnly(text: string): boolean {
+  const found = scan(text, false);
+  return found.leftover.length === 0 && !nothingFound(found);
+}
+
 function stepSize(size: SaySize, by: number): SaySize {
   const at = SIZES.indexOf(size);
   return SIZES[Math.min(SIZES.length - 1, Math.max(0, at + by))] ?? size;
@@ -473,7 +505,11 @@ function work(intent: SayIntent, said: string): SayResult {
   // Bare words and nothing else: on an empty piece they are the print.
   if (texts.length === 0 && nothingFound(found) && mode === "set") {
     const words = text.split(" ").length;
-    if (intent.lines.length === 0 && words <= 8) {
+    const instruction =
+      /\b(?:put|make|add|write|says?|saying|name|line|change|give|want|can you|please)\b/i.test(
+        text,
+      );
+    if (intent.lines.length === 0 && words <= 8 && !instruction) {
       texts = [cleanText(text)].filter(Boolean);
       found = { ...found, leftover: [] };
     } else {

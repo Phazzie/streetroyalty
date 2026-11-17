@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import type { CatalogProduct } from "@/lib/pod/types";
 import { renderArt } from "@/lib/say/art";
-import { colorName, contrastInk } from "@/lib/say/colors";
+import { contrastInk } from "@/lib/say/colors";
 import { fitIntent, ghostLayers, pickProduct, type ListedBlank } from "@/lib/say/fit";
 import {
   applyUtterance,
@@ -64,7 +64,7 @@ function Poster({ intent, ground }: { intent: SayIntent; ground: string }) {
   const longest = Math.max(4, ...intent.lines.map((line) => Math.min(line.text.length, 18)));
   return (
     <div
-      className="say-poster flex min-h-36 flex-col items-center justify-center overflow-hidden border-2 border-ink px-3 py-5 text-center sm:min-h-44"
+      className="say-poster flex min-h-36 flex-col items-center justify-center gap-1 overflow-hidden border-2 border-ink px-4 py-7 text-center sm:min-h-44"
       style={{ backgroundColor: ground, color: ink }}
       aria-hidden="true"
     >
@@ -83,7 +83,7 @@ function Poster({ intent, ground }: { intent: SayIntent; ground: string }) {
               rotate: `${line.tilt}deg`,
               textTransform: "none",
               lineHeight: 0.92,
-              fontSize: `min(${(6.5 * POSTER_SIZE[line.size]).toFixed(2)}rem, ${((185 / longest) * POSTER_SIZE[line.size]).toFixed(1)}cqw)`,
+              fontSize: `min(${(6.5 * POSTER_SIZE[line.size]).toFixed(2)}rem, ${((150 / longest) * POSTER_SIZE[line.size] * (line.tilt === 0 ? 1 : 0.86)).toFixed(1)}cqw)`,
             }}
           >
             {line.text}
@@ -349,8 +349,8 @@ export function SayPage() {
     <div className="mx-auto max-w-5xl">
       <style>{CSS}</style>
       <p className="tag">Talk or type</p>
-      <h1 className="mt-3 font-display text-4xl leading-none sm:text-5xl">Say it</h1>
-      <p className="mt-2 mb-5 max-w-xl text-lg text-muted">
+      <h1 className="sr-only">Say it</h1>
+      <p className="mt-3 mb-4 max-w-xl text-lg text-muted">
         Tell it what you want on a piece, in your own words. It builds a real start you can take to
         the studio.
       </p>
@@ -415,7 +415,7 @@ export function SayPage() {
               autoCapitalize="off"
               enterKeyHint="go"
               maxLength={300}
-              className="h-16 w-full min-w-0 flex-1 rounded-md border-2 border-ink bg-cream px-4 font-sans text-lg text-fg outline-none placeholder:text-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-fg"
+              className="h-16 w-full min-w-0 shrink-0 rounded-md sm:flex-1 sm:shrink border-2 border-ink bg-cream px-4 font-sans text-lg text-fg outline-none placeholder:text-subtle focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-fg"
             />
             <Button type="submit" size="lg" className="h-16 sm:min-w-32" disabled={!draft.trim()}>
               Make it
@@ -443,7 +443,7 @@ export function SayPage() {
                 {hasWords && heard && fresh.length === 0 ? (
                   <button
                     type="button"
-                    className="chip"
+                    className="chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-fg"
                     onClick={() => apply(`add a line that says "${heard.replace(/"/g, "")}"`)}
                   >
                     Print those words
@@ -461,7 +461,7 @@ export function SayPage() {
                   <button
                     key={chip.label}
                     type="button"
-                    className="chip"
+                    className="chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-fg"
                     onClick={() => (chip.run ? chip.run() : apply(chip.say ?? chip.label))}
                   >
                     {chip.label}
@@ -572,8 +572,7 @@ export function SayPage() {
             <p className="text-muted">Say the words you want on it first.</p>
           ) : signedOut ? (
             <p className="text-muted">
-              You are not signed in, so the words arrive in the studio as a picture on the house
-              tee, in {colorName(intent.lines[0]?.color ?? "#ffffff")} and the rest as you said it.{" "}
+              You are not signed in, so the words go to the studio as a picture on the house tee.{" "}
               <Link to="/login" className="font-bold text-fg underline underline-offset-4">
                 Sign in first
               </Link>{" "}

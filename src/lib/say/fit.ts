@@ -35,11 +35,15 @@ const BLANK_WORD: Record<SayBlank, string> = {
 /** A colour this close is the colour they asked for. */
 const SAME_COLOR = 9;
 
+/**
+ * The studio's own scale for each size word. 1 is the house default: letters 14% of the print
+ * area tall in the print file, which squeezes a long line to fit the width.
+ */
 export const LINE_SCALE: Record<SaySize, number> = {
-  small: 0.45,
-  medium: 0.75,
-  big: 1.15,
-  huge: 1.8,
+  small: 0.6,
+  medium: 1,
+  big: 1.6,
+  huge: 2.4,
 };
 
 /** What the catalog list says about a blank. The full blank, with its variants, is loaded after the pick. */
@@ -102,15 +106,16 @@ export function buildLayers(intent: SayIntent): DesignLayer[] {
   const lines = intent.lines.slice(0, MAX_LAYERS);
   const face = font(intent);
   const scales = lines.map((line) => LINE_SCALE[line.size]);
-  // Each line takes room in proportion to its size, and the stack never leaves the print area.
-  const weights = scales.map((scale) => 0.1 + scale * 0.12);
-  const total = weights.reduce((sum, weight) => sum + weight, 0);
-  const squeeze = total > 0.84 ? 0.84 / total : 1;
+  // Each line takes the room its letters need, and the stack never leaves the print area.
+  const room = (scale: number) => 0.14 * scale * 1.25 + 0.02;
+  const total = scales.reduce((sum, scale) => sum + room(scale), 0);
+  const squeeze = total > 0.86 ? 0.86 / total : 1;
+  const weights = scales.map((scale) => room(scale) * squeeze);
   let cursor = 0.48 - (total * squeeze) / 2;
   return lines.map((line, index) => {
-    const room = (weights[index] ?? 0.2) * squeeze;
-    const y = cursor + room / 2;
-    cursor += room;
+    const space = weights[index] ?? 0.2;
+    const y = cursor + space / 2;
+    cursor += space;
     return {
       id: `say-${index + 1}`,
       type: "text" as const,
@@ -119,11 +124,7 @@ export function buildLayers(intent: SayIntent): DesignLayer[] {
       color: /^#[0-9a-fA-F]{6}$/.test(line.color) ? line.color : "#f6f1ff",
       x: 0.5,
       y: clamp(Number(y.toFixed(3)), 0.06, 0.94),
-      scale: clamp(
-        Number(((scales[index] ?? 0.75) * (squeeze < 1 ? Math.max(squeeze, 0.5) : 1)).toFixed(3)),
-        0.15,
-        3,
-      ),
+      scale: clamp(Number(((scales[index] ?? 1) * squeeze).toFixed(3)), 0.15, 3),
       rotation: clamp(line.tilt, -180, 180),
     };
   });
