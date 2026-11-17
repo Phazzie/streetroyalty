@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getSql } from "../db.ts";
 import { getDesign, listDesigns, listShop } from "../studio/designs.server.ts";
 import {
@@ -150,6 +150,51 @@ describe("remixing a piece", () => {
     const rows = await sql<{ count: number }>`select count(*)::int as count from design_lineage`;
     expect(Number(rows[0]?.count)).toBe(0);
     expect(await listDesigns("bo")).toEqual([]);
+  });
+
+  it("writes nothing when the copy cannot be saved, and says so plainly", async () => {
+    const source = await seedDesign("ada", { published: true });
+    // The same id twice: the second copy collides in the database.
+    const spy = vi
+      .spyOn(crypto, "randomUUID")
+      .mockReturnValue("11111111-2222-4333-8444-555555555555");
+    try {
+      await remixDesign("bo", source.slug);
+      await expect(remixDesign("cy", source.slug)).rejects.toThrow(
+        "The remix did not save. Try again.",
+      );
+    } finally {
+      spy.mockRestore();
+    }
+    const sql = await getSql();
+    const rows = await sql<{ count: number }>`select count(*)::int as count from design_lineage`;
+    expect(Number(rows[0]?.count)).toBe(1);
+    expect(await listDesigns("bo")).toHaveLength(1);
+    expect(await listDesigns("cy")).toEqual([]);
+  });
+
+  it("copies artwork layers as they are", async () => {
+    const source = await seedDesign("ada", { published: true });
+    const sql = await getSql();
+    const layers = JSON.stringify([
+      {
+        id: "art",
+        type: "image",
+        src: `data:image/png;base64,${"A".repeat(4000)}`,
+        x: 0.5,
+        y: 0.5,
+        scale: 1,
+        rotation: 12,
+      },
+    ]);
+    await sql`update designs set layers_json = ${layers} where id = ${source.id}`;
+
+    const { designId } = await remixDesign("bo", source.slug);
+    const rows = await sql<{ layers_json: string }>`
+      select layers_json from designs where id = ${designId}
+    `;
+    expect(rows[0]?.layers_json).toBe(layers);
+    expect((await getDesign("bo", designId)).layers).toEqual(JSON.parse(layers));
   });
 
   it("stops one person after too many copies in an hour", async () => {

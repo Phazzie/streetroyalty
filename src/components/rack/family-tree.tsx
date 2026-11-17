@@ -54,6 +54,7 @@ const CSS = `
   background: var(--color-bg); display: block; overflow: hidden;
 }
 .sr-ft-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sr-ft-blank { display: grid; place-items: center; color: var(--color-subtle); }
 .sr-ft-thumb[data-ghost="true"] {
   border-style: dashed; border-color: var(--color-subtle);
   background: repeating-linear-gradient(135deg, transparent 0 7px, var(--color-line) 7px 9px);
@@ -160,8 +161,16 @@ function step(index: number): CSSProperties {
 }
 
 function Thumb({ stop }: { stop: Stop }) {
-  if (!stop.onRack || !stop.mockupUrl) {
-    return <span className="sr-ft-thumb" data-ghost={!stop.onRack} aria-hidden="true" />;
+  if (!stop.onRack) {
+    return <span className="sr-ft-thumb" data-ghost="true" aria-hidden="true" />;
+  }
+  if (!stop.mockupUrl) {
+    // On the rack, but its picture is too heavy to send with a whole family. The crown stands in.
+    return (
+      <span className="sr-ft-thumb sr-ft-blank" aria-hidden="true">
+        <Crown className="h-3 w-auto" />
+      </span>
+    );
   }
   return (
     <span className="sr-ft-thumb" aria-hidden="true">
