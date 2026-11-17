@@ -286,5 +286,28 @@ export async function runDevSeed(): Promise<{ seeded: boolean; makers: number; p
     }
   }
 
+  // A few battles and street scans, so the throne and the scan counter have numbers.
+  const today = new Date().toISOString().slice(0, 10);
+  for (const [index, piece] of ids.entries()) {
+    const rival = ids[(index + 3) % ids.length];
+    if (!rival || rival.maker === piece.maker) continue;
+    const pairKey = [piece.id, rival.id].sort().join(":");
+    for (const voter of crowners) {
+      if (voter === piece.maker || voter === rival.maker) continue;
+      const pieceWins = (index + voter.length) % 3 !== 0;
+      await sql`
+        insert into battle_votes (id, voter_id, pair_key, winner_id, loser_id)
+        values (${crypto.randomUUID()}, ${voter}, ${pairKey}, ${pieceWins ? piece.id : rival.id}, ${pieceWins ? rival.id : piece.id})
+        on conflict do nothing
+      `;
+    }
+    if (index % 2 === 0) {
+      await sql`
+        insert into tag_scans (design_id, day, scans) values (${piece.id}, ${today}, ${index + 2})
+        on conflict do nothing
+      `;
+    }
+  }
+
   return { seeded: true, makers: MAKERS.length, pieces: ids.length };
 }

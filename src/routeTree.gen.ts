@@ -16,6 +16,7 @@ import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as ClashRouteImport } from './routes/clash'
 import { Route as EpisodesRouteImport } from './routes/episodes'
 import { Route as GalleryRouteImport } from './routes/gallery'
+import { Route as GoLiveRouteImport } from './routes/go-live'
 import { Route as LabRouteImport } from './routes/lab'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MadeRouteImport } from './routes/made'
@@ -24,6 +25,7 @@ import { Route as MeRouteImport } from './routes/me'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as PatternsRouteImport } from './routes/patterns'
 import { Route as RackRouteImport } from './routes/rack'
+import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as SayRouteImport } from './routes/say'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as StudioRouteImport } from './routes/studio'
@@ -76,6 +78,11 @@ const GalleryRoute = GalleryRouteImport.update({
   path: '/gallery',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GoLiveRoute = GoLiveRouteImport.update({
+  id: '/go-live',
+  path: '/go-live',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LabRoute = LabRouteImport.update({
   id: '/lab',
   path: '/lab',
@@ -114,6 +121,11 @@ const PatternsRoute = PatternsRouteImport.update({
 const RackRoute = RackRouteImport.update({
   id: '/rack',
   path: '/rack',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SayRoute = SayRouteImport.update({
@@ -205,6 +217,7 @@ export interface FileRoutesByFullPath {
   '/clash': typeof ClashRoute
   '/episodes': typeof EpisodesRouteWithChildren
   '/gallery': typeof GalleryRoute
+  '/go-live': typeof GoLiveRoute
   '/lab': typeof LabRoute
   '/login': typeof LoginRoute
   '/made': typeof MadeRoute
@@ -213,6 +226,7 @@ export interface FileRoutesByFullPath {
   '/orders': typeof OrdersRoute
   '/patterns': typeof PatternsRoute
   '/rack': typeof RackRouteWithChildren
+  '/reports': typeof ReportsRoute
   '/say': typeof SayRoute
   '/shop': typeof ShopRouteWithChildren
   '/studio': typeof StudioRoute
@@ -237,6 +251,7 @@ export interface FileRoutesByTo {
   '/checkout': typeof CheckoutRoute
   '/clash': typeof ClashRoute
   '/gallery': typeof GalleryRoute
+  '/go-live': typeof GoLiveRoute
   '/lab': typeof LabRoute
   '/login': typeof LoginRoute
   '/made': typeof MadeRoute
@@ -244,6 +259,7 @@ export interface FileRoutesByTo {
   '/me': typeof MeRoute
   '/orders': typeof OrdersRoute
   '/patterns': typeof PatternsRoute
+  '/reports': typeof ReportsRoute
   '/say': typeof SayRoute
   '/studio': typeof StudioRoute
   '/episodes/$slug': typeof EpisodesSlugRoute
@@ -269,6 +285,7 @@ export interface FileRoutesById {
   '/clash': typeof ClashRoute
   '/episodes': typeof EpisodesRouteWithChildren
   '/gallery': typeof GalleryRoute
+  '/go-live': typeof GoLiveRoute
   '/lab': typeof LabRoute
   '/login': typeof LoginRoute
   '/made': typeof MadeRoute
@@ -277,6 +294,7 @@ export interface FileRoutesById {
   '/orders': typeof OrdersRoute
   '/patterns': typeof PatternsRoute
   '/rack': typeof RackRouteWithChildren
+  '/reports': typeof ReportsRoute
   '/say': typeof SayRoute
   '/shop': typeof ShopRouteWithChildren
   '/studio': typeof StudioRoute
@@ -304,6 +322,7 @@ export interface FileRouteTypes {
     | '/clash'
     | '/episodes'
     | '/gallery'
+    | '/go-live'
     | '/lab'
     | '/login'
     | '/made'
@@ -312,6 +331,7 @@ export interface FileRouteTypes {
     | '/orders'
     | '/patterns'
     | '/rack'
+    | '/reports'
     | '/say'
     | '/shop'
     | '/studio'
@@ -336,6 +356,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/clash'
     | '/gallery'
+    | '/go-live'
     | '/lab'
     | '/login'
     | '/made'
@@ -343,6 +364,7 @@ export interface FileRouteTypes {
     | '/me'
     | '/orders'
     | '/patterns'
+    | '/reports'
     | '/say'
     | '/studio'
     | '/episodes/$slug'
@@ -367,6 +389,7 @@ export interface FileRouteTypes {
     | '/clash'
     | '/episodes'
     | '/gallery'
+    | '/go-live'
     | '/lab'
     | '/login'
     | '/made'
@@ -375,6 +398,7 @@ export interface FileRouteTypes {
     | '/orders'
     | '/patterns'
     | '/rack'
+    | '/reports'
     | '/say'
     | '/shop'
     | '/studio'
@@ -401,6 +425,7 @@ export interface RootRouteChildren {
   ClashRoute: typeof ClashRoute
   EpisodesRoute: typeof EpisodesRouteWithChildren
   GalleryRoute: typeof GalleryRoute
+  GoLiveRoute: typeof GoLiveRoute
   LabRoute: typeof LabRoute
   LoginRoute: typeof LoginRoute
   MadeRoute: typeof MadeRoute
@@ -409,6 +434,7 @@ export interface RootRouteChildren {
   OrdersRoute: typeof OrdersRoute
   PatternsRoute: typeof PatternsRoute
   RackRoute: typeof RackRouteWithChildren
+  ReportsRoute: typeof ReportsRoute
   SayRoute: typeof SayRoute
   ShopRoute: typeof ShopRouteWithChildren
   StudioRoute: typeof StudioRoute
@@ -472,6 +498,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GalleryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/go-live': {
+      id: '/go-live'
+      path: '/go-live'
+      fullPath: '/go-live'
+      preLoaderRoute: typeof GoLiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lab': {
       id: '/lab'
       path: '/lab'
@@ -526,6 +559,13 @@ declare module '@tanstack/react-router' {
       path: '/rack'
       fullPath: '/rack'
       preLoaderRoute: typeof RackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/say': {
@@ -689,6 +729,7 @@ const rootRouteChildren: RootRouteChildren = {
   ClashRoute: ClashRoute,
   EpisodesRoute: EpisodesRouteWithChildren,
   GalleryRoute: GalleryRoute,
+  GoLiveRoute: GoLiveRoute,
   LabRoute: LabRoute,
   LoginRoute: LoginRoute,
   MadeRoute: MadeRoute,
@@ -697,6 +738,7 @@ const rootRouteChildren: RootRouteChildren = {
   OrdersRoute: OrdersRoute,
   PatternsRoute: PatternsRoute,
   RackRoute: RackRouteWithChildren,
+  ReportsRoute: ReportsRoute,
   SayRoute: SayRoute,
   ShopRoute: ShopRouteWithChildren,
   StudioRoute: StudioRoute,
