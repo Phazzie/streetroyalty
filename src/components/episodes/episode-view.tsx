@@ -37,6 +37,7 @@ export function EpisodeView({
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(8);
   const [rack, setRack] = useState<DesignSummary[]>([]);
   const video = useRef<HTMLVideoElement | null>(null);
+  const stage = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
   const hasVideo = Boolean(episode.videoUrl);
   const allRefs = useMemo(() => episodePieces(episode), [episode]);
@@ -167,7 +168,7 @@ export function EpisodeView({
       ) : null}
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] lg:gap-10">
-        <div className="min-w-0">
+        <div ref={stage} className="min-w-0 scroll-mt-20">
           {hasVideo ? (
             <video
               ref={video}
@@ -291,7 +292,7 @@ export function EpisodeView({
                   type="button"
                   onClick={() => {
                     seek(item.startSec);
-                    window.scrollTo({ top: 0 });
+                    stage.current?.scrollIntoView({ block: "start" });
                   }}
                   className="ep-tc inline-flex min-h-11 items-center border-b-2 border-fg text-lg"
                   aria-label={`Jump to ${item.title}, ${formatTimecode(item.startSec)}`}
