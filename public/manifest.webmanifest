@@ -1,12 +1,12 @@
 {
-  "name": "Street Royalty Outfit Lab",
-  "short_name": "Royalty",
+  "name": "Risk Desk",
+  "short_name": "Risk Desk",
   "id": "/",
-  "start_url": "/lab",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#cbb6ee",
-  "theme_color": "#cbb6ee",
+  "background_color": "#090908",
+  "theme_color": "#090908",
   "icons": [
     {
       "src": "/pwa/icon-192.png",
