@@ -4,17 +4,17 @@ import type { ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 font-medium transition-[opacity,transform] duration-150 ease-out disabled:pointer-events-none disabled:border-line disabled:bg-line disabled:text-muted disabled:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-fg active:scale-[0.98]",
+  "inline-flex shrink-0 items-center justify-center gap-2 font-medium transition-[opacity,transform] duration-150 ease-out disabled:pointer-events-none disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg active:scale-[0.98]",
   {
     variants: {
       variant: {
-        primary: "sticker-shadow border-2 border-ink bg-accent font-extrabold text-accent-fg",
-        ghost: "border-2 border-ink bg-surface font-bold text-fg hover:bg-cream",
-        quiet: "bg-surface font-bold text-fg",
+        primary: "rounded-md bg-accent font-display text-accent-fg",
+        ghost: "rounded-md bg-surface text-fg ring-1 ring-line hover:bg-elevated",
+        quiet: "rounded-md bg-elevated text-fg",
       },
       size: {
-        md: "h-12 rounded-md px-4 text-base",
-        lg: "h-14 rounded-lg px-5 text-lg",
+        md: "h-11 px-4 text-sm",
+        lg: "h-12 px-5 text-base",
       },
     },
     defaultVariants: { variant: "primary", size: "md" },
