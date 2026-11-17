@@ -96,6 +96,15 @@ describe("htmlToParagraphs", () => {
       "Four",
     ]);
   });
+  it("reads named and numbered entities, and leaves an unknown one as written", () => {
+    assert.deepEqual(
+      htmlToParagraphs(
+        "<p>It&rsquo;s heavy &mdash; 400gsm&nbsp;fleece. Don&#8217;t&#x20;dry &amp;lt; &bogus;</p>",
+      ),
+      ["It\u2019s heavy \u2014 400gsm fleece. Don\u2019t dry &lt; &bogus;"],
+    );
+    assert.deepEqual(htmlToParagraphs("a&#0;b&#55357;c&#99999999;"), ["a b c&#99999999;"]);
+  });
   it("never returns an angle bracket from a tag", () => {
     const out = htmlToParagraphs(
       '<img src=x onerror="alert(1)"><a href="javascript:1">link</a>',

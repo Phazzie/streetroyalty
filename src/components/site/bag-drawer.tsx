@@ -17,6 +17,7 @@ export function BagDrawer() {
   const remove = useBag((state) => state.remove);
   const clear = useBag((state) => state.clear);
   const sent = useBag((state) => state.sent);
+  const notice = useBag((state) => state.notice);
   const markSent = useBag((state) => state.markSent);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -180,12 +181,12 @@ export function BagDrawer() {
                 <p className="mt-1 text-sm text-muted">
                   Shipping and tax are worked out at checkout.
                 </p>
-                {note ? (
+                {note || notice ? (
                   <p
                     role="status"
                     className="mt-3 border-2 border-ink bg-surface px-3 py-2 text-sm"
                   >
-                    {note}
+                    {note || notice}
                   </p>
                 ) : null}
                 <Button

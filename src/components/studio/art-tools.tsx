@@ -18,7 +18,7 @@ import { createSingleFlight } from "@/lib/ui/single-flight";
 
 function failText(kind: string): string {
   if (kind === "limit") return "The studio hit today's art limit. It opens again tomorrow.";
-  if (kind === "unavailable") return "Art needs the AI key. Upload a picture instead.";
+  if (kind === "unavailable") return "Art is not available right now. Upload a picture instead.";
   return "That one did not land. Try different words.";
 }
 
@@ -29,7 +29,7 @@ export function ArtMaker({
   onNote,
 }: {
   full: boolean;
-  onArt: (src: string, original: string) => void;
+  onArt: (src: string, original: string) => boolean;
   onNote: (text: string) => void;
 }) {
   const [idea, setIdea] = useState("");
@@ -54,7 +54,12 @@ export function ArtMaker({
         }
         const pixels = await loadPixels(result.image, 900);
         const cut = fitPng(knockout(pixels));
-        onArt(cut, cut);
+        if (!onArt(cut, cut)) {
+          onNote(
+            "The piece filled up to eight layers while this was drawing, so the art was not added.",
+          );
+          return;
+        }
         onNote(
           "Art is on the piece with the white cut away. Pick an ink below to make it one colour.",
         );

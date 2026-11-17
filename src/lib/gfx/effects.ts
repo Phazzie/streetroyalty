@@ -228,6 +228,12 @@ export function halftone(
   return out;
 }
 
+/** True when any pixel is see-through, so the picture must stay a PNG to keep its backdrop clear. */
+export function hasTransparency(source: Pixels): boolean {
+  for (let at = 3; at < source.data.length; at += 4) if (source.data[at] < 250) return true;
+  return false;
+}
+
 /** Share of pixels that would take ink, 0..1. */
 export function coverage(source: Pixels): number {
   let sum = 0;

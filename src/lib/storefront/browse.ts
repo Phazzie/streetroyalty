@@ -13,7 +13,12 @@ export function filterProducts(
     .filter((word) => word.length > 1)
     .slice(0, 6);
   return products.filter((product) => {
-    if (filter.collection !== "all" && product.collection !== filter.collection) return false;
+    if (
+      filter.collection !== "all" &&
+      product.collection !== filter.collection &&
+      !product.collections?.includes(filter.collection)
+    )
+      return false;
     if (words.length === 0) return true;
     const text = [
       product.name,

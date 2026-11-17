@@ -48,6 +48,12 @@ describe("the preview drop", () => {
 });
 
 describe("browsing", () => {
+  it("shows a piece under every collection it is in", () => {
+    const both = { ...products[0], collection: "new", collections: ["new", "hoodies"] };
+    for (const collection of ["new", "hoodies"])
+      assert.equal(filterProducts([both], { collection, query: "" }).length, 1, collection);
+    assert.equal(filterProducts([both], { collection: "tees", query: "" }).length, 0);
+  });
   it("filters by collection and by every search word", () => {
     assert.deepEqual(
       filterProducts(products, { collection: "sets", query: "" }).map(

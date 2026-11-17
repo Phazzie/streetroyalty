@@ -81,6 +81,8 @@ type BagState = {
   hydrated: boolean;
   /** True after these lines were handed to the hosted checkout. The bag cannot know if the order went through. */
   sent: boolean;
+  /** Why the last add did not go in. Empty when it did. */
+  notice: string;
   markSent: () => void;
   hydrate: () => void;
   add: (line: BagLine) => void;
@@ -111,6 +113,7 @@ export const useBag = create<BagState>((set, get) => ({
   open: false,
   hydrated: false,
   sent: false,
+  notice: "",
   markSent: () => {
     try {
       localStorage.setItem(SENT_KEY, "1");
@@ -132,25 +135,34 @@ export const useBag = create<BagState>((set, get) => ({
     set({ lines, sent: sent && lines.length > 0, hydrated: true });
   },
   add: (line) => {
-    const lines = addLine(get().lines, line);
+    const before = get().lines;
+    const lines = addLine(before, line);
+    // A full bag hands back the same list. Say so, or the drawer opens as if the piece went in.
+    if (lines === before) {
+      set({ open: true, notice: "Your bag is full. Take a piece out to add this one." });
+      return;
+    }
     save(lines);
     clearSent();
-    set({ lines, open: true, sent: false });
+    set({ lines, open: true, sent: false, notice: "" });
   },
+  // A bag that has changed is no longer the one that went to checkout.
   setQuantity: (variantId, quantity) => {
     const lines = setLineQuantity(get().lines, variantId, quantity);
     save(lines);
-    set({ lines });
+    clearSent();
+    set({ lines, sent: false, notice: "" });
   },
   remove: (variantId) => {
     const lines = get().lines.filter((item) => item.variantId !== variantId);
     save(lines);
-    set({ lines });
+    clearSent();
+    set({ lines, sent: false, notice: "" });
   },
   clear: () => {
     save([]);
     clearSent();
-    set({ lines: [], sent: false });
+    set({ lines: [], sent: false, notice: "" });
   },
-  setOpen: (open) => set({ open }),
+  setOpen: (open) => set(open ? { open } : { open, notice: "" }),
 }));

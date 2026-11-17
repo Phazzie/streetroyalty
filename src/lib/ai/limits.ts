@@ -44,7 +44,8 @@ export function readLimits(env: LimitEnv): AiLimits {
   };
 }
 
-export type SpendVerdict = { ok: true } | { ok: false; reason: "visitor" | "global" };
+/** "store" means the count could not be kept anywhere shared, so nothing was spent. */
+export type SpendVerdict = { ok: true } | { ok: false; reason: "visitor" | "global" | "store" };
 
 /** Counts are the totals after this request was added. */
 export function judgeSpend(

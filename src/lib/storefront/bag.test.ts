@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { addLine, bagCount, bagSubtotalCents, parseStoredBag, setLineQuantity } from "./bag.ts";
+import {
+  addLine,
+  bagCount,
+  bagSubtotalCents,
+  parseStoredBag,
+  setLineQuantity,
+  useBag,
+} from "./bag.ts";
 import { MAX_BAG_LINES, MAX_LINE_QUANTITY, type BagLine } from "./types.ts";
 
 function line(variantId: string, quantity = 1, priceCents = 4200): BagLine {
@@ -39,6 +46,29 @@ describe("bag", () => {
       ["b"],
     );
     assert.equal(setLineQuantity(lines, "a", 99)[0].quantity, MAX_LINE_QUANTITY);
+  });
+  it("says so when a full bag turns a piece away", () => {
+    useBag.getState().clear();
+    for (let i = 0; i < MAX_BAG_LINES; i += 1) useBag.getState().add(line(`v${i}`));
+    assert.equal(useBag.getState().notice, "");
+    useBag.getState().add(line("one-too-many"));
+    assert.equal(useBag.getState().lines.length, MAX_BAG_LINES);
+    assert.ok(useBag.getState().notice.length > 0);
+    useBag.getState().remove("v0");
+    assert.equal(useBag.getState().notice, "");
+    useBag.getState().clear();
+  });
+  it("forgets the trip to checkout once the bag is changed", () => {
+    useBag.getState().clear();
+    useBag.getState().add(line("a", 2));
+    useBag.getState().add(line("b"));
+    useBag.getState().markSent();
+    useBag.getState().setQuantity("a", 3);
+    assert.equal(useBag.getState().sent, false);
+    useBag.getState().markSent();
+    useBag.getState().remove("b");
+    assert.equal(useBag.getState().sent, false);
+    useBag.getState().clear();
   });
   it("counts pieces and totals cents", () => {
     const lines = [line("a", 2, 4200), line("b", 1, 11800)];

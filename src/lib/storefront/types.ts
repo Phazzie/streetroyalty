@@ -44,6 +44,8 @@ export type StoreProduct = {
   sizes: string[];
   variants: StoreVariant[];
   collection?: string;
+  /** Every collection the piece is in, when it is in more than the one above. */
+  collections?: string[];
   badge?: string;
   /** Slugs that finish the outfit. */
   pairsWith: string[];
