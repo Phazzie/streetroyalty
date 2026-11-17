@@ -233,10 +233,24 @@ export function searchFromPlan(plan: Plan, blankId?: string): PlanSearch {
   return out;
 }
 
-/* Typing money. People type "45", "45.5", "$45.00" or "45,50". */
+/* Typing money. People type "45", "45.5", "$45.00", "45,50" or "1,000". */
+
+/**
+ * One dot for the cents and nothing else. A comma is the cents mark only when one or two
+ * digits follow it and there is no dot; otherwise it is a thousands mark and is dropped.
+ */
+function tidyMoney(text: string): string {
+  const kept = text.replace(/[^0-9.,]/g, "");
+  const lastDot = kept.lastIndexOf(".");
+  const lastComma = kept.lastIndexOf(",");
+  if (lastComma === -1) return kept;
+  if (lastDot > lastComma) return kept.replace(/,/g, "");
+  if (lastDot !== -1) return kept.replace(/\./g, "").replace(",", ".");
+  return /^\d*,\d{1,2}$/.test(kept) ? kept.replace(",", ".") : kept.replace(/,/g, "");
+}
 
 export function dollarsToCents(text: string): number {
-  const tidy = text.replace(/[^0-9.,]/g, "").replace(",", ".");
+  const tidy = tidyMoney(text);
   const match = /^(\d*)(?:\.(\d{0,2})\d*)?/.exec(tidy);
   if (!match) return 0;
   const dollars = Number(match[1] || "0");

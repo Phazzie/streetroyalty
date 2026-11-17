@@ -62,7 +62,7 @@ export const MAKERS: Maker[] = [
       dtg: {
         status: "says-yes",
         sourceUrl: "https://www.printful.com/dtg-printing",
-        saw: "A digital printer applies water-based inks to fabric.",
+        saw: "Direct to garment is ink sprayed onto garments.",
       },
       dtf: {
         status: "says-yes",
@@ -97,7 +97,7 @@ export const MAKERS: Maker[] = [
     whoMakesIt: {
       status: "says-yes",
       sourceUrl: "https://printify.com/all-over-print/",
-      saw: "Orders go to a network of separate print providers.",
+      saw: "Its print providers are spread across the US, Canada, Europe, Australia and Asia.",
     },
     noMinimum: {
       status: "says-yes",
@@ -148,7 +148,7 @@ export const MAKERS: Maker[] = [
     noMinimum: {
       status: "says-yes",
       sourceUrl: "https://www.contrado.com/",
-      saw: "No minimums. Order one or twenty.",
+      saw: "No minimums.",
     },
     methods: {
       dtg: NOT_CHECKED,
@@ -157,14 +157,13 @@ export const MAKERS: Maker[] = [
       puff: NOT_CHECKED,
       "all-over": {
         status: "says-yes",
-        sourceUrl: "https://www.contrado.com/",
-        saw: "Sublimation printing is listed among its print methods.",
+        sourceUrl: "https://www.contrado.com/all-over-custom-t-shirt-printing",
+        saw: "Its all-over-print tee is printed edge to edge, then cut and sewn by hand.",
       },
       "cut-and-sew": {
         status: "says-yes",
-        sourceUrl: "https://www.contrado.com/",
-        saw: "Cut and sew manufacturing is named in the site menu.",
-        note: "We read the name only, not the details.",
+        sourceUrl: "https://www.contrado.com/cut-and-sew-manufacturers",
+        saw: "It calls itself a cut and sew manufacturer, with no minimum order.",
       },
       screen: NOT_CHECKED,
     },

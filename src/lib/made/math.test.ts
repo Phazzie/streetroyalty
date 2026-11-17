@@ -194,6 +194,17 @@ describe("typing money", () => {
     expect(dollarsToCents("-20")).toBe(2000);
   });
 
+  it("reads a comma as thousands unless it is plainly the cents", () => {
+    expect(dollarsToCents("1,000")).toBe(100_000);
+    expect(dollarsToCents("$1,250.50")).toBe(125_050);
+    expect(dollarsToCents("12,000,000")).toBe(100_000_000);
+    expect(dollarsToCents("1.250,50")).toBe(125_050);
+    expect(dollarsToCents("45,5")).toBe(4550);
+    expect(dollarsToCents(",5")).toBe(50);
+    expect(dollarsToCents("abc")).toBe(0);
+    expect(dollarsToCents("1e9")).toBe(1900);
+  });
+
   it("reads a percent", () => {
     expect(percentToBps("2.9")).toBe(290);
     expect(percentToBps("10%")).toBe(1000);

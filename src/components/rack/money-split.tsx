@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { SeamBar } from "@/components/made/seam-bar";
 import { bpsToPercent, CARD_FEE_BPS, CARD_FEE_FIXED_CENTS, splitRetail } from "@/lib/made/math";
@@ -18,6 +18,7 @@ export function MoneySplit({
   retailCents: number;
   productType: string;
 }) {
+  const titleId = useId();
   const [config, setConfig] = useState<Config | null>(null);
 
   useEffect(() => {
@@ -40,12 +41,9 @@ export function MoneySplit({
   const garment = productType.trim() ? productType.trim().toLowerCase() : "garment";
 
   return (
-    <section
-      aria-labelledby="money-split-title"
-      className="border-2 border-ink bg-surface p-4 text-fg"
-    >
+    <section aria-labelledby={titleId} className="border-2 border-ink bg-surface p-4 text-fg">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="money-split-title" className="font-display text-sm tracking-wider uppercase">
+        <h2 id={titleId} className="font-display text-sm tracking-wider uppercase">
           Where the money goes
         </h2>
         <span className="border-2 border-ink px-2 py-0.5 font-display text-[0.68rem] tracking-widest uppercase">

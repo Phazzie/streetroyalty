@@ -183,7 +183,7 @@ export function MathPage({
   const plan = planFromSearch(search);
   const result = runPlan(plan);
   const catalog = useCatalog();
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"" | "yes" | "no">("");
 
   const set = (patch: Partial<Plan>, blankId: string | undefined = search.b) =>
     onChange(searchFromPlan({ ...plan, ...patch }, blankId));
@@ -240,8 +240,9 @@ export function MathPage({
                     The catalog did not load. Type the cost below.
                   </span>
                 ) : (
-                  catalog.presets.map((preset) => {
+                  catalog.presets.map((preset, _index, all) => {
                     const on = search.b === preset.id && plan.makeCents === preset.wholesaleCents;
+                    const shared = all.filter((other) => other.type === preset.type).length > 1;
                     return (
                       <button
                         key={preset.id}
@@ -257,7 +258,9 @@ export function MathPage({
                           on && "chip-on",
                         )}
                       >
-                        <span className="text-[0.78rem] uppercase">{preset.type}</span>
+                        <span className="max-w-[14rem] truncate text-[0.78rem] uppercase">
+                          {shared ? preset.name : preset.type}
+                        </span>
                         <span className="font-sans text-xs tracking-normal">
                           {preset.wholesaleCents != null
                             ? `from ${formatMoney(preset.wholesaleCents)}`
@@ -271,8 +274,8 @@ export function MathPage({
               {typeof catalog === "object" ? (
                 <p className="mt-2 text-xs text-subtle">
                   {catalog.mode === "sandbox"
-                    ? "The studio is in sandbox, so these costs are stand-ins and not real quotes. Smallest size shown."
-                    : "Costs come from the printer's catalog today. Smallest size shown, bigger sizes cost more."}
+                    ? "The studio is in sandbox, a practice mode, so these costs are stand-ins and not real quotes. The cheapest size is shown."
+                    : "Costs come from the printer's catalog today. The cheapest size is shown. Bigger sizes can cost more."}
                 </p>
               ) : null}
             </div>
@@ -321,6 +324,10 @@ export function MathPage({
                 onCommit={(text) => set({ feeFixedCents: dollarsToCents(text) })}
               />
             </div>
+            <p className="text-xs text-subtle">
+              What the card company takes out of every sale. 2.9% plus 30 cents is a common rate.
+              Yours may differ, so check and change it.
+            </p>
             <Field
               label="House cut"
               suffix="% of the price"
@@ -344,12 +351,14 @@ export function MathPage({
             <div className="grid grid-cols-2 gap-3">
               <Field
                 label="Ad budget"
+                hint="What you plan to spend on ads."
                 prefix="$"
                 value={money(plan.adCents)}
                 onCommit={(text) => set({ adCents: dollarsToCents(text) })}
               />
               <Field
                 label="Monthly target"
+                hint="What you want to keep a month."
                 prefix="$"
                 value={money(plan.targetCents)}
                 onCommit={(text) => set({ targetCents: dollarsToCents(text) })}
@@ -400,7 +409,12 @@ export function MathPage({
                   At this price you lose {formatMoney(Math.abs(result.keepCents))} on every piece.
                 </p>
               ) : null}
-              {result.breakEvenPriceCents != null ? (
+              {result.breakEvenPriceCents === 0 ? (
+                <p className="mt-2 text-sm text-muted">
+                  The shipping you charge already covers your costs, so any price leaves you
+                  something.
+                </p>
+              ) : result.breakEvenPriceCents != null ? (
                 <p className="mt-2 text-sm text-muted">
                   Charge less than {formatMoney(result.breakEvenPriceCents)} and you lose money on
                   each one.
@@ -480,16 +494,24 @@ export function MathPage({
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <Button
               onClick={() => {
+                if (!navigator.clipboard) {
+                  setCopied("no");
+                  return;
+                }
                 void navigator.clipboard
-                  ?.writeText(window.location.href)
-                  .then(() => setCopied(true))
-                  .catch(() => setCopied(false));
+                  .writeText(window.location.href)
+                  .then(() => setCopied("yes"))
+                  .catch(() => setCopied("no"));
               }}
             >
               Copy a link to this plan
             </Button>
             <span role="status" className="text-sm text-muted">
-              {copied ? "Copied. Your numbers are in the link." : ""}
+              {copied === "yes"
+                ? "Copied. Your numbers are in the link."
+                : copied === "no"
+                  ? "Could not copy. Copy the address from the bar at the top, your numbers are in it."
+                  : ""}
             </span>
           </div>
           <ul className="mt-5 grid gap-1 text-sm text-muted">
