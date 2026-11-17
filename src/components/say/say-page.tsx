@@ -523,7 +523,7 @@ export function SayPage() {
                 className="say-mockup block aspect-[11/12] w-full object-cover"
               />
             ) : (
-              <div className="pending-pulse flex aspect-[11/12] w-full items-center justify-center text-muted">
+              <div className="flex aspect-[11/12] w-full items-center justify-center text-muted">
                 {catalog && catalog.length === 0 ? "No blanks to show." : "Drawing the preview"}
               </div>
             )}

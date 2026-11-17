@@ -85,10 +85,8 @@ describe("the go-live panel", () => {
     );
     expect(container.querySelector("#sw-database details")?.hasAttribute("open")).toBe(true);
     // A setting that is in gets no copy button. One that is missing does.
-    expect(screen.queryByRole("button", { name: "Copy the name STRIPE_SECRET_KEY" })).toBeNull();
-    expect(
-      screen.getByRole("button", { name: "Copy the name STRIPE_WEBHOOK_SECRET" }),
-    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Copy name STRIPE_SECRET_KEY" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Copy name STRIPE_WEBHOOK_SECRET" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Printing" }).getAttribute("href")).toBe(
       "#sw-printing",
     );
@@ -135,7 +133,7 @@ describe("the go-live panel", () => {
       />,
     );
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Copy the name DATABASE_URL" }));
+      fireEvent.click(screen.getByRole("button", { name: "Copy name DATABASE_URL" }));
       await Promise.resolve();
     });
     expect(writeText).toHaveBeenCalledWith("DATABASE_URL");

@@ -32,7 +32,7 @@ function BattlesPage() {
   }, [loadThrone]);
 
   return (
-    <StudioShell current="/rack">
+    <StudioShell current="/battles">
       <p className="tag">Battles</p>
       <h1 className="mt-3 font-display text-4xl leading-none">Which one would you wear</h1>
       <p className="mt-2 mb-5 max-w-xl text-muted">

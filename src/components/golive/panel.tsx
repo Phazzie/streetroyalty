@@ -354,7 +354,7 @@ function CopyName({ name, onCopied }: { name: string; onCopied: (text: string) =
       type="button"
       className="gl-copy"
       data-done={state === "done"}
-      aria-label={`Copy the name ${name}`}
+      aria-label={`Copy name ${name}`}
       onClick={() => {
         void navigator.clipboard
           .writeText(name)

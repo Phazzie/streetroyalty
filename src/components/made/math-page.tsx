@@ -195,7 +195,7 @@ export function MathPage({
     result.piecesForTarget != null ? Math.ceil((result.piecesForTarget * 12) / 52) : null;
 
   return (
-    <StudioShell current="/rack">
+    <StudioShell current="/math">
       <style>{CSS}</style>
       <p className="tag">For makers</p>
       <h1 className="mt-3 font-display text-4xl leading-none">Do the math</h1>

@@ -7,7 +7,7 @@ export const Route = createFileRoute("/reports")({ component: ReportsPage });
 /** The back room. The queue itself checks, on the server, that the viewer runs the shop. */
 function ReportsPage() {
   return (
-    <StudioShell current="/rack">
+    <StudioShell current="/reports">
       <ReportsQueue />
     </StudioShell>
   );

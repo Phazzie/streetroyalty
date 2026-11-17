@@ -109,7 +109,13 @@ export function ReportsQueue() {
   }
 
   if (phase.name === "closed") {
-    return <p>{REPORT_MESSAGES.staffOnly}</p>;
+    return (
+      <div>
+        <p className="tag">Reports</p>
+        <h1 className="mt-3 font-display text-4xl leading-none">The report queue</h1>
+        <p className="mt-3 max-w-xl text-muted">{REPORT_MESSAGES.staffOnly}</p>
+      </div>
+    );
   }
 
   return (
