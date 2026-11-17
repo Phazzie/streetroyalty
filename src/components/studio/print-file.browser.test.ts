@@ -2,7 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import { renderPrintFile } from "@/components/studio/print-file";
 import { createSandboxProvider } from "@/lib/pod/sandbox.ts";
 import type { DesignLayer, PrintArea } from "@/lib/pod/types.ts";
-import { imageDimensions, parsePrintFile, printQualityWarning } from "@/lib/studio/validate.ts";
+import {
+  MAX_PRINT,
+  imageDimensions,
+  parsePrintFile,
+  printQualityWarning,
+} from "@/lib/studio/validate.ts";
 
 /**
  * The print file is the one thing a factory actually receives, and it is drawn
@@ -97,6 +102,23 @@ function squareArt(color: string): string {
   return canvas.toDataURL("image/png");
 }
 
+/** Artwork that will not compress: the worst case for file size. */
+function noiseArt(edge: number): string {
+  const canvas = document.createElement("canvas");
+  canvas.width = edge;
+  canvas.height = edge;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("no canvas");
+  const data = ctx.createImageData(edge, edge);
+  let seed = 7;
+  for (let index = 0; index < data.data.length; index += 1) {
+    seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
+    data.data[index] = index % 4 === 3 ? 255 : (seed >> 16) & 0xff;
+  }
+  ctx.putImageData(data, 0, 0);
+  return canvas.toDataURL("image/png");
+}
+
 const slots = await everyPrintArea();
 const TEE_FRONT: PrintArea = { placement: "front", widthIn: 12, heightIn: 16, dpi: 150 };
 
@@ -118,6 +140,27 @@ describe("the print file the studio exports", () => {
   it("is accepted by the server as an upload", async () => {
     const file = await renderPrintFile(TEE_FRONT, [WORD]);
     expect(parsePrintFile(file)?.mime).toBe("image/png");
+  });
+
+  it("exports a tee front at the printer's full resolution", async () => {
+    expect(sizeOf(await renderPrintFile(TEE_FRONT, [WORD]))).toEqual({ width: 1800, height: 2400 });
+  });
+
+  it("steps down in size, keeping its shape, when the artwork is too heavy to upload at full size", async () => {
+    const heavy: DesignLayer = {
+      id: "noise",
+      type: "image",
+      src: noiseArt(1000),
+      x: 0.5,
+      y: 0.5,
+      scale: 1,
+      rotation: 0,
+    };
+    const file = await renderPrintFile(TEE_FRONT, [heavy]);
+    const size = sizeOf(file);
+    expect(file.length).toBeLessThanOrEqual(MAX_PRINT);
+    expect(size.width).toBeLessThan(1800);
+    expect(size.width / size.height).toBeCloseTo(0.75, 2);
   });
 
   it("is transparent wherever nothing was placed", async () => {
