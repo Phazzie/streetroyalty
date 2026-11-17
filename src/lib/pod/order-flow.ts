@@ -388,7 +388,9 @@ export async function processStripeWebhook(args: {
     await args.store.recordEvent(event.id, "stripe", event.type);
     return { status: 200, body: { ignored: true } };
   }
-  if (args.paymentsMode === "live" && args.podMode !== "live") {
+  // Only once money was actually taken. A completed session whose payment has not
+  // cleared goes down the normal path, which answers "unpaid" and changes nothing.
+  if (event.paid && args.paymentsMode === "live" && args.podMode !== "live") {
     await args.store.markNeedsReview(
       event.orderId,
       "Live payment arrived while printing is sandboxed. No garment was sent. Refund the charge in Stripe.",

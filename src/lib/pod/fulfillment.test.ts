@@ -318,6 +318,35 @@ describe("the Stripe webhook", () => {
     expect(printer.asked).toEqual([]);
   });
 
+  it.each([
+    ["an order awaiting payment", "awaiting_payment" as const],
+    ["a canceled order", "canceled" as const],
+  ])(
+    "does not mark %s paid over a session whose payment has not cleared, even with printing in sandbox",
+    async (_what, status) => {
+      const { store, printer, now } = setup(status);
+      const signed = stripeEvent({
+        id: "evt_1",
+        orderId: "ord-1",
+        amountCents: TOTAL,
+        paymentStatus: "unpaid",
+      });
+      const answer = await processStripeWebhook({
+        rawBody: signed.raw,
+        signature: signed.signature,
+        secret: STRIPE_WEBHOOK_SECRET,
+        store,
+        provider: printer,
+        podMode: "sandbox",
+        paymentsMode: "live",
+      });
+      expect(answer.status).toBe(200);
+      expect(answer.body).toMatchObject({ ok: false });
+      expect(now()).toMatchObject({ status, paymentStatus: "unpaid" });
+      expect(printer.asked).toEqual([]);
+    },
+  );
+
   it("empties the cart only when the order went to print", async () => {
     const { store, stripe } = setup();
     await stripe({ id: "evt_1", amountCents: TOTAL - 1 });

@@ -16,6 +16,8 @@ function loadImage(src: string): Promise<HTMLImageElement> {
  * real thing. The rest are for artwork so heavy that the full file would be
  * over the upload limit: 0.75 is the lowest the server accepts without a
  * sharpness warning, and below that the buyer is told the print may be soft.
+ * If even the smallest does not fit, the export stops with a message that says
+ * what to change.
  */
 const SIZE_STEPS = [1, 0.875, 0.75, 0.6, 0.45];
 
@@ -36,9 +38,12 @@ export async function renderPrintFile(area: PrintArea, layers: DesignLayer[]): P
   let file = "";
   for (const step of SIZE_STEPS) {
     file = draw(Math.round(fullWidth * step), Math.round(fullHeight * step), layers, images);
-    if (file.length <= MAX_PRINT) break;
+    if (file.length <= MAX_PRINT) return file;
   }
-  return file;
+  // Smaller than this would print soft, and the server would refuse the file anyway.
+  throw new Error(
+    "That artwork is too heavy to print at a usable size. Use a smaller or simpler picture, or scale it down on the piece.",
+  );
 }
 
 function draw(

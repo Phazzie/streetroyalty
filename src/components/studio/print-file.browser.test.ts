@@ -163,6 +163,21 @@ describe("the print file the studio exports", () => {
     expect(size.width / size.height).toBeCloseTo(0.75, 2);
   });
 
+  it("says what to change when the artwork is too heavy to fit at any usable size", async () => {
+    const wall: DesignLayer = {
+      id: "noise",
+      type: "image",
+      src: noiseArt(1000),
+      x: 0.5,
+      y: 0.5,
+      scale: 1.9,
+      rotation: 0,
+    };
+    await expect(renderPrintFile(TEE_FRONT, [wall])).rejects.toThrow(
+      /too heavy to print.*smaller or simpler/,
+    );
+  });
+
   it("is transparent wherever nothing was placed", async () => {
     const data = await pixels(await renderPrintFile(TEE_FRONT, [WORD]));
     const alphaAt = (x: number, y: number) => data.data[(y * data.width + x) * 4 + 3];
