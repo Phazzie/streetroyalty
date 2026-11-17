@@ -182,6 +182,11 @@ export function ClashMachine({ colors, onChange }: Props) {
       timers.current.all = window.setTimeout(() => {
         setRolling(false);
         setLandings((count) => count + 1);
+        // A phone gives a small knock when the last reel stops, and a harder one for a riot.
+        if (wasPull && typeof navigator.vibrate === "function") {
+          const landed = clashScore([colors.body, colors.panel, colors.piping]).score;
+          navigator.vibrate(landed >= 80 ? [28, 40, 28, 40, 60] : landed >= 60 ? [24, 40, 24] : 14);
+        }
       }, longest + 40);
     } else {
       setRolling(false);
@@ -250,6 +255,8 @@ export function ClashMachine({ colors, onChange }: Props) {
       setNote("Copy the address from the bar at the top. The colours are in it.");
     }
   }
+
+  const pullLabel = rolling ? "Rolling" : allLocked ? "All three are locked" : "Pull";
 
   // The score label prints out of register in the three colours, further off the louder it gets.
   const offset = (result.score / 100) * 5;
@@ -331,11 +338,11 @@ export function ClashMachine({ colors, onChange }: Props) {
 
           <Button
             size="lg"
-            className="mt-4 w-full font-display tracking-wide uppercase"
+            className="mt-4 hidden w-full font-display tracking-wide uppercase lg:inline-flex"
             disabled={rolling || allLocked}
             onClick={roll}
           >
-            {rolling ? "Rolling" : allLocked ? "All three are locked" : "Pull"}
+            {pullLabel}
           </Button>
 
           <div className="mt-3 grid grid-cols-2 gap-2">
@@ -397,6 +404,23 @@ export function ClashMachine({ colors, onChange }: Props) {
           </p>
         </section>
       </div>
+
+      {/* On a phone the lever rides the bottom of the screen, so the first tap is always in reach. */}
+      <div className="cm-lever sticky bottom-0 z-10 -mx-4 border-t-2 border-ink bg-bg px-4 pt-3 lg:hidden">
+        <Button
+          size="lg"
+          className="w-full font-display tracking-wide uppercase"
+          disabled={rolling || allLocked}
+          onClick={roll}
+        >
+          {pullLabel}
+        </Button>
+      </div>
+
+      <p className="mt-4 max-w-xl border-2 border-ink bg-surface px-3 py-2 text-sm text-muted">
+        This is a colour toy, and the sweatsuit is a drawing. The full garment designer is being
+        built, so nothing here can be ordered yet.
+      </p>
 
       <section className="mt-8" aria-labelledby="cm-kept-title">
         <h2 id="cm-kept-title" className="font-display text-xl leading-none">
@@ -622,6 +646,7 @@ function Dropper() {
 }
 
 const CSS = `
+.cm-lever { padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }
 .cm-window {
   position: relative;
   height: ${CELL * 3}px;

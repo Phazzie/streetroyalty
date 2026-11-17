@@ -20,11 +20,10 @@ function ClashPage() {
   return (
     <StudioShell current="/clash">
       <p className="tag">Colour toy</p>
-      <h1 className="mt-3 font-display text-4xl leading-none">The clash machine</h1>
+      <h1 className="mt-3 font-display text-3xl leading-none sm:text-4xl">The clash machine</h1>
       <p className="mt-2 mb-4 max-w-xl text-muted">
-        Pull for a colourway. The score says how hard it fights, and a high one is not a warning.
-        This is a toy for colour: the full garment designer is being built, so nothing here can be
-        ordered yet.
+        Pull for a colourway. The score says how hard the colours fight. A high one is not a
+        warning.
       </p>
       <ClashMachine
         colors={colors}

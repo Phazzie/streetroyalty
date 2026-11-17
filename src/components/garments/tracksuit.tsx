@@ -112,7 +112,7 @@ export function Tracksuit({ colors, view = "set", className, title }: Props) {
           <stop offset="0" stopColor="#fff" stopOpacity="0.13" />
           <stop offset="0.45" stopColor="#fff" stopOpacity="0" />
           <stop offset="0.55" stopColor="#000" stopOpacity="0" />
-          <stop offset="1" stopColor="#000" stopOpacity="0.13" />
+          <stop offset="1" stopColor="#000" stopOpacity="0.07" />
         </linearGradient>
         <linearGradient id={ids.inner} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#000" stopOpacity="0.34" />
@@ -160,7 +160,7 @@ function HoodieHalf({ c, ids, side }: { c: Resolved; ids: Ids; side: "left" | "r
       {/* The underside of the sleeve sits in shadow. */}
       <path d="M110 196 L68 368 L56 366 L99 204 Z" fill="#000" opacity="0.1" />
       <path d={SLEEVE_PANEL} fill={c.panel} {...edge} data-panel="sleeve-panel" data-side={side} />
-      <path d="M61 180 L30 352" stroke="#fff" strokeOpacity="0.16" strokeWidth="5" {...line} />
+      <path d="M61 180 L30 352" stroke="#fff" strokeOpacity="0.1" strokeWidth="5" {...line} />
       {/* Folds at the elbow and above the cuff. */}
       <path
         d="M52 232 C64 240 78 243 92 240"
@@ -186,7 +186,7 @@ function HoodieHalf({ c, ids, side }: { c: Resolved; ids: Ids; side: "left" | "r
       <path
         d="M31 342 C42 348 55 352 68 352"
         stroke="#000"
-        strokeOpacity="0.1"
+        strokeOpacity="0.16"
         strokeWidth="1.2"
         {...line}
       />
@@ -483,7 +483,7 @@ function JoggerHalf({ c, ids, side }: { c: Resolved; ids: Ids; side: "left" | "r
       <path
         d="M82 368 C94 373 106 375 119 374"
         stroke="#000"
-        strokeOpacity="0.1"
+        strokeOpacity="0.16"
         strokeWidth="1.2"
         {...line}
       />
@@ -491,7 +491,7 @@ function JoggerHalf({ c, ids, side }: { c: Resolved; ids: Ids; side: "left" | "r
       <path
         d="M63 72 C57 170 66 296 80 376"
         stroke="#fff"
-        strokeOpacity="0.16"
+        strokeOpacity="0.1"
         strokeWidth="4"
         {...line}
       />

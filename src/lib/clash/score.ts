@@ -84,38 +84,55 @@ function fight(first: Oklch, second: Oklch): { tension: number; kind: Kind; warm
   return { tension, kind: kind === "pull" && warmCold ? "split" : kind, warmCold };
 }
 
-function phrase(
-  first: { hex: string; color: Oklch },
-  other: { hex: string; color: Oklch },
-  entry: Fight,
-): string {
+/** Above this a pair is properly at it. Below, the same pair is only starting something. */
+const HARD_FIGHT = 0.55;
+
+type Entry = { hex: string; color: Oklch };
+
+function phrase(first: Entry, other: Entry, entry: Fight): string {
+  const hard = entry.tension >= HARD_FIGHT;
+  if (entry.kind !== "split")
+    return plain(colorName(first.hex), colorName(other.hex), entry.kind, hard);
   const warmFirst = temperature(first.color) !== "cold";
-  const nameA = colorName(warmFirst ? first.hex : other.hex);
-  const nameB = colorName(warmFirst ? other.hex : first.hex);
-  if (entry.kind !== "split") return plain(colorName(first.hex), colorName(other.hex), entry.kind);
-  if (nameA === nameB) return plain(nameA, nameB, "buzz");
-  return `${nameA} runs hot, ${nameB} runs cold, both turned all the way up`;
+  const warm = colorName(warmFirst ? first.hex : other.hex);
+  const cold = colorName(warmFirst ? other.hex : first.hex);
+  if (warm === cold) return plain(warm, cold, "buzz", hard);
+  return hard
+    ? `${warm} runs hot, ${cold} runs cold, both turned all the way up`
+    : `${warm} runs hot, ${cold} runs cold`;
 }
 
-function plain(nameA: string, nameB: string, kind: Kind): string {
-  if (nameA === nameB) return `two kinds of ${nameA} are buzzing against each other`;
+function plain(nameA: string, nameB: string, kind: Kind, hard: boolean): string {
+  if (nameA === nameB) {
+    return hard
+      ? `two kinds of ${nameA} are buzzing against each other`
+      : `two kinds of ${nameA} are humming together`;
+  }
   switch (kind) {
     case "miss":
-      return `${nameA} and ${nameB} are fighting`;
+      return hard
+        ? `${nameA} and ${nameB} are fighting`
+        : `${nameA} and ${nameB} are starting something`;
     case "buzz":
-      return `${nameA} and ${nameB} are buzzing side by side`;
+      return hard
+        ? `${nameA} and ${nameB} are buzzing side by side`
+        : `${nameA} and ${nameB} are humming side by side`;
     case "opposite":
-      return `${nameA} and ${nameB} are squaring up`;
+      return hard
+        ? `${nameA} and ${nameB} are squaring up`
+        : `${nameA} and ${nameB} are eyeing each other up`;
     case "split":
     case "pull":
-      return `${nameA} and ${nameB} are pulling in different directions`;
+      return hard
+        ? `${nameA} and ${nameB} are pulling in different directions`
+        : `${nameA} and ${nameB} lean different ways`;
   }
 }
 
 /** The distinct, valid colours in a palette, in the order they first appear. */
-function distinct(palette: readonly unknown[]): Array<{ hex: string; color: Oklch }> {
+function distinct(palette: readonly unknown[]): Entry[] {
   const seen = new Set<string>();
-  const out: Array<{ hex: string; color: Oklch }> = [];
+  const out: Entry[] = [];
   for (const entry of palette) {
     const hex = normalizeHex(entry);
     if (!hex || seen.has(hex)) continue;

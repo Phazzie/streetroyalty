@@ -116,3 +116,11 @@ describe("temperature", () => {
     expect(of("#888888")).toBe("neutral");
   });
 });
+
+describe("colorName for greys", () => {
+  it("never calls a true grey a brown", () => {
+    expect(colorName("#222222")).toBe("black");
+    expect(colorName("#333333")).toBe("charcoal");
+    expect(colorName("#c8c8c8")).toBe("silver");
+  });
+});

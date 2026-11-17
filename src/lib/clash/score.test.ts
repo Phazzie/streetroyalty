@@ -176,3 +176,17 @@ describe("louder and quieter", () => {
     expect(quieter(GREYS)).toEqual(GREYS);
   });
 });
+
+describe("reasons match the volume", () => {
+  it("does not say a soft pair is turned all the way up", () => {
+    const result = clashScore(["#0d0d10", "#141f52", "#6e1429"]);
+    expect(result.score).toBeLessThan(35);
+    expect(result.reasons.join(" ")).not.toMatch(/all the way up|fighting|squaring up/);
+  });
+
+  it("keeps the hard words for the hard fights", () => {
+    expect(clashScore(["#e3202a", "#3d7eff"]).reasons[0]).toMatch(
+      /fighting|squaring up|all the way up/,
+    );
+  });
+});

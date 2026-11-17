@@ -144,6 +144,8 @@ const NAMES: ReadonlyArray<readonly [string, string]> = [
   ["magenta", "#d61fc4"],
 ];
 
+const GREYS = new Set(["black", "charcoal", "grey", "silver", "white"]);
+
 type Lab = { l: number; a: number; b: number };
 
 function toLab(color: Oklch): Lab {
@@ -161,9 +163,12 @@ export function colorName(input: unknown): string {
   const color = hexToOklch(input);
   if (!color) return "no colour";
   const lab = toLab(color);
+  // A true grey only ever gets a grey's name, however close a dark brown sits to it.
+  const pool =
+    color.c < NEUTRAL_CHROMA * 0.6 ? NAMED.filter((entry) => GREYS.has(entry.name)) : NAMED;
   let best = "grey";
   let bestDistance = Number.POSITIVE_INFINITY;
-  for (const entry of NAMED) {
+  for (const entry of pool) {
     // Hue and chroma count for more than lightness: a dark orange is still an orange to most people.
     const distance =
       0.7 * (entry.lab.l - lab.l) ** 2 + (entry.lab.a - lab.a) ** 2 + (entry.lab.b - lab.b) ** 2;
