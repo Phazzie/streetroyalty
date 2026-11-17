@@ -131,6 +131,8 @@ describe("a URL the printer can reach", () => {
     ["an IPv6 private address", "http://[fd12:3456::1]/x"],
     ["an IPv6 link-local address", "http://[fe80::1]/x"],
     ["a private address written as IPv6", "http://[::ffff:10.0.0.5]/x"],
+    ["loopback written as one number", "http://2130706433/x"],
+    ["loopback written in hex", "http://0x7f.1/x"],
     ["an mDNS name", "http://printer.local/x"],
     ["an internal name", "http://build.internal/x"],
     ["a bare machine name", "http://devbox/x"],
