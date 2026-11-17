@@ -9,6 +9,7 @@ import {
   resolveShape,
   resolveView,
 } from "./index.ts";
+import { drawGarment, type Part } from "./shapes.ts";
 
 const WORD: DesignLayer = {
   id: "t",
@@ -490,5 +491,97 @@ describe("the art sits where it prints", () => {
     expect(
       garmentMockupMarkup({ shape: "tee", colorHex: "#141414", placement: "front", layers: [] }),
     ).not.toContain('clip-path="url(#p)"');
+  });
+});
+
+describe("the details are on the cloth, not off the edge of it", () => {
+  /** Every coordinate pair in a path, in order. */
+  const points = (d: string): [number, number][] =>
+    [...d.matchAll(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g)].map((pair) => [
+      Number(pair[1]),
+      Number(pair[2]),
+    ]);
+  const under = (shape: "tee" | "longsleeve" | "crew" | "hoodie" | "trackjacket"): Part[] =>
+    drawGarment(shape, "front").under;
+
+  it("sews a rib cuff on every long sleeve, above the cuff edge", () => {
+    for (const shape of ["longsleeve", "crew", "hoodie", "trackjacket"] as const) {
+      const cuffs = under(shape).filter((part) => part.kind === "rib" && part.width === 22);
+      expect(cuffs).toHaveLength(1);
+      const ends = points(cuffs[0]?.d ?? "");
+      // Two cuffs, two ends each. The sleeve ends at y 428 to 440: the rib sits above that.
+      expect(ends).toHaveLength(4);
+      for (const [x, y] of ends) {
+        expect(y).toBeLessThan(432);
+        expect(y).toBeGreaterThan(400);
+        expect(Math.abs(x - 240)).toBeGreaterThan(150);
+      }
+    }
+  });
+
+  it("hems a short sleeve with two rows inside the cuff edge", () => {
+    const rows = under("tee").filter((part) => {
+      if (part.kind !== "stitch") return false;
+      const first = points(part.d)[0];
+      // The right cuff runs from 428,224 to 392,284. A row starts just inside its top.
+      return first !== undefined && first[0] > 410 && first[0] < 428 && first[1] < 224;
+    });
+    expect(rows).toHaveLength(2);
+  });
+
+  it("lays the hoodie cords down each side of the print, not through it", () => {
+    const hoodie = drawGarment("hoodie", "front");
+    const cords = hoodie.over.filter((part) => part.kind === "band" && part.tone === "cord");
+    expect(cords).toHaveLength(1);
+    const path = cords[0]?.d ?? "";
+    const tips = path
+      .split("M")
+      .filter(Boolean)
+      .map((piece) => points(piece).at(-1) ?? [0, 0]);
+    expect(tips).toHaveLength(2);
+    const { x, w } = hoodie.window;
+    for (const [tipX] of tips) expect(tipX < x || tipX > x + w).toBe(true);
+  });
+
+  it("keeps the caption on clear table when a tee is turned for its left sleeve", () => {
+    const caption = (shape: string, placement: string) =>
+      /<text [^>]*>PREVIEW \/ [A-Z ]+<\/text>/.exec(
+        garmentMockupMarkup({ shape, colorHex: "#141414", placement, layers: [] }),
+      )?.[0] ?? "";
+    expect(caption("tee", "sleeve_left")).toContain('text-anchor="end"');
+    expect(caption("tee", "sleeve_left")).toContain("PREVIEW / LEFT SLEEVE");
+    for (const [shape, placement] of [
+      ["tee", "front"],
+      ["tee", "sleeve_right"],
+      ["longsleeve", "sleeve_left"],
+      ["hat", "back"],
+    ] as const) {
+      expect(caption(shape, placement)).not.toContain("text-anchor");
+      expect(caption(shape, placement)).toContain("PREVIEW / ");
+    }
+  });
+});
+
+describe("rows that are not what the type promises", () => {
+  it("skips a layer that is not a layer and still draws the rest", () => {
+    const junk = [null, undefined, 7, "CROWN", [], WORD] as unknown as DesignLayer[];
+    const svg = garmentMockupMarkup({
+      shape: "tee",
+      colorHex: "#141414",
+      placement: "front",
+      layers: junk,
+    });
+    expect(() => parseXml(svg)).not.toThrow();
+    expect(svg.match(/>CROWN<\/text>/g)).toHaveLength(1);
+    expect(svg).not.toMatch(/NaN|undefined|null/);
+    expect(() =>
+      garmentMockupSvg({
+        shape: "hat",
+        colorHex: "#141414",
+        placement: "front",
+        // @ts-expect-error a stored value that is not a list at all
+        layers: { length: 3 },
+      }),
+    ).not.toThrow();
   });
 });

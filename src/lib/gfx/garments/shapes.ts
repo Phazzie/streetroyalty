@@ -46,9 +46,20 @@ export type Drawing = {
   folds: string[];
   lights: string[];
   window: PrintWindow;
-  /** Sleeve views turn and zoom the whole table about a point. */
-  camera: { x: number; y: number; zoom: number; rot: number } | null;
+  /**
+   * Turns and zooms the whole table about a point of the drawing. `at` is where that
+   * point lands in the picture; left out, it lands in the middle.
+   */
+  camera: {
+    x: number;
+    y: number;
+    zoom: number;
+    rot: number;
+    at?: readonly [number, number];
+  } | null;
   label: string;
+  /** Set when the garment covers the bottom left corner, where the caption sits. */
+  captionRight?: boolean;
 };
 
 type P = readonly [number, number];
@@ -245,8 +256,8 @@ function top(kind: TopKind, view: GarmentView): Drawing {
   const ux = cuffOut[0] - cuffIn[0];
   const uy = cuffOut[1] - cuffIn[1];
   const cuffWidth = Math.hypot(ux, uy);
-  // Unit vector that points back up the sleeve.
-  const up: P = [-uy / cuffWidth, ux / cuffWidth];
+  // Unit vector that points back up the sleeve, at a right angle to the cuff edge.
+  const up: P = [uy / cuffWidth, -ux / cuffWidth];
   const back1 = (p: P, by: number): P => [p[0] + up[0] * by, p[1] + up[1] * by];
   if (long) {
     const depth = 22;
@@ -356,14 +367,16 @@ function top(kind: TopKind, view: GarmentView): Drawing {
         under.push({ kind: "fill", d: circle(ex, 216, 3.4), tone: "metal" });
         under.push({ kind: "fill", d: circle(ex, 216, 1.7), tone: "inner" });
       }
+      // The cords are drawn wide and laid down each side of the chest, the way a flat lay
+      // is dressed, so they frame a print and do not hang through the middle of it.
       const cordR = line(
         [255, 217],
         [
           {
-            to: [260, 282],
+            to: [304, 272],
             c: [
-              [261, 244],
-              [251, 268],
+              [276, 221],
+              [302, 236],
             ],
           },
         ],
@@ -372,10 +385,10 @@ function top(kind: TopKind, view: GarmentView): Drawing {
         [225, 217],
         [
           {
-            to: [219, 290],
+            to: [175, 282],
             c: [
-              [219, 248],
-              [230, 274],
+              [204, 222],
+              [178, 240],
             ],
           },
         ],
@@ -384,7 +397,7 @@ function top(kind: TopKind, view: GarmentView): Drawing {
       over.push({ kind: "band", d: cordR + cordL, width: 3.4, tone: "cord" });
       over.push({
         kind: "band",
-        d: `M260 282l.6 9M219 290l-.7 9`,
+        d: `M304 272l.4 9M175 282l-.5 9`,
         width: 4,
         tone: "metal",
       });
@@ -708,7 +721,11 @@ function top(kind: TopKind, view: GarmentView): Drawing {
     const turn = long ? -17 : -50;
     const cx = sign === 1 ? at[0] : 2 * CX - at[0];
     window = win(cx - size / 2, at[1] - size / 2, size, size, sign * turn);
-    camera = { x: cx, y: at[1] + (long ? 10 : 8), zoom: long ? 1.9 : 2.3, rot: -sign * turn };
+    // A short sleeve is a small thing: it sits low and to one side, so the collar and
+    // the shoulder stay in the picture and it still reads as a tee.
+    camera = long
+      ? { x: cx, y: at[1] + 10, zoom: 1.9, rot: -sign * turn }
+      : { x: cx, y: at[1] + 8, zoom: 2, rot: -sign * turn, at: [CX + sign * 60, 440] };
     label = view === "sleeve_left" ? "LEFT SLEEVE" : "RIGHT SLEEVE";
   } else if (back) {
     window = long ? win(183.5, hood ? 196 : 188, 113, 150) : win(177, 188, 126, 168);
@@ -729,7 +746,19 @@ function top(kind: TopKind, view: GarmentView): Drawing {
   const middle = hood ? 262 : jacket ? 287 : long ? 297 : 302;
   camera ??= { x: CX, y: middle, zoom: 1.1, rot: 0 };
 
-  return { sil, silBands: [], behind: [], under, over, folds, lights, window, camera, label };
+  return {
+    sil,
+    silBands: [],
+    behind: [],
+    under,
+    over,
+    folds,
+    lights,
+    window,
+    camera,
+    label,
+    captionRight: !long && view === "sleeve_left",
+  };
 }
 
 function shift(s: Seg, dx: number, dy: number): Seg {
@@ -923,7 +952,6 @@ function jogger(view: GarmentView): Drawing {
         },
       ],
     ),
-    both([300, 300], [{ to: [308, 470], q: [308, 380] }]),
   ];
   // Wearer's left thigh. From the back that leg is on the viewer's left.
   const window = back ? win(160, 256, 58, 76) : win(264, 232, 58, 76);

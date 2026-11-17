@@ -205,6 +205,8 @@ function textEms(text: string, body: boolean): number {
 }
 
 function layerMarkup(layer: DesignLayer, window: PrintWindow, fallbackInk: string): string {
+  // A stored row is not always what the type promises: skip anything that is not a layer.
+  if (!layer || typeof layer !== "object") return "";
   const cx = window.x + num(layer.x, 0.5, -1, 2) * window.w;
   const cy = window.y + num(layer.y, 0.5, -1, 2) * window.h;
   const scale = num(layer.scale, 1, 0.02, 12);
@@ -305,8 +307,11 @@ function compose(options: {
 
   const view = options.square ? "0 60 480 480" : "0 0 480 600";
   const captionY = options.square ? 526 : 584;
+  // The caption moves to the right when the garment lies over the left corner.
+  const right = drawing.captionRight === true;
+  const markX = right ? 453 : 27;
   const place = camera
-    ? ` transform="translate(240 ${options.square ? 300 : 296}) rotate(${f(camera.rot)}) scale(${camera.zoom}) translate(${f(-camera.x)} ${f(-camera.y)})"`
+    ? ` transform="translate(${f(camera.at?.[0] ?? 240)} ${f(camera.at?.[1] ?? (options.square ? 300 : 296))}) rotate(${f(camera.rot)}) scale(${camera.zoom}) translate(${f(-camera.x)} ${f(-camera.y)})"`
     : "";
   const whole = `x="-200" y="-200" width="880" height="1000"`;
   const bands = drawing.silBands
@@ -333,8 +338,8 @@ function compose(options: {
 <rect width="480" height="600" fill="url(#m)"/>
 <rect width="480" height="600" fill="url(#d)"/>
 <rect width="9" height="600" fill="url(#r)"/>
-<path d="M20 ${captionY - 3}h14M27 ${captionY - 10}v14" stroke="#b7a8d4" stroke-width="1" opacity=".55"/>
-<text x="42" y="${captionY + 1}" fill="#b7a8d4" font-family="${DISPLAY_STACK}" font-weight="900" font-size="9.5" letter-spacing="2.2" opacity=".85">PREVIEW / ${drawing.label}</text>
+<path d="M${markX - 7} ${captionY - 3}h14M${markX} ${captionY - 10}v14" stroke="#b7a8d4" stroke-width="1" opacity=".55"/>
+<text x="${right ? 438 : 42}" y="${captionY + 1}" fill="#b7a8d4" font-family="${DISPLAY_STACK}" font-weight="900" font-size="9.5" letter-spacing="2.2" opacity=".85"${right ? ' text-anchor="end"' : ""}>PREVIEW / ${drawing.label}</text>
 <g${place}>
 <g fill="#05020a" stroke="#05020a" stroke-linejoin="round"><g filter="url(#g)" opacity=".7" transform="translate(7 16)"><path d="${drawing.sil}" stroke="none"/>${bands}</g><g filter="url(#f)" opacity=".75" transform="translate(1.5 4)"><path d="${drawing.sil}" stroke="none"/>${bands}</g></g>
 ${paintAll(drawing.behind, tones)}
