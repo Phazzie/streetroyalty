@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { getSql } from "../db.ts";
+import { getSql, type Sql } from "../db.ts";
 import {
   pairKey,
   pairsLeft,
@@ -33,6 +33,14 @@ type PieceRow = {
   losses: number;
 };
 
+/** One piece's picture, read on its own so ranking never has to carry every picture. */
+async function withPicture(sql: Sql, row: PieceRow): Promise<PieceRow> {
+  const found = await sql<{ mockup_url: string | null }>`
+    select mockup_url from designs where id = ${row.id}
+  `;
+  return { ...row, mockup_url: found[0]?.mockup_url ?? null };
+}
+
 function toSide(row: PieceRow): BattleSide {
   return {
     id: row.id,
@@ -63,8 +71,8 @@ export async function nextBattle(
   const signedIn = userId !== null;
   const rows = await sql<PieceRow>`
     select * from (
-      select d.id, d.slug, d.title, d.mockup_url, d.user_id, d.updated_at,
-        coalesce(p.display_name, u."name") as maker_name,
+      select d.id, d.slug, d.title, null::text as mockup_url, d.user_id, d.updated_at,
+        coalesce(p.display_name, 'A maker') as maker_name,
         p.handle as maker_handle,
         (select count(*)::int from battle_votes v where v.winner_id = d.id) as wins,
         (select count(*)::int from battle_votes v where v.loser_id = d.id) as losses
@@ -117,7 +125,11 @@ export async function nextBattle(
 
   const [first, second] = picked;
   return {
-    pair: { key: pairKey(first.id, second.id), left: toSide(first.row), right: toSide(second.row) },
+    pair: {
+      key: pairKey(first.id, second.id),
+      left: toSide(await withPicture(sql, first.row)),
+      right: toSide(await withPicture(sql, second.row)),
+    },
     reason: "ready",
     signedIn,
     pairsLeft: left,
@@ -187,8 +199,8 @@ export async function castVote(
 export async function throne(limit = 10): Promise<ThroneRow[]> {
   const sql = await getSql();
   const rows = await sql<PieceRow>`
-    select d.id, d.slug, d.title, d.mockup_url, d.user_id,
-      coalesce(p.display_name, u."name") as maker_name,
+    select d.id, d.slug, d.title, null::text as mockup_url, d.user_id,
+      coalesce(p.display_name, 'A maker') as maker_name,
       p.handle as maker_handle,
       (select count(*)::int from battle_votes v where v.winner_id = d.id) as wins,
       (select count(*)::int from battle_votes v where v.loser_id = d.id) as losses
@@ -201,10 +213,16 @@ export async function throne(limit = 10): Promise<ThroneRow[]> {
       )
   `;
   const byId = new Map(rows.map((row) => [row.id, row]));
-  return rankByScore(
+  const ranked = rankByScore(
     rows.map((row) => ({ id: row.id, wins: Number(row.wins), losses: Number(row.losses) })),
     limit,
-  ).flatMap((ranked) => {
+  );
+  // Only the pieces on the board bring their pictures, so the read stays small as the rack grows.
+  for (const entry of ranked) {
+    const row = byId.get(entry.id);
+    if (row) byId.set(entry.id, await withPicture(sql, row));
+  }
+  return ranked.flatMap((ranked) => {
     const row = byId.get(ranked.id);
     if (!row) return [];
     return [

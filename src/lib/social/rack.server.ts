@@ -72,9 +72,19 @@ export async function piecesFor(options: {
   const slug = options.slug ?? "";
   const sql = await getSql();
   const rows = await sql<PieceRow>`
-    select d.*,
+    select d.id, d.user_id, d.collection_id, d.title, d.slug, d.status, d.product_id,
+      d.product_name, d.product_type, d.variant_id, d.variant_label, d.color_name, d.color_hex,
+      d.size_label, d.placement, d.technique, d.print_file_id, d.mockup_url, d.retail_cents,
+      d.currency, d.provider_product_id, d.updated_at,
+      coalesce((
+        select json_agg(json_build_object('type', 'text', 'color', layer ->> 'color'))::text
+        from json_array_elements(
+          case when json_typeof(d.layers_json::json) = 'array' then d.layers_json::json else '[]'::json end
+        ) layer
+        where layer ->> 'type' = 'text'
+      ), '[]') as layers_json,
       p.handle as maker_handle,
-      coalesce(p.display_name, u."name") as maker_name,
+      coalesce(p.display_name, 'A maker') as maker_name,
       coalesce(k.crown_count, 0)::int as crown_count,
       exists(
         select 1 from crowns mine where mine.design_id = d.id and mine.user_id = ${viewer}
@@ -154,6 +164,9 @@ export async function toggleCrown(
     select id from designs where id = ${designId} and status = 'published'
   `;
   if (!pieces[0]) throw new Error("That piece is not on the rack.");
+  // A crown names you in the maker's activity, so you get a maker name of your own first.
+  const { ensureProfile } = await import("./makers.server.ts");
+  await ensureProfile(userId);
 
   const already = await sql<{ user_id: string }>`
     select user_id from crowns where user_id = ${userId} and design_id = ${designId}

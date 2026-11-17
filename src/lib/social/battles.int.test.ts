@@ -118,8 +118,8 @@ describe("the next battle", () => {
       mockupUrl: a.mockupUrl,
       maker: { name: "Ada Royal", handle: "ada" },
     });
-    // No profile yet: the account name, and no handle to link to.
-    expect(sides[1]).toMatchObject({ id: b.id, maker: { name: "bo", handle: null } });
+    // No maker page yet: never the account name, which can be the front of an email.
+    expect(sides[1]).toMatchObject({ id: b.id, maker: { name: "A maker", handle: null } });
     expect(battle.pair?.key).toBe(pairKey(a.id, b.id));
   });
 
@@ -151,6 +151,8 @@ describe("the next battle", () => {
   });
 
   it("puts two different makers in the ring when it can", async () => {
+    await giveHandle("ada", "ada", "Ada Royal");
+    await giveHandle("bo", "bo", "Bo Knows");
     await seedDesign("ada", { title: "Ada One", published: true });
     await seedDesign("ada", { title: "Ada Two", published: true });
     await seedDesign("ada", { title: "Ada Three", published: true });

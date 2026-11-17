@@ -231,7 +231,7 @@ describe("a piece's family", () => {
     });
   });
 
-  it("runs from the original down to the piece, and uses the account name with no profile", async () => {
+  it("runs from the original down to the piece, and never shows the account name of a maker with no page", async () => {
     const root = await seedDesign("ada", { title: "Do Better", published: true });
     const second = await publishedRemix("bo", root.slug);
     const third = await publishedRemix("cy", second.slug);
@@ -246,7 +246,7 @@ describe("a piece's family", () => {
     expect(family.chain.map((item) => item.maker)).toEqual([
       { name: "Ada Royal", handle: "ada" },
       { name: "Bo Knows", handle: "bo" },
-      { name: "cy", handle: null },
+      { name: "A maker", handle: null },
     ]);
     expect(family.broken).toBe(false);
     expect(family.remixes).toEqual([]);
@@ -263,7 +263,7 @@ describe("a piece's family", () => {
     expect(family.chain[0]).toMatchObject({ slug: root.slug, onRack: true });
     expect(family.chain[1]).toEqual({
       slug: null,
-      title: "Do Better remix",
+      title: "An earlier piece",
       mockupUrl: null,
       maker: { name: "Bo Knows", handle: "bo" },
       onRack: false,

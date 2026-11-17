@@ -71,7 +71,7 @@ export async function listActivity(
 
   const crowns = await sql<ActorColumns & { at: Stamp; slug: string; title: string }>`
     select c.created_at as at, d.slug, d.title,
-      p.handle as actor_handle, p.display_name as actor_profile_name, u."name" as actor_user_name
+      p.handle as actor_handle, p.display_name as actor_profile_name, null::text as actor_user_name
     from crowns c
     join designs d on d.id = c.design_id
     left join profiles p on p.user_id = c.user_id
@@ -83,7 +83,7 @@ export async function listActivity(
 
   const follows = await sql<ActorColumns & { at: Stamp }>`
     select f.created_at as at,
-      p.handle as actor_handle, p.display_name as actor_profile_name, u."name" as actor_user_name
+      p.handle as actor_handle, p.display_name as actor_profile_name, null::text as actor_user_name
     from follows f
     left join profiles p on p.user_id = f.follower_id
     left join "user" u on u."id" = f.follower_id
@@ -104,7 +104,7 @@ export async function listActivity(
   >`
     select kid.updated_at as at, mine.slug, mine.title,
       kid.slug as remix_slug, kid.title as remix_title,
-      p.handle as actor_handle, p.display_name as actor_profile_name, u."name" as actor_user_name
+      p.handle as actor_handle, p.display_name as actor_profile_name, null::text as actor_user_name
     from design_lineage l
     join designs mine on mine.id = l.parent_id
     join designs kid on kid.id = l.design_id
@@ -242,7 +242,7 @@ export async function listShelf(userId: string): Promise<ShelfPiece[]> {
     maker_user_name: string | null;
   }>`
     select c.created_at as at, d.slug, d.title, d.mockup_url,
-      p.handle as maker_handle, p.display_name as maker_profile_name, u."name" as maker_user_name
+      p.handle as maker_handle, p.display_name as maker_profile_name, null::text as maker_user_name
     from crowns c
     join designs d on d.id = c.design_id
     left join profiles p on p.user_id = d.user_id

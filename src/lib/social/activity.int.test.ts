@@ -95,7 +95,7 @@ describe("a maker's activity", () => {
     expect(feed.map((item) => item.kind)).toEqual(["crown", "follow", "remix", "battle", "scan"]);
     expect(sentences(feed)).toEqual([
       "Bo Second crowned Do Better Hoodie.",
-      "cy started following you.",
+      "Someone started following you.",
       "Bo Second remixed Do Better Hoodie into Do Better Again.",
       "Do Better Hoodie won 1 battle.",
       "Do Better Hoodie was scanned 4 times out in the street.",
@@ -111,7 +111,7 @@ describe("a maker's activity", () => {
     expect(new Set(feed.map((item) => item.id)).size).toBe(feed.length);
   });
 
-  it("links names to maker pages and pieces to the rack, and leaves a maker with no page as plain text", async () => {
+  it("links names to maker pages and pieces to the rack, and never shows an account name in public", async () => {
     const hoodie = await seedDesign("ada", { title: "Do Better Hoodie", published: true });
     const remix = await seedDesign("bo", { title: "Do Better Again", published: true });
     await lineage(remix.id, hoodie.id);
@@ -119,8 +119,9 @@ describe("a maker's activity", () => {
     await crown("cy", hoodie.id, "2026-11-17T17:00:00Z");
 
     const [crowned, remixed] = await listActivity("ada", NOW);
+    // cy has no maker page. An account name can be the front of an email, so it is never shown.
     expect(crowned?.parts).toEqual([
-      { text: "cy" },
+      { text: "Someone" },
       { text: " crowned " },
       { text: "Do Better Hoodie", to: "piece", slug: hoodie.slug },
       { text: "." },
@@ -270,6 +271,7 @@ describe("a maker's activity", () => {
     const hoodie = await seedDesign("ada", { title: "Do Better Hoodie", published: true });
     for (let index = 0; index < 45; index += 1) {
       const fan = await seedUser(`fan-${index}`);
+      await profile(fan, `fan${index}`, `fan-${index}`);
       const minute = String(index).padStart(2, "0");
       await crown(fan, hoodie.id, `2026-11-17T10:${minute}:00Z`);
     }
@@ -298,7 +300,7 @@ describe("a maker's activity", () => {
     const feed = await listActivity("ada", NOW);
     expect(feed).toHaveLength(40);
     expect(feed[0]?.kind).toBe("follow");
-    expect(sentences(feed)).not.toContain("cy started following you.");
+    expect(sentences(feed)).not.toContain("Someone started following you.");
   });
 });
 
@@ -317,7 +319,7 @@ describe("the crowned shelf", () => {
         slug: loud.slug,
         title: "Loud Pack Hoodie",
         mockupUrl: loud.mockupUrl,
-        maker: { name: "cy", handle: null },
+        maker: { name: "A maker", handle: null },
         crownedAt: "2026-11-16T10:00:00.000Z",
       },
       {

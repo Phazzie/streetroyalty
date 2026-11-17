@@ -151,7 +151,9 @@ function node(row: NodeRow | undefined): FamilyNode {
   const onRack = row.status === "published";
   return {
     slug: onRack ? row.slug : null,
-    title: row.title,
+    // Off the rack, the maker keeps their credit but the title stays private: it may have
+    // been taken down, or renamed as a draft.
+    title: onRack ? row.title : "An earlier piece",
     mockupUrl: onRack ? row.mockup_url : null,
     maker: {
       name: row.display_name?.trim() || row.user_name?.trim() || "A maker",
@@ -172,7 +174,7 @@ export async function readFamily(
     select d.id, d.slug, d.title,
       case when length(d.mockup_url) <= ${limits.picture} then d.mockup_url end as mockup_url,
       d.status, p.handle, p.display_name,
-      u."name" as user_name
+      null::text as user_name
     from designs d
     left join profiles p on p.user_id = d.user_id
     left join "user" u on u."id" = d.user_id
@@ -195,7 +197,7 @@ export async function readFamily(
     select up.parent_id as ancestor_id, up.root_id, up.depth, d.id, d.slug, d.title,
       case when d.status = 'published' and length(d.mockup_url) <= ${limits.picture}
         then d.mockup_url end as mockup_url,
-      d.status, p.handle, p.display_name, u."name" as user_name
+      d.status, p.handle, p.display_name, null::text as user_name
     from up
     left join designs d on d.id = up.parent_id
     left join profiles p on p.user_id = d.user_id
@@ -212,7 +214,7 @@ export async function readFamily(
       select d.id, d.slug, d.title,
         case when d.status = 'published' and length(d.mockup_url) <= ${limits.picture}
           then d.mockup_url end as mockup_url,
-        d.status, p.handle, p.display_name, u."name" as user_name
+        d.status, p.handle, p.display_name, null::text as user_name
       from (select ${top.root_id}::text as root_id) r
       left join designs d on d.id = r.root_id
       left join profiles p on p.user_id = d.user_id
@@ -252,7 +254,7 @@ export async function readFamily(
   const remixRows = await sql<NodeRow>`
     select d.id, d.slug, d.title,
       case when length(d.mockup_url) <= ${limits.picture} then d.mockup_url end as mockup_url,
-      d.status, p.handle, p.display_name, u."name" as user_name
+      d.status, p.handle, p.display_name, null::text as user_name
     from design_lineage l
     join designs d on d.id = l.design_id
     left join profiles p on p.user_id = d.user_id

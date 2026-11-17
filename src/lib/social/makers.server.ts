@@ -210,6 +210,8 @@ export async function toggleFollow(
   const maker = makers[0];
   if (!maker) throw new Error("No maker goes by that handle.");
   if (maker.user_id === userId) throw new Error("You cannot follow yourself.");
+  // A follow names you in the maker's activity, so you get a maker name of your own first.
+  await ensureProfile(userId);
 
   const already = await sql<{ follower_id: string }>`
     select follower_id from follows where follower_id = ${userId} and maker_id = ${maker.user_id}

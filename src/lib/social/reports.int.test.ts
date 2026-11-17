@@ -108,14 +108,15 @@ describe("filing a report", () => {
     expect(await reportRows()).toHaveLength(1);
   });
 
-  it("still says already after the shop has settled the first one", async () => {
+  it("lets a person report again once the shop has settled their first report", async () => {
     const piece = await seedDesign("ada", { published: true });
     const input = { kind: "piece", slug: piece.slug, reason: "scam" };
     await fileReport("bo", input);
     const queue = await listReports("boss");
     await resolveReport("boss", { ticket: queue.groups[0]?.ticket, action: "keep" });
+    expect(await fileReport("bo", input)).toEqual({ status: "filed" });
     expect(await fileReport("bo", input)).toEqual({ status: "already" });
-    expect((await listReports("boss")).groups).toEqual([]);
+    expect((await listReports("boss")).groups).toHaveLength(1);
   });
 
   it("lets a person report a piece and its maker as two separate things", async () => {
@@ -430,16 +431,16 @@ describe("settling a pile", () => {
     expect(await designStatus(piece.id)).toBe("published");
     expect((await reportRows())[0]?.status).toBe("kept");
 
-    // Taken down, put back up by its maker, then the old ticket is pressed again.
+    // Taken down. The maker cannot put it back up, and the old ticket cannot act twice.
     await fileReport("cy", { kind: "piece", slug: piece.slug, reason: "other" });
     const second = (await listReports("boss")).groups[0]?.ticket;
     await resolveReport("boss", { ticket: second, action: "remove" });
     expect(await designStatus(piece.id)).toBe("draft");
-    await publishDesign("ada", piece.id);
+    await expect(publishDesign("ada", piece.id)).rejects.toThrow(/took this piece off the rack/);
     await expect(resolveReport("boss", { ticket: second, action: "remove" })).rejects.toThrow(
       REPORT_MESSAGES.settled,
     );
-    expect(await designStatus(piece.id)).toBe("published");
+    expect(await designStatus(piece.id)).toBe("draft");
   });
 
   it("refuses a ticket that does not exist and an action that is not one of the two", async () => {

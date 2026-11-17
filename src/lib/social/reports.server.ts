@@ -109,6 +109,7 @@ export async function fileReport(
   const seen = await sql<{ id: string }>`
     select id from reports
     where reporter_id = ${userId} and kind = ${target.kind} and target_id = ${target.targetId}
+      and status = 'open'
   `;
   if (seen.length > 0) return { status: "already" };
 
@@ -126,7 +127,7 @@ export async function fileReport(
       ${crypto.randomUUID()}, ${userId}, ${target.kind}, ${target.targetId},
       ${reason}, ${note}, ${now.toISOString()}::timestamptz
     )
-    on conflict (reporter_id, kind, target_id) do nothing
+    on conflict (reporter_id, kind, target_id) where status = 'open' do nothing
     returning id
   `;
   return { status: inserted.length > 0 ? "filed" : "already" };

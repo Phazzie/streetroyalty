@@ -43,7 +43,7 @@ export function StudioShell({ current, children }: { current: string; children: 
           <span className="tag">{mode === "live" ? "Live print" : "Sandbox"}</span>
           {/* On a phone the doors sit on one line that slides, so the work starts higher up the screen. */}
           <nav
-            className="no-scrollbar order-last -mx-4 flex w-[calc(100%+2rem)] gap-2 overflow-x-auto px-4 py-1 sm:order-none sm:mx-0 sm:w-auto sm:flex-wrap sm:overflow-visible sm:px-0 sm:py-0"
+            className="no-scrollbar order-last -mx-4 flex w-[calc(100%+2rem)] gap-2 overflow-x-auto px-4 py-1 sm:mx-0 sm:w-full sm:flex-wrap sm:overflow-visible sm:px-0 sm:py-0"
             aria-label="Studio"
           >
             {LINKS.map((link) => (

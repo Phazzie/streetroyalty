@@ -12,7 +12,14 @@ import {
 } from "./validate.ts";
 import type { CollectionRecord, DesignRecord, DesignSummary, ShopPiece } from "./models.ts";
 import { isAopProduct, parseColorwayBlob, parseGarment, parseStoredGarment } from "./garments.ts";
-import { fileUrl, ownedDesign, readStudioConfig, record, summary, type DesignRow } from "./shared.server.ts";
+import {
+  fileUrl,
+  ownedDesign,
+  readStudioConfig,
+  record,
+  summary,
+  type DesignRow,
+} from "./shared.server.ts";
 
 export async function listCollections(userId: string): Promise<CollectionRecord[]> {
   const sql = await getSql();
@@ -114,7 +121,9 @@ export async function saveDesign(
   let garmentJson: string | null = null;
   if (isAopProduct(product.id)) {
     garmentJson =
-      input.garment != null ? JSON.stringify(parseGarment(input.garment)) : (existing?.garment_json ?? null);
+      input.garment != null
+        ? JSON.stringify(parseGarment(input.garment))
+        : (existing?.garment_json ?? null);
   }
   if (existing) {
     await sql`
@@ -216,6 +225,12 @@ export async function publishDesign(userId: string, designId: string): Promise<D
   if (!row) throw new Error("That design is not on your rack.");
   if (!row.print_file_id) throw new Error("Save a print file before publishing.");
   if (!row.mockup_url) throw new Error("Generate a mockup before publishing.");
+  // The shop took this piece off the rack after a report. Only the shop can put it back.
+  const held = await sql<{ id: string }>`
+    select id from reports where kind = 'piece' and target_id = ${row.id} and status = 'removed' limit 1
+  `;
+  if (held[0])
+    throw new Error("The shop took this piece off the rack after a report. Ask the shop.");
   const config = readStudioConfig();
   let providerProductId = row.provider_product_id ?? null;
   if (config.podMode === "live") {
@@ -306,11 +321,22 @@ export async function getShopDesign(slug: string): Promise<ShopPiece> {
       const ids = JSON.parse(found.piece_ids_json) as string[];
       const pieces = [];
       for (const id of ids) {
-        const pieceRows = await sql<{ id: string; title: string; slug: string; product_type: string }>`
+        const pieceRows = await sql<{
+          id: string;
+          title: string;
+          slug: string;
+          product_type: string;
+        }>`
           select id, title, slug, product_type from designs where id = ${id}
         `;
         const piece = pieceRows[0];
-        if (piece) pieces.push({ id: piece.id, title: piece.title, slug: piece.slug, productType: piece.product_type });
+        if (piece)
+          pieces.push({
+            id: piece.id,
+            title: piece.title,
+            slug: piece.slug,
+            productType: piece.product_type,
+          });
       }
       set = {
         id: found.id,
