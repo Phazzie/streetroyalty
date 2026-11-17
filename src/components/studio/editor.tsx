@@ -441,6 +441,12 @@ export function Editor({ designId }: { designId: string }) {
     if (!product?.aopTemplateId) return;
     const templateId = product.aopTemplateId;
     setGarment((current) => (current?.templateId === templateId ? current : defaultGarment(templateId)));
+    // The house lime ink disappears on a light lilac body. Start from the mark color.
+    setLayers((current) =>
+      current.map((layer) =>
+        layer.type === "text" && layer.color.toLowerCase() === "#d6ff3c" ? { ...layer, color: "#1a1024" } : layer,
+      ),
+    );
   }, [product?.aopTemplateId]);
 
   useEffect(() => {
