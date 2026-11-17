@@ -1166,14 +1166,14 @@ function hat(view: GarmentView): Drawing {
   // From the front, a little above eye level: the brim is a curved lip under the crown,
   // a touch wider than it, thick in the middle and running out to a point at each side.
   const lipTop: [P, P, P, P] = [
-    [356, 348],
+    [349, 344],
     [322, 331],
     [282, 326],
     [CX, 326],
   ];
   const lipEdge: [P, P, P, P] = [
-    [356, 348],
-    [334, 370],
+    [349, 344],
+    [346, 371],
     [288, 378],
     [CX, 378],
   ];
@@ -1231,7 +1231,7 @@ function hat(view: GarmentView): Drawing {
       {
         kind: "drop",
         d: both(
-          [350, 350],
+          [345, 347],
           [
             {
               to: [CX, 334],
@@ -1251,12 +1251,12 @@ function hat(view: GarmentView): Drawing {
     folds: [
       both([296, 246], [{ to: [328, 316], q: [324, 276] }]),
       both(
-        [346, 356],
+        [343, 358],
         [
           {
             to: [CX, 376],
             c: [
-              [326, 372],
+              [332, 373],
               [288, 376],
             ],
           },

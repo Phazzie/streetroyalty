@@ -372,7 +372,12 @@ function toDataUrl(svg: string): string {
   return `data:image/svg+xml;charset=utf-8,${packed}`;
 }
 
-/** The SVG text of a mockup, for anything that wants the markup and not a link. */
+/**
+ * The SVG text of a mockup, for anything that wants the markup and not a link.
+ * Its gradients, filters and clips have one-letter ids that every mockup shares, so two
+ * of these set straight into one page would borrow each other's. Show it in an <img>
+ * (garmentMockupSvg) unless there is exactly one on the page.
+ */
 export function garmentMockupMarkup(input: GarmentMockupInput): string {
   const shape = resolveShape(input?.shape);
   return compose({
