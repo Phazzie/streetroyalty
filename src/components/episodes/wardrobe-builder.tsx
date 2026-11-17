@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Copy, Download, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, Check, Copy, Download, Plus, Trash2 } from "lucide-react";
 import { boardBlob, drawBoard } from "@/components/episodes/reference-board";
 import { cn } from "@/lib/cn";
 import { boardFileName } from "@/lib/episodes/board";
@@ -180,7 +180,6 @@ export function WardrobeBuilder({ products, demo }: { products: StoreProduct[]; 
   const [rack, setRack] = useState<DesignSummary[] | null>(null);
   const [rackError, setRackError] = useState(false);
   const [allRack, setAllRack] = useState(false);
-  const [palettes, setPalettes] = useState<Record<string, string[]>>({});
   const [noPicture, setNoPicture] = useState<string[]>([]);
   const [boardNote, setBoardNote] = useState("");
   const [ticks, setTicks] = useState<Record<string, boolean>>({});
@@ -218,17 +217,9 @@ export function WardrobeBuilder({ products, demo }: { products: StoreProduct[]; 
   // A rack piece cannot be told from a missing one until the rack has loaded.
   const pending = rack === null && active.pieces.some((ref) => ref.kind === "rack");
   const gone = pending ? [] : resolved.filter(isMissing);
-  const basePieces = useMemo(
+  const pieces = useMemo(
     () => resolved.filter((piece): piece is SheetPiece => !isMissing(piece)),
     [resolved],
-  );
-  const pieces = useMemo(
-    () =>
-      basePieces.map((piece) => {
-        const sampled = palettes[refKey(piece.ref)];
-        return sampled && sampled.length > 0 ? { ...piece, sampled } : piece;
-      }),
-    [basePieces, palettes],
   );
   const sheet = useMemo(
     () => buildWardrobeSheet({ character: active.name, pieces }),
@@ -239,31 +230,38 @@ export function WardrobeBuilder({ products, demo }: { products: StoreProduct[]; 
   const shownCustoms = allRack ? customs : customs.slice(0, RACK_PREVIEW);
   const wearing = new Set(active.pieces.map(refKey));
   const full = active.pieces.length >= MAX_PIECES;
-  const boardKey = basePieces.map((piece) => refKey(piece.ref)).join("|");
+  const boardKey = pieces.map((piece) => refKey(piece.ref)).join("|");
 
   useEffect(() => {
     const node = canvas.current;
-    if (!node || basePieces.length === 0) return;
+    // Bumped even for an empty outfit, so a board still loading for the last one is dropped.
     const mine = (run.current += 1);
-    void drawBoard(
-      node,
-      { character: active.name, pieces: basePieces },
-      () => run.current !== mine,
-    ).then((result) => {
-      if (!result || run.current !== mine) return;
-      setNoPicture(result.withoutPicture);
-      setPalettes((before) => {
-        const same = Object.entries(result.palettes).every(
-          ([key, value]) => before[key]?.join() === value.join(),
-        );
-        return same ? before : { ...before, ...result.palettes };
+    setBoardNote("");
+    if (!node || pieces.length === 0) {
+      setNoPicture([]);
+      return;
+    }
+    void drawBoard(node, { character: active.name, pieces }, () => run.current !== mine)
+      .then((result) => {
+        if (!result || run.current !== mine) return;
+        setNoPicture(result.withoutPicture);
+      })
+      .catch(() => {
+        if (run.current === mine) {
+          setBoardNote("The board could not be drawn in this browser. The words below still work.");
+        }
       });
-    });
-    // basePieces is covered by boardKey: same keys, same pieces.
+    // pieces is covered by boardKey: same keys, same pieces.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardKey, active.name]);
 
   const checked = sheet.checklist.filter((item) => ticks[item]).length;
+
+  const sheetTop = useRef<HTMLDivElement | null>(null);
+  const toSheet = () => {
+    const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    sheetTop.current?.scrollIntoView({ behavior: calm ? "auto" : "smooth", block: "start" });
+  };
 
   const download = async () => {
     const node = canvas.current;
@@ -429,10 +427,27 @@ export function WardrobeBuilder({ products, demo }: { products: StoreProduct[]; 
               </button>
             </div>
           ) : null}
+          {pieces.length > 0 ? (
+            <button
+              type="button"
+              onClick={toSheet}
+              className="sticky bottom-3 z-10 mt-5 flex min-h-12 w-full items-center justify-between gap-3 border-2 border-ink bg-ink px-4 text-left text-bg shadow-[4px_4px_0_var(--color-pipe)] lg:hidden"
+            >
+              <span className="min-w-0">
+                <span className="ep-tc block text-xs opacity-80">
+                  {pieces.length} on {sheet.character}
+                </span>
+                <span className="block font-display text-xs tracking-wider uppercase">
+                  See the board and the words
+                </span>
+              </span>
+              <ArrowDown className="h-5 w-5 shrink-0" strokeWidth={3} aria-hidden="true" />
+            </button>
+          ) : null}
         </Step>
       </div>
 
-      <div className="flex min-w-0 flex-col gap-8">
+      <div ref={sheetTop} className="flex min-w-0 scroll-mt-20 flex-col gap-8">
         <Step n={3} title="Take it to the shoot">
           {pieces.length === 0 ? (
             <div className="border-2 border-dashed border-ink px-5 py-12 text-center">
@@ -472,12 +487,14 @@ export function WardrobeBuilder({ products, demo }: { products: StoreProduct[]; 
             </p>
             {noPicture.length > 0 ? (
               <p className="mt-1 text-sm text-muted">
-                No picture could be loaded for {noPicture.join(", ")}. The board shows the base
-                colour instead.
+                No picture could be loaded for {noPicture.join("; ")}. The board shows the base
+                colour instead, so attach a picture of {noPicture.length === 1 ? "it" : "them"} by
+                hand.
               </p>
             ) : null}
             <p className="mt-1 text-sm text-muted">
-              The small swatches are measured from each picture, so they are a guide.
+              The small swatches on the board are measured from each picture, so they are a guide.
+              The words below only use colours on record.
               {demo
                 ? " Pictures of the preview drop are generated, not photos of finished garments."
                 : ""}

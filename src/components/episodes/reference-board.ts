@@ -38,6 +38,10 @@ export function loadPicture(url: string): Promise<HTMLImageElement | null> {
     image.src = url;
   });
   pictures.set(url, loading);
+  // A failure is not remembered, so the next draw gets to try again.
+  void loading.then((image) => {
+    if (!image && pictures.get(url) === loading) pictures.delete(url);
+  });
   return loading;
 }
 
@@ -105,7 +109,11 @@ function drawCell(
     ctx.fillStyle = piece.baseColor?.hex ? inkOn(piece.baseColor.hex) : MUTED;
     ctx.font = `400 22px ${BODY}`;
     ctx.textAlign = "center";
-    ctx.fillText("No picture on record", picture.x + picture.w / 2, picture.y + picture.h / 2);
+    ctx.fillText(
+      piece.imageUrl ? "Picture did not load" : "No picture on record",
+      picture.x + picture.w / 2,
+      picture.y + picture.h / 2,
+    );
     ctx.textAlign = "left";
   }
 

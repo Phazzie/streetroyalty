@@ -24,8 +24,6 @@ export type SheetPiece = {
   /** The label's own line about the piece, quoted as is. */
   quote: string | null;
   imageUrl: string | null;
-  /** Hex colours measured from the picture in the browser. A guide, never a spec. */
-  sampled?: string[];
   /** Path on this site where the piece can be bought. */
   href: string;
 };
@@ -69,6 +67,25 @@ function words(value: string): string {
   return value.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
 }
 
+/**
+ * Names, colours and blurbs come from the shop and from what makers typed. They end
+ * up inside a block that gets pasted into another tool, so each is kept to one line
+ * and a sane length. A title cannot add lines to the block or bury the rest of it.
+ */
+function oneLine(value: string | null | undefined, max: number): string {
+  return String(value ?? "")
+    .replace(/[\u0000-\u001f\u007f\u2028\u2029]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max)
+    .trim();
+}
+
+const MAX_PIECE_NAME = 80;
+const MAX_COLOR_NAME = 40;
+const MAX_GARMENT = 60;
+const MAX_QUOTE = 200;
+
 export function sheetPieceFromProduct(product: StoreProduct): SheetPiece {
   const color = product.colors[0];
   const known = KNOWN_BUILD[product.slug];
@@ -76,13 +93,16 @@ export function sheetPieceFromProduct(product: StoreProduct): SheetPiece {
   return {
     ref: { kind: "shop", slug: product.slug },
     source: "shop",
-    name: product.name,
-    garment: words(product.kind).toLowerCase() || "piece",
-    baseColor: color ? { name: color.name, hex: cleanHex(color.swatch) } : null,
+    name: oneLine(product.name, MAX_PIECE_NAME) || "Untitled piece",
+    garment: oneLine(words(product.kind), MAX_GARMENT).toLowerCase() || "piece",
+    baseColor:
+      color && oneLine(color.name, MAX_COLOR_NAME)
+        ? { name: oneLine(color.name, MAX_COLOR_NAME), hex: cleanHex(color.swatch) }
+        : null,
     print: null,
     panels: matches && known ? known.panels : null,
     piping: matches && known ? known.piping : null,
-    quote: product.blurb.trim() || null,
+    quote: oneLine(product.blurb, MAX_QUOTE) || null,
     imageUrl: product.images[0]?.url ?? null,
     href: `/shop/${product.slug}`,
   };
@@ -94,18 +114,19 @@ type RackFields = Pick<
 > & { mockupUrl: string | null };
 
 export function sheetPieceFromDesign(design: RackFields): SheetPiece {
-  const type = words(design.productType).toLowerCase();
-  const blank = design.productName.trim();
+  const type = oneLine(words(design.productType), MAX_GARMENT).toLowerCase();
+  const blank = oneLine(design.productName, MAX_GARMENT);
+  const colorName = oneLine(design.colorName, MAX_COLOR_NAME);
   return {
     ref: { kind: "rack", slug: design.slug },
     source: "rack",
-    name: design.title.trim() || blank || "Untitled piece",
+    name: oneLine(design.title, MAX_PIECE_NAME) || blank || "Untitled piece",
     garment:
       blank && type && !blank.toLowerCase().includes(type)
         ? `${blank} (${type})`
         : blank || type || "piece",
-    baseColor: design.colorName ? { name: design.colorName, hex: cleanHex(design.colorHex) } : null,
-    print: words(design.placement).toLowerCase() || null,
+    baseColor: colorName ? { name: colorName, hex: cleanHex(design.colorHex) } : null,
+    print: oneLine(words(design.placement), MAX_COLOR_NAME).toLowerCase() || null,
     panels: null,
     piping: null,
     quote: null,
@@ -165,11 +186,8 @@ export function describePiece(piece: SheetPiece): string {
     parts.push("Any logo, stitching or trim: exactly as in the reference picture.");
   }
   if (piece.quote) parts.push(`In the label's words: "${piece.quote.replace(/"/g, "'")}"`);
-  if (piece.sampled && piece.sampled.length > 0) {
-    parts.push(
-      `Colours measured from its picture: ${piece.sampled.join(", ")}. A guide. The picture wins.`,
-    );
-  }
+  // Colours measured from the picture stay on the board. In the words they would put a
+  // second, shaded hex next to the one on record and invite the drift this is here to stop.
   return parts.join(" ");
 }
 
@@ -183,14 +201,18 @@ export type WardrobeSheet = {
   text: string;
 };
 
-function list(items: string[]): string {
+/** A list in a sentence. A name with a comma in it ("Crown Tee, Cream") switches the list to semicolons. */
+export function list(items: string[]): string {
   if (items.length <= 1) return items[0] ?? "";
-  if (items.length === 2) return `${items[0]} and ${items[1]}`;
-  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+  const commas = items.some((item) => item.includes(","));
+  if (items.length === 2 && !commas) return `${items[0]} and ${items[1]}`;
+  const joiner = commas ? "; " : ", ";
+  const and = commas ? "; and " : " and ";
+  return `${items.slice(0, -1).join(joiner)}${and}${items[items.length - 1]}`;
 }
 
 export function characterName(raw: string): string {
-  return raw.replace(/\s+/g, " ").trim().slice(0, 40) || "The character";
+  return oneLine(raw, 40) || "The character";
 }
 
 export function buildWardrobeSheet(input: {

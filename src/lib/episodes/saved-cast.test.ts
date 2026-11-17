@@ -160,6 +160,31 @@ describe("taking a cast from an episode", () => {
     expect(parseSavedCast(JSON.stringify(cast))).toEqual(cast);
   });
 
+  it("keeps what a character with the same name already had on, after the episode's pieces", () => {
+    let saved = renameActive(defaultCast(), "Character A");
+    saved = togglePiece(saved, { kind: "rack", slug: "mine" });
+    saved = togglePiece(saved, { kind: "shop", slug: "lilac-set-hoodie" });
+    const cast = mergeEpisodeCast(saved, TEMPLATE_EPISODE);
+    expect(cast.characters[0]?.pieces).toEqual([
+      { kind: "shop", slug: "lilac-set-hoodie" },
+      { kind: "shop", slug: "lilac-set-jogger" },
+      { kind: "shop", slug: "crown-cap" },
+      { kind: "rack", slug: "mine" },
+    ]);
+    // Sending the same cast twice changes nothing.
+    expect(mergeEpisodeCast(cast, TEMPLATE_EPISODE)).toEqual(cast);
+  });
+
+  it("never dresses a character past the outfit cap when merging", () => {
+    let saved = renameActive(defaultCast(), "Character A");
+    for (let n = 0; n < MAX_PIECES; n += 1) {
+      saved = togglePiece(saved, { kind: "rack", slug: `r${n}` });
+    }
+    const cast = mergeEpisodeCast(saved, TEMPLATE_EPISODE);
+    expect(cast.characters[0]?.pieces).toHaveLength(MAX_PIECES);
+    expect(cast.characters[0]?.pieces[0]).toEqual({ kind: "shop", slug: "lilac-set-hoodie" });
+  });
+
   it("does not grow past the cap, and leaves the save alone when nobody fits", () => {
     let saved = renameActive(defaultCast(), "One");
     for (let n = 0; n < MAX_CHARACTERS; n += 1) saved = renameActive(addCharacter(saved), `N${n}`);

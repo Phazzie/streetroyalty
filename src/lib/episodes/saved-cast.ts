@@ -156,8 +156,9 @@ export function episodeOutfits(episode: Episode): { name: string; pieces: Wardro
 
 /**
  * Adds an episode's cast to what is already saved, without throwing anything away.
- * A saved character with the same name gets the episode's pieces. An empty,
- * unnamed slot is reused. Anyone else is added while there is room. The first
+ * A saved character with the same name gets the episode's pieces first and keeps
+ * whatever else they had on, as far as the outfit has room. An empty, unnamed slot
+ * is reused. Anyone else is added while there is room. The first
  * cast member becomes the active one.
  */
 export function mergeEpisodeCast(saved: SavedCast, episode: Episode): SavedCast {
@@ -182,8 +183,10 @@ export function mergeEpisodeCast(saved: SavedCast, episode: Episode): SavedCast 
       target = { id: `c${n}`, name: "", pieces: [] };
       characters = [...characters, target];
     }
+    const mine = new Set(outfit.pieces.map(refKey));
+    const kept = target.pieces.filter((piece) => !mine.has(refKey(piece)));
     target.name = outfit.name;
-    target.pieces = outfit.pieces;
+    target.pieces = [...outfit.pieces, ...kept].slice(0, MAX_PIECES);
     if (first) {
       activeId = target.id;
       first = false;
