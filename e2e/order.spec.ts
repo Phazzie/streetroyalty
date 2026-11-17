@@ -35,6 +35,7 @@ test.describe("from nothing to a placed order", () => {
     await page.waitForURL("**/orders");
     await expect(page.getByText("submitted", { exact: false }).first()).toBeVisible();
     await expect(page.getByText("$69.83")).toBeVisible();
+    await page.screenshot({ path: test.info().outputPath("orders.png"), fullPage: true });
 
     await page.goto("/cart");
     await expect(page.getByText("Nothing in the bag.")).toBeVisible();
