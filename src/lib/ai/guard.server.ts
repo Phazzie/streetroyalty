@@ -54,14 +54,37 @@ function visitorBucket(day: string): string {
   return `v:${createHash("sha256").update(`${salt}|${day}|${address}`).digest("hex").slice(0, 24)}`;
 }
 
-async function bump(day: string, bucket: string, kind: string): Promise<number> {
+/**
+ * Adds one to the visitor's count and, only if that leaves the visitor within
+ * their cap, one to the whole site's. It is a single statement, so a failure
+ * never leaves the visitor charged for a request that was then turned away,
+ * and a visitor past their cap cannot run up the site's count.
+ */
+async function bump(
+  day: string,
+  bucket: string,
+  kind: string,
+  visitorCap: number,
+): Promise<{ visitor: number; global: number | null }> {
   const sql = await getSql();
-  const rows = await sql<{ count: number }>`
-    insert into ai_usage (day, bucket, kind, count) values (${day}, ${bucket}, ${kind}, 1)
-    on conflict (day, bucket, kind) do update set count = ai_usage.count + 1
-    returning count
+  const rows = await sql<{ visitor: number | null; global: number | null }>`
+    with v as (
+      insert into ai_usage (day, bucket, kind, count) values (${day}, ${bucket}, ${kind}, 1)
+      on conflict (day, bucket, kind) do update set count = ai_usage.count + 1
+      returning count
+    ), g as (
+      insert into ai_usage (day, bucket, kind, count)
+      select ${day}, 'global', ${kind}, 1 from v where v.count <= ${visitorCap}
+      on conflict (day, bucket, kind) do update set count = ai_usage.count + 1
+      returning count
+    )
+    select (select count from v) as visitor, (select count from g) as global
   `;
-  return Number(rows[0]?.count ?? 1);
+  const row = rows[0];
+  return {
+    visitor: Number(row?.visitor ?? 1),
+    global: row?.global == null ? null : Number(row.global),
+  };
 }
 
 function bumpMemory(day: string, bucket: string, kind: string): number {
@@ -106,12 +129,9 @@ export async function count(
   const day = usageDay(new Date());
   const bucket = visitorBucket(day);
   try {
-    const visitor = await bump(day, bucket, kind);
-    const first = judgeSpend({ visitor, global: null }, cap);
-    if (!first.ok) return first;
-    const global = await bump(day, "global", kind);
+    const counts = await bump(day, bucket, kind, cap.visitor);
     void sweep(day);
-    return judgeSpend({ visitor, global }, cap);
+    return judgeSpend(counts, cap);
   } catch (error) {
     console.error("ai usage", error);
     if (strict) return NO_STORE;
