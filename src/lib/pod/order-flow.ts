@@ -13,6 +13,24 @@ export type OrderStatus =
   | "shipped"
   | "delivered";
 
+export const ORDER_STATUSES: OrderStatus[] = [
+  "draft",
+  "awaiting_payment",
+  "paid",
+  "submitted",
+  "failed",
+  "needs_review",
+  "canceled",
+  "shipped",
+  "delivered",
+];
+
+/** An order can be claimed for printing from these. Anything later already went to the printer or was stopped. */
+export const CLAIMABLE: OrderStatus[] = ["draft", "awaiting_payment", "failed"];
+
+/** How long a claim holds before another paid signal may take it over, in case the first one died mid-confirm. */
+export const CLAIM_HOLD_MS = 2 * 60 * 1000;
+
 export type FulfillmentOrder = {
   id: string;
   status: OrderStatus;
@@ -35,11 +53,18 @@ export interface OrderStore {
   getOrder(id: string): Promise<FulfillmentOrder | null>;
   findByExternalId(externalId: string): Promise<FulfillmentOrder | null>;
   findByProviderOrderId(providerOrderId: string): Promise<FulfillmentOrder | null>;
+  /**
+   * Take the right to send this order to the printer, in one step, so that two
+   * paid signals arriving together cannot both confirm it. True for exactly one
+   * caller. The order reads `paid` while the claim is held.
+   */
+  claimForPrint(id: string): Promise<boolean>;
   markSubmitted(id: string, providerStatus: string): Promise<void>;
   /** Payment was captured but the printer rejected or dropped the confirm. Retryable. Not a refund. */
   markFulfillmentFailed(id: string, reason: string): Promise<void>;
   /** The captured amount does not match the order. Do not print. A human refunds in Stripe. */
   markNeedsReview(id: string, reason: string): Promise<void>;
+  /** A status the order cannot legally move to is dropped. Tracking and printer status are kept either way. */
   applyProviderUpdate(
     id: string,
     patch: {
@@ -136,11 +161,33 @@ export function decidePaymentFulfillment(
   return { ok: true, action: "confirmed" };
 }
 
-function alreadyConfirmed(error: unknown): boolean {
+/** Statuses a printer update may move an order from, to reach `to`. */
+export function statusesThatCanBecome(to: OrderStatus): OrderStatus[] {
+  return ORDER_STATUSES.filter((from) => canTransition(from, to));
+}
+
+function refusalSaysConfirmed(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return /already (confirmed|fulfilled|being fulfilled)|status is (pending|inprocess|in_process)/i.test(
     message,
   );
+}
+
+/**
+ * A confirm can fail because the order is already with the printer. The
+ * printer's own record settles that. The wording of its error is only a
+ * fallback for when that record cannot be read.
+ */
+async function printerAlreadyHasIt(
+  provider: PodProvider,
+  providerOrderId: string,
+  error: unknown,
+): Promise<boolean> {
+  try {
+    return (await provider.getOrder(providerOrderId)).confirmed;
+  } catch {
+    return refusalSaysConfirmed(error);
+  }
 }
 
 export async function fulfillPaidOrder(
@@ -164,10 +211,14 @@ export async function fulfillPaidOrder(
   assertFulfillmentAllowed(input.podMode, input.paymentsMode);
   const providerOrderId = order?.providerOrderId;
   if (!providerOrderId) return { ok: false, reason: "missing_provider_order" };
+  // The read above can be stale by now. Only the caller that wins the claim talks to the printer.
+  if (!(await store.claimForPrint(input.orderId))) {
+    return { ok: true, action: "ignored", reason: "already_in_hand" };
+  }
   try {
     await provider.confirmOrder(providerOrderId);
   } catch (error) {
-    if (!alreadyConfirmed(error)) {
+    if (!(await printerAlreadyHasIt(provider, providerOrderId, error))) {
       const message =
         error instanceof Error ? error.message : "The printer did not accept the order.";
       await store.markFulfillmentFailed(input.orderId, message);

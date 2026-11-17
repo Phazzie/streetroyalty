@@ -7,7 +7,13 @@ import { seedOrderRow } from "../../test/seed-order.ts";
 
 beforeEach(truncateAll);
 
-orderStoreContract("SQL", async () => ({
-  store: dbStore(await getSql()),
-  seed: (order) => seedOrderRow(order),
-}));
+orderStoreContract("SQL", async () => {
+  const sql = await getSql();
+  return {
+    store: dbStore(sql),
+    seed: (order) => seedOrderRow(order),
+    async ageClaim(id) {
+      await sql`update orders set updated_at = now() - interval '1 hour' where id = ${id}`;
+    },
+  };
+});

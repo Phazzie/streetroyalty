@@ -1,10 +1,13 @@
 import { getSql, type Sql } from "../db.ts";
 import {
+  CLAIMABLE,
+  CLAIM_HOLD_MS,
   assertLivePaymentHasPrinter,
   fulfillPaidOrder,
   processPrintfulWebhook,
   processStripeWebhook,
   purchasedLineKeys,
+  statusesThatCanBecome,
   type FulfillmentOrder,
   type OrderStatus,
   type OrderStore,
@@ -150,6 +153,21 @@ export function dbStore(sql: Sql): OrderStore {
       if (!rows[0]) return null;
       return this.getOrder(rows[0].id);
     },
+    async claimForPrint(id) {
+      // One statement, so Postgres picks a single winner among callers that arrive together.
+      const staleBefore = new Date(Date.now() - CLAIM_HOLD_MS).toISOString();
+      const claimed = await sql<{ id: string }>`
+        update orders
+        set status = 'paid', payment_status = 'paid', updated_at = now()
+        where id = ${id}
+          and (
+            status = any(string_to_array(${CLAIMABLE.join(",")}, ','))
+            or (status = 'paid' and updated_at < ${staleBefore}::timestamptz)
+          )
+        returning id
+      `;
+      return claimed.length === 1;
+    },
     async markSubmitted(id, providerStatus) {
       await sql`
         update orders
@@ -172,9 +190,16 @@ export function dbStore(sql: Sql): OrderStore {
       `;
     },
     async applyProviderUpdate(id, patch) {
+      // The legal-move check is part of the write. A check made on an earlier read
+      // lets two updates that arrive together land in the wrong order.
+      const next = patch.status ?? null;
+      const from = next ? statusesThatCanBecome(next).join(",") : "";
       await sql`
         update orders set
-          status = coalesce(${patch.status ?? null}, status),
+          status = case
+            when ${next}::text is not null and status = any(string_to_array(${from}, ',')) then ${next}::text
+            else status
+          end,
           provider_status = coalesce(${patch.providerStatus ?? null}, provider_status),
           tracking_number = coalesce(${patch.trackingNumber ?? null}, tracking_number),
           tracking_url = coalesce(${patch.trackingUrl ?? null}, tracking_url),

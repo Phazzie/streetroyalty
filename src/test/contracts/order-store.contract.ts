@@ -10,6 +10,8 @@ export type StoreHarness = {
   store: OrderStore;
   /** Put one order in the store in exactly this state. */
   seed(order: FulfillmentOrder): Promise<void>;
+  /** Make a held print claim look older than the hold, as if its owner died mid-confirm. */
+  ageClaim(id: string): Promise<void>;
 };
 
 export const STATUSES: OrderStatus[] = [
@@ -57,6 +59,62 @@ export function orderStoreContract(name: string, make: () => Promise<StoreHarnes
       expect((await harness.store.findByProviderOrderId("pf-ord-1"))?.id).toBe("ord-1");
       expect(await harness.store.getOrder("nope")).toBeNull();
       expect(await harness.store.findByProviderOrderId("nope")).toBeNull();
+    });
+
+    describe("claiming an order for print", () => {
+      it.each(["draft", "awaiting_payment", "failed"] as OrderStatus[])(
+        "gives a %s order to the first caller and marks it paid",
+        async (status) => {
+          await harness.seed(order(status));
+          expect(await harness.store.claimForPrint("ord-1")).toBe(true);
+          expect(await harness.store.getOrder("ord-1")).toMatchObject({
+            status: "paid",
+            paymentStatus: "paid",
+          });
+        },
+      );
+
+      it("refuses the second caller", async () => {
+        await harness.seed(order("awaiting_payment"));
+        expect(await harness.store.claimForPrint("ord-1")).toBe(true);
+        expect(await harness.store.claimForPrint("ord-1")).toBe(false);
+      });
+
+      it("picks exactly one winner among callers that arrive together", async () => {
+        await harness.seed(order("awaiting_payment"));
+        const results = await Promise.all(
+          Array.from({ length: 8 }, () => harness.store.claimForPrint("ord-1")),
+        );
+        expect(results.filter(Boolean)).toHaveLength(1);
+      });
+
+      it.each(["submitted", "shipped", "delivered", "canceled", "needs_review"] as OrderStatus[])(
+        "refuses a %s order and leaves it as it was",
+        async (status) => {
+          await harness.seed(order(status));
+          expect(await harness.store.claimForPrint("ord-1")).toBe(false);
+          expect(await statusOf()).toBe(status);
+        },
+      );
+
+      it("refuses an order that does not exist", async () => {
+        expect(await harness.store.claimForPrint("nope")).toBe(false);
+      });
+
+      it("can be taken over once the first claim has gone stale", async () => {
+        await harness.seed(order("awaiting_payment"));
+        expect(await harness.store.claimForPrint("ord-1")).toBe(true);
+        await harness.ageClaim("ord-1");
+        expect(await harness.store.claimForPrint("ord-1")).toBe(true);
+        expect(await harness.store.claimForPrint("ord-1")).toBe(false);
+      });
+
+      it("opens again after a refused print, so a retry can claim it", async () => {
+        await harness.seed(order("awaiting_payment"));
+        await harness.store.claimForPrint("ord-1");
+        await harness.store.markFulfillmentFailed("ord-1", "printer said no");
+        expect(await harness.store.claimForPrint("ord-1")).toBe(true);
+      });
     });
 
     it("marks a confirmed order submitted and paid", async () => {
