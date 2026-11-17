@@ -119,6 +119,16 @@ export async function fileReport(
     where reporter_id = ${userId} and created_at > ${since}::timestamptz
   `;
   if (Number(today[0]?.n ?? 0) >= DAILY_REPORT_CEILING) throw new Error(REPORT_MESSAGES.tooMany);
+  // Reports sent in parallel all read the count above before any is written. The
+  // allowance is taken in one statement, which they cannot race past.
+  const { takeQuota, windowKey } = await import("./quota.server.ts");
+  const allowed = await takeQuota(sql, {
+    userId,
+    action: "report",
+    window: windowKey(now, "day"),
+    limit: DAILY_REPORT_CEILING,
+  });
+  if (!allowed) throw new Error(REPORT_MESSAGES.tooMany);
 
   // Two taps at once race past the check above. The unique key settles it.
   const inserted = await sql<{ id: string }>`

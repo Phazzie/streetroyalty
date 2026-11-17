@@ -208,6 +208,16 @@ describe("remixing a piece", () => {
       designId: expect.any(String) as string,
     });
   });
+
+  it("holds the hourly limit when the taps arrive all at once", async () => {
+    const source = await seedDesign("ada", { published: true });
+    const results = await Promise.allSettled(
+      Array.from({ length: REMIX_HOURLY_LIMIT + 10 }, () => remixDesign("bo", source.slug)),
+    );
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(
+      REMIX_HOURLY_LIMIT,
+    );
+  });
 });
 
 describe("a piece's family", () => {

@@ -18,6 +18,7 @@ describe("the database handle", () => {
       "0011_tag_scans.sql",
       "0012_reports.sql",
       "0013_cart_colorway_lines.sql",
+      "0014_action_quotas.sql",
     ]);
   });
 

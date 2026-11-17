@@ -17,6 +17,12 @@ exports[`the database handle > has the tables and columns the app reads 1`] = `
     "updatedAt: timestamp with time zone",
     "userId: text",
   ],
+  "action_quotas": [
+    "action: text",
+    "used: integer",
+    "user_id: text",
+    "window_key: text",
+  ],
   "ai_usage": [
     "bucket: text",
     "count: integer",

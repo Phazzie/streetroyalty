@@ -46,6 +46,9 @@ for (const [path, heading] of ROUTES) {
     });
 
     test("has no serious accessibility problems", async ({ page }) => {
+      // Contrast is measured on the finished page. Mid fade-in, text is see-through on
+      // purpose, and on a busy machine the scan can land on such a frame.
+      await page.emulateMedia({ reducedMotion: "reduce" });
       await page.goto(path);
       await expect(page.getByRole("heading", { name: heading }).first()).toBeVisible();
       const results = await new AxeBuilder({ page })

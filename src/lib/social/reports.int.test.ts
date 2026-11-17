@@ -223,6 +223,23 @@ describe("filing a report", () => {
     expect((await reportRows())[0]?.note).toBe("line one line two gnp.exe");
   });
 
+  it("holds the daily ceiling when reports arrive all at once", async () => {
+    const now = new Date("2026-11-17T12:00:00Z");
+    const pieces = [];
+    for (let index = 0; index < DAILY_REPORT_CEILING + 5; index += 1) {
+      pieces.push(await seedDesign("ada", { title: `Piece ${index}`, published: true }));
+    }
+    const results = await Promise.allSettled(
+      pieces.map((piece) =>
+        fileReport("bo", { kind: "piece", slug: piece.slug, reason: "other" }, now),
+      ),
+    );
+    const filed = results.filter(
+      (result) => result.status === "fulfilled" && result.value.status === "filed",
+    );
+    expect(filed).toHaveLength(DAILY_REPORT_CEILING);
+  });
+
   it("stops one person at the daily ceiling", async () => {
     const sql = await getSql();
     const now = new Date("2026-11-17T12:00:00Z");

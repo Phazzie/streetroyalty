@@ -91,9 +91,18 @@ export async function remixDesign(userId: string, slug: string): Promise<{ desig
     join designs d on d.id = l.design_id
     where d.user_id = ${userId} and l.created_at > now() - interval '1 hour'
   `;
-  if (Number(recent[0]?.count ?? 0) >= REMIX_HOURLY_LIMIT) {
-    throw new Error("That is a lot of remixes in one hour. Finish one, then come back.");
-  }
+  const tooMany = "That is a lot of remixes in one hour. Finish one, then come back.";
+  if (Number(recent[0]?.count ?? 0) >= REMIX_HOURLY_LIMIT) throw new Error(tooMany);
+  // The count above reads before anything is written, so taps sent at once could all pass
+  // it. The allowance is taken in one statement, which they cannot race past.
+  const { takeQuota, windowKey } = await import("./quota.server.ts");
+  const allowed = await takeQuota(sql, {
+    userId,
+    action: "remix",
+    window: windowKey(new Date(), "hour"),
+    limit: REMIX_HOURLY_LIMIT,
+  });
+  if (!allowed) throw new Error(tooMany);
 
   const id = crypto.randomUUID();
   const title = remixTitle(source.title);

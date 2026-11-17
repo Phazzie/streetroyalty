@@ -44,7 +44,9 @@ test("one account cannot see or reach another account's design, cart or order", 
   // But it lands in Bo's cart, and Ada's is untouched.
   await bo.getByRole("button", { name: "Add to cart" }).click();
   await bo.waitForURL("**/cart");
-  await expect(bo.getByText(title)).toBeVisible();
+  // Wait for the cart itself, not the piece page it came from, before reading it.
+  await expect(bo.getByRole("heading", { name: "Cart" })).toBeVisible();
+  await expect(bo.getByRole("main").getByText(title)).toBeVisible();
   await page.goto("/cart");
   await expect(page.getByText(/\$30\.69 before shipping/)).toBeVisible();
 
