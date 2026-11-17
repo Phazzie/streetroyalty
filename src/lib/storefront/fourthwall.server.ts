@@ -74,11 +74,10 @@ async function call(
   }
 }
 
-/**
- * The products of a collection, or the HTTP status of the page that failed.
- * A partial list is never returned, so it cannot be cached as the whole shelf.
- */
-async function allProducts(collection: string, currency: string): Promise<StoreProduct[] | number> {
+/** The pages of a collection that loaded, and the HTTP status of the page that stopped it, if one did. */
+type Listing = { products: StoreProduct[]; failed: number | null };
+
+async function allProducts(collection: string, currency: string): Promise<Listing> {
   const products: StoreProduct[] = [];
   for (let page = 0; page < MAX_PAGES; page += 1) {
     const res = await call(`/collections/${encodeURIComponent(collection)}/products`, {
@@ -86,37 +85,48 @@ async function allProducts(collection: string, currency: string): Promise<StoreP
       page: String(page),
       size: String(PAGE_SIZE),
     });
-    if (res.status !== 200) return res.status;
+    if (res.status !== 200) return { products, failed: res.status };
     const mapped = mapFourthwallProducts(res.json);
     products.push(...mapped.products);
     if (!mapped.hasNextPage) break;
   }
-  return products;
+  return { products, failed: null };
 }
 
 async function fetchLive(previous?: Cached): Promise<Cached | Failure> {
   const currency = "USD";
-  const [shop, collections, products] = await Promise.all([
+  const [shop, collections, shelf] = await Promise.all([
     call("/shop", {}),
     call("/collections", { size: "50" }),
     allProducts("all", currency),
   ]);
-  if (typeof products === "number") {
-    return { at: Date.now(), refused: products === 401 || products === 403 };
+  // A shelf with a page missing is a failed refresh, so it is never cached as the whole shop.
+  if (shelf.failed !== null) {
+    return { at: Date.now(), refused: shelf.failed === 401 || shelf.failed === 403 };
   }
+  const products = shelf.products;
   const named =
     collections.status === 200
       ? mapFourthwallCollections(collections.json).slice(0, MAX_COLLECTIONS)
       : [];
-  const members = await Promise.all(
+  const listings = await Promise.all(
     named.map((collection) => allProducts(collection.slug, currency)),
   );
+  // The pieces in each collection. One that did not load in full keeps the pages that did,
+  // plus what the last good shelf knew, so a missed page does not empty it.
+  const members = named.map((collection, index) => {
+    const listing = listings[index];
+    const slugs = new Set(listing.products.map((item) => item.slug));
+    if (listing.failed !== null) {
+      for (const item of previous?.catalog.products ?? []) {
+        if (item.collections?.includes(collection.slug)) slugs.add(item.slug);
+      }
+    }
+    return slugs;
+  });
   const tagged = products.map((product) => {
     const slugs = named
-      .filter((_, index) => {
-        const list = members[index];
-        return Array.isArray(list) && list.some((item) => item.slug === product.slug);
-      })
+      .filter((_, index) => members[index].has(product.slug))
       .map((collection) => collection.slug);
     return slugs.length > 0 ? { ...product, collection: slugs[0], collections: slugs } : product;
   });
