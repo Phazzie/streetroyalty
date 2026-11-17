@@ -99,13 +99,23 @@ describe("the shop bag", () => {
 
   it("keeps working when the browser refuses to store anything", async () => {
     const bag = await visit();
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    // A stand-in for the whole store. Spying on the real one's methods does not hold in this
+    // environment once the store has been used, so the outcome would depend on test order.
+    const setItem = vi.fn(() => {
       throw new Error("QuotaExceededError");
     });
-    act(() => bag.result.current.add(HOODIE));
-    act(() => bag.result.current.markSent());
-    expect(bag.result.current.lines).toHaveLength(1);
-    expect(bag.result.current.sent).toBe(true);
+    vi.stubGlobal("localStorage", { setItem, getItem: () => null, removeItem: () => undefined });
+    try {
+      act(() => bag.result.current.add(HOODIE));
+      act(() => bag.result.current.markSent());
+      expect(setItem).toHaveBeenCalled();
+      expect(bag.result.current.lines).toHaveLength(1);
+      expect(bag.result.current.sent).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    localStorage.setItem("probe", "1");
+    expect(localStorage.getItem("probe")).toBe("1");
   });
 
   it("empties on clear, here and on the next visit", async () => {
