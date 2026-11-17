@@ -89,14 +89,16 @@ export function noteLength(note: string): number {
  */
 export function cleanNote(input: unknown): string {
   return String(input ?? "")
-    .replace(/[\u0000-\u001f\u007f-\u009f]+/g, " ")
+    .replace(/\p{Cc}+/gu, " ")
     .replace(/[‎‏‪-‮⁦-⁩]/g, "")
     .replace(/ {2,}/g, " ")
     .trim();
 }
 
 /** Tally reasons, most common first, ties in the order of the list above. */
-export function tallyReasons(reasons: readonly string[]): { reason: ReportReason; count: number }[] {
+export function tallyReasons(
+  reasons: readonly string[],
+): { reason: ReportReason; count: number }[] {
   return REPORT_REASONS.map((item) => ({
     reason: item.id,
     count: reasons.filter((reason) => (isReportReason(reason) ? reason : "other") === item.id)
