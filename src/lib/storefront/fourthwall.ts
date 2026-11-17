@@ -29,14 +29,38 @@ export function moneyToCents(value: unknown): number | null {
 }
 
 const ENTITIES: Record<string, string> = {
-  "&amp;": "&",
-  "&lt;": "<",
-  "&gt;": ">",
-  "&quot;": '"',
-  "&#39;": "'",
-  "&apos;": "'",
-  "&nbsp;": " ",
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: " ",
+  rsquo: "\u2019",
+  lsquo: "\u2018",
+  rdquo: "\u201d",
+  ldquo: "\u201c",
+  mdash: "\u2014",
+  ndash: "\u2013",
+  hellip: "\u2026",
+  bull: "\u2022",
+  middot: "\u00b7",
+  copy: "\u00a9",
+  reg: "\u00ae",
+  trade: "\u2122",
+  deg: "\u00b0",
+  times: "\u00d7",
+  frac12: "\u00bd",
+  eacute: "\u00e9",
 };
+
+/** A named entity from the list above, or any numbered one. An unknown name is left as written. */
+function decodeEntity(entity: string, body: string): string {
+  if (body[0] !== "#") return ENTITIES[body] ?? entity;
+  const hex = body[1] === "x" || body[1] === "X";
+  const code = Number.parseInt(body.slice(hex ? 2 : 1), hex ? 16 : 10);
+  const usable = code >= 32 && code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff);
+  return usable && code !== 160 ? String.fromCodePoint(code) : " ";
+}
 
 /**
  * Product copy arrives as HTML. It is reduced to plain paragraphs so it can be
@@ -48,7 +72,7 @@ export function htmlToParagraphs(html: string): string[] {
     .replace(/<\s*br\s*\/?\s*>/gi, "\n")
     .replace(/<\s*\/?\s*(p|div|li|ul|ol|h[1-6]|tr)(\s[^>]*)?>/gi, "\n")
     .replace(/<[^>]*>/g, " ")
-    .replace(/&(?:amp|lt|gt|quot|apos|nbsp|#39);/g, (entity) => ENTITIES[entity] ?? " ");
+    .replace(/&(#\d{1,7}|#[xX][0-9a-fA-F]{1,6}|[a-zA-Z][a-zA-Z0-9]{1,30});/g, decodeEntity);
   return text
     .split(/\n+/)
     .map((line) => line.replace(/\s+/g, " ").trim())

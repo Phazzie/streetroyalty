@@ -32,6 +32,7 @@ type Failure = { at: number; refused: boolean };
 const globalRef = globalThis as typeof globalThis & {
   __srStorefront__?: Cached;
   __srStorefrontDown__?: Failure;
+  __srStorefrontLoading__?: Promise<Cached | Failure>;
 };
 
 function token(): string | undefined {
@@ -73,8 +74,10 @@ async function call(
   }
 }
 
-/** The products of a collection, or the HTTP status that stopped the first page from loading. */
-async function allProducts(collection: string, currency: string): Promise<StoreProduct[] | number> {
+/** The pages of a collection that loaded, and the HTTP status of the page that stopped it, if one did. */
+type Listing = { products: StoreProduct[]; failed: number | null };
+
+async function allProducts(collection: string, currency: string): Promise<Listing> {
   const products: StoreProduct[] = [];
   for (let page = 0; page < MAX_PAGES; page += 1) {
     const res = await call(`/collections/${encodeURIComponent(collection)}/products`, {
@@ -82,39 +85,53 @@ async function allProducts(collection: string, currency: string): Promise<StoreP
       page: String(page),
       size: String(PAGE_SIZE),
     });
-    if (res.status !== 200) return page === 0 ? res.status : products;
+    if (res.status !== 200) return { products, failed: res.status };
     const mapped = mapFourthwallProducts(res.json);
     products.push(...mapped.products);
     if (!mapped.hasNextPage) break;
   }
-  return products;
+  return { products, failed: null };
 }
 
-async function fetchLive(): Promise<Cached | Failure> {
+async function fetchLive(previous?: Cached): Promise<Cached | Failure> {
   const currency = "USD";
-  const [shop, collections, products] = await Promise.all([
+  const [shop, collections, shelf] = await Promise.all([
     call("/shop", {}),
     call("/collections", { size: "50" }),
     allProducts("all", currency),
   ]);
-  if (typeof products === "number") {
-    return { at: Date.now(), refused: products === 401 || products === 403 };
+  // A shelf with a page missing is a failed refresh, so it is never cached as the whole shop.
+  if (shelf.failed !== null) {
+    return { at: Date.now(), refused: shelf.failed === 401 || shelf.failed === 403 };
   }
+  const products = shelf.products;
   const named =
     collections.status === 200
       ? mapFourthwallCollections(collections.json).slice(0, MAX_COLLECTIONS)
       : [];
-  const members = await Promise.all(
+  const listings = await Promise.all(
     named.map((collection) => allProducts(collection.slug, currency)),
   );
+  // The pieces in each collection. One that did not load in full keeps the pages that did,
+  // plus what the last good shelf knew, so a missed page does not empty it.
+  const members = named.map((collection, index) => {
+    const listing = listings[index];
+    const slugs = new Set(listing.products.map((item) => item.slug));
+    if (listing.failed !== null) {
+      for (const item of previous?.catalog.products ?? []) {
+        if (item.collections?.includes(collection.slug)) slugs.add(item.slug);
+      }
+    }
+    return slugs;
+  });
   const tagged = products.map((product) => {
-    const index = members.findIndex(
-      (list) => Array.isArray(list) && list.some((item) => item.slug === product.slug),
-    );
-    return index >= 0 ? { ...product, collection: named[index].slug } : product;
+    const slugs = named
+      .filter((_, index) => members[index].has(product.slug))
+      .map((collection) => collection.slug);
+    return slugs.length > 0 ? { ...product, collection: slugs[0], collections: slugs } : product;
   });
   const used = named.filter((collection) =>
-    tagged.some((product) => product.collection === collection.slug),
+    tagged.some((product) => product.collections?.includes(collection.slug)),
   );
   const shopName =
     shop.status === 200 &&
@@ -122,10 +139,11 @@ async function fetchLive(): Promise<Cached | Failure> {
     typeof shop.json === "object" &&
     typeof (shop.json as { name?: unknown }).name === "string"
       ? String((shop.json as { name: string }).name)
-      : "Street Royalty";
+      : (previous?.catalog.shopName ?? "Street Royalty");
   return {
     at: Date.now(),
-    shop: shop.status === 200 ? shop.json : null,
+    // One missed answer from /shop keeps the record already in hand, because checkout reads its host from it.
+    shop: shop.status === 200 ? shop.json : (previous?.shop ?? null),
     catalog: {
       source: "fourthwall",
       shopName,
@@ -142,7 +160,11 @@ async function live(): Promise<Cached | null> {
   // After a failure, wait a little before asking again, so a broken shop is not hit on every page view.
   const down = globalRef.__srStorefrontDown__;
   if (down && Date.now() - down.at < RETRY_MS) return cached ?? null;
-  const fresh = await fetchLive();
+  // Everyone who arrives during a refresh waits on the same one.
+  globalRef.__srStorefrontLoading__ ??= fetchLive(cached).finally(() => {
+    globalRef.__srStorefrontLoading__ = undefined;
+  });
+  const fresh = await globalRef.__srStorefrontLoading__;
   if ("catalog" in fresh) {
     globalRef.__srStorefront__ = fresh;
     globalRef.__srStorefrontDown__ = undefined;
@@ -188,10 +210,22 @@ export async function startCheckout(lines: CheckoutLine[]): Promise<CheckoutStar
     );
   }
   const data = await live();
-  const host = checkoutHost(data?.shop, process.env.FOURTHWALL_CHECKOUT_DOMAIN);
+  const override = process.env.FOURTHWALL_CHECKOUT_DOMAIN?.trim();
+  let shop: unknown = data?.shop ?? null;
+  // The shop record names the checkout host. If the last refresh could not read it, ask once more.
+  if (!shop && !override) {
+    const again = await call("/shop", {});
+    if (again.status === 200) {
+      shop = again.json;
+      if (data) data.shop = shop;
+    }
+  }
+  const host = checkoutHost(shop, override);
   if (!host)
     throw new Error(
-      "Checkout is not set up yet. Set FOURTHWALL_CHECKOUT_DOMAIN to the shop's Fourthwall domain.",
+      shop || override
+        ? "Checkout is not set up yet. Set FOURTHWALL_CHECKOUT_DOMAIN to the shop's Fourthwall domain."
+        : "The shop did not answer, so checkout could not start. Try again in a minute.",
     );
   const currency = data?.catalog.currency ?? "USD";
   const res = await call(

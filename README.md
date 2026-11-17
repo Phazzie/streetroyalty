@@ -80,13 +80,13 @@ Copy `.env.example` to the host’s secret store. Do not commit real keys. This 
 
 ## Spending caps
 
-Every picture, video, and text call is counted before it reaches xAI: once against the visitor and once against the whole site, per day. A request that could never produce anything is turned away before it is counted, and nothing is counted when the key is missing. Over the cap, the lab says it hit today's limit and the text features fall back to their built-in answers. Counters live in the `ai_usage` table, keyed by a one-day hash of the visitor's address, and rows older than a week are deleted.
+Every picture, video, and text call is counted before it reaches xAI: once against the visitor and once against the whole site, per day. A request that could never produce anything is turned away before it is counted, and nothing is counted when the key is missing. Over the cap, the lab says it hit today's limit and the text features fall back to their built-in answers. Counters live in the `ai_usage` table, keyed by a one-day hash of the visitor's address, and rows older than a week are deleted. If the database cannot be reached, text falls back to a count in the server's memory, and pictures and video are refused until it is back. On Vercel, pictures and video stay off until `DATABASE_URL` is set, because without it each server instance would keep its own count.
 
 ## Hosting on Vercel
 
 The build writes Vercel's output format, so a Vercel project linked to this repository deploys with no settings. Three things make it more than a demo:
 
-1. **A database.** Without `DATABASE_URL` the app runs on an in-memory database inside each server instance, so accounts, designs, carts, orders, and the spending counters do not last. Add a Postgres store from the Vercel project's Storage tab and it sets `DATABASE_URL`. Migrations run during the build.
+1. **A database.** Without `DATABASE_URL` the app runs on an in-memory database inside each server instance, so accounts, designs, carts, orders, and the spending counters do not last, and picture and video generation is switched off. Add a Postgres store from the Vercel project's Storage tab and it sets `DATABASE_URL`. Migrations run during the build.
 2. **Sign-in.** Set `BETTER_AUTH_URL` to the production origin and `BETTER_AUTH_SECRET` to a long random string. Email and password sign-in then works. The Google and X buttons go through Grok's sign-in broker and only work when the app is published through Grok.
 3. **Keys.** `XAI_API_KEY` for the lab and the studio's art tools, and `FOURTHWALL_STOREFRONT_TOKEN` for the real shop.
 

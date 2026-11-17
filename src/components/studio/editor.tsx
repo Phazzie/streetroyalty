@@ -7,6 +7,7 @@ import { Note, Panel } from "@/components/studio/shell";
 import { renderPrintFile } from "@/components/studio/print-file";
 import { luminance } from "@/lib/color";
 import { fitPng, loadPixels } from "@/lib/gfx/canvas";
+import { hasTransparency } from "@/lib/gfx/effects";
 import { copy } from "@/lib/copy";
 import { compressDataUrl, readFileAsDataUrl } from "@/lib/images";
 import type { CatalogProduct, DesignLayer, PrintArea } from "@/lib/pod/types";
@@ -71,8 +72,11 @@ export function Editor({ designId }: { designId: string }) {
   const flight = useRef(createSingleFlight());
   // The untouched picture behind each image layer, so a print effect can always start over.
   const originals = useRef(new Map<string, string>());
+  // Made art lands seconds after it was asked for, so the layer limit is read from here, not from the render that asked.
+  const layerCount = useRef(1);
 
   useEffect(() => {
+    layerCount.current = layers.length;
     for (const layer of layers) {
       if (layer.type === "image" && !originals.current.has(layer.id)) {
         originals.current.set(layer.id, layer.src);
@@ -229,20 +233,28 @@ export function Editor({ designId }: { designId: string }) {
     }
     try {
       const raw = await readFileAsDataUrl(file);
-      // A PNG, WebP or GIF can carry a transparent backdrop. Keeping it as a PNG keeps that; a JPEG would fill it in.
-      const keepsAlpha = /^image\/(png|webp|gif)$/.test(file.type);
-      const src = keepsAlpha ? fitPng(await loadPixels(raw, 1000)) : await compressDataUrl(raw, 1200, 0.85);
+      // A PNG, WebP or GIF can carry a transparent backdrop, and only a PNG keeps it; a JPEG would fill it in.
+      // One with nothing see-through goes the JPEG way, which holds far more detail in the same space.
+      let src = "";
+      if (/^image\/(png|webp|gif)$/.test(file.type)) {
+        const pixels = await loadPixels(raw, 1000);
+        if (hasTransparency(pixels)) src = fitPng(pixels);
+      }
+      src ||= await compressDataUrl(raw, 1200, 0.85);
       addArt(src, src);
     } catch (error) {
       setNote(errorText(error));
     }
   }
 
-  function addArt(src: string, original: string) {
-    if (layers.length >= MAX_LAYERS) {
+  /** Adds a picture layer. False means the piece was already full and nothing was added. */
+  function addArt(src: string, original: string): boolean {
+    if (layerCount.current >= MAX_LAYERS) {
       setNote("Eight layers is the limit.");
-      return;
+      return false;
     }
+    // Counted now, not when the page next draws, so a second picture landing in the same moment is turned away here.
+    layerCount.current += 1;
     const id = `img-${Date.now()}`;
     originals.current.set(id, original);
     setLayers((current) => {
@@ -250,6 +262,7 @@ export function Editor({ designId }: { designId: string }) {
       return [...current, { id, type: "image" as const, src, x: 0.5, y: 0.42, scale: 0.85, rotation: 0 }];
     });
     setSelected(id);
+    return true;
   }
 
   async function exportPrint() {

@@ -4,6 +4,7 @@ import {
   cornerColor,
   coverage,
   halftone,
+  hasTransparency,
   hexToRgb,
   inkLightMarks,
   knockout,
@@ -189,5 +190,14 @@ describe("inkLightMarks", () => {
     const onLight = canvas(20, 20, WHITE);
     paint(onLight, 8, 8, 12, 12, BLACK);
     assert.equal(inkLightMarks(onLight), false);
+  });
+});
+
+describe("hasTransparency", () => {
+  it("is false for a solid picture and true once a pixel is see-through", () => {
+    const solid = canvas(4, 4, [200, 30, 30]);
+    assert.equal(hasTransparency(solid), false);
+    solid.data[3] = 0;
+    assert.equal(hasTransparency(solid), true);
   });
 });
