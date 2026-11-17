@@ -136,7 +136,7 @@ function readSignIn(env: Env, databaseOn: boolean): Reading {
   if (!databaseOn) {
     return {
       lamp: "partly",
-      now: "Sign-in is set, but accounts still vanish when the server restarts. It is waiting on the database.",
+      now: "Sign-in is set, but accounts still vanish when the server restarts.",
       waitsOn: ["database"],
     };
   }
@@ -209,14 +209,14 @@ function readPayments(env: Env, databaseOn: boolean): Reading {
   if (throws(() => assertLivePaymentHasPrinter(readPodMode(env), mode))) {
     return {
       lamp: "partly",
-      now: "Stripe is ready, but checkout refuses real money while printing is in sandbox. It is waiting on printing.",
+      now: "Stripe is ready, but checkout refuses real money while printing is in sandbox.",
       waitsOn: ["printing"],
     };
   }
   if (!databaseOn) {
     return {
       lamp: "partly",
-      now: "People can pay, but the order is only held in the server's memory and is lost when it restarts. It is waiting on the database.",
+      now: "People can pay, but the order is only held in the server's memory and is lost when it restarts.",
       waitsOn: ["database"],
     };
   }
