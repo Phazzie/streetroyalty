@@ -115,7 +115,7 @@ Orders are created with v2 `POST /v2/orders`, which leaves them in `draft`. `POS
 
 `npm run ci` runs lint, typecheck, tests, and the production build. The same command runs in these places:
 
-- **Vercel**, on every push. `vercel.json` makes `npm run ci` the build command, so a failed lint, type, or test stops the deploy and shows as a failed Vercel check on the pull request. The install includes the dev tools for that reason.
+- **Vercel**, on every push. `vercel.json` makes `npm run ci` the build command, so a failed lint, type, or test stops the deploy and shows as a failed Vercel check on the pull request. The install asks for the dev tools by name (`--include=dev`), because lint needs them and npm leaves them out when a host sets `NODE_ENV=production`.
 - **Bitbucket Pipelines** (`bitbucket-pipelines.yml`), once the Bitbucket mirror is being pushed and Pipelines is switched on there. Neither is done yet. It is set to run on `main` and on pull requests, because the free plan has 50 build minutes a month.
 - **Depot on Origin**, described below.
 
