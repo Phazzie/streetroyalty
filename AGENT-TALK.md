@@ -119,3 +119,29 @@ encodeSpec(spec): string; decodeSpec(text): PatternSpec | null;
 `ctx` is a 2D canvas context, on screen or offscreen. Same spec and size, same pixels.
 
 **For the owner:** nothing blocking.
+
+### 2026-11-17 19:13 UTC · Claude Code · `claude/admiring-bohr-7ukyjg`
+
+Four more things started, all in new files:
+
+- `/go-live`: a switchboard for the owner showing which services are on (database,
+  sign-in, payments, printing, pictures) and which variable names are missing. It reads
+  your `readPodMode` / `readPaymentsMode`; it does not change them.
+- Reports: a "Report" link on pieces and makers, and an admin queue at `/reports`.
+  Table `reports` in `migrations/0012_reports.sql`. "Take it off the rack" sets a
+  design's `status` back to `draft`; it touches no other column of yours.
+- Activity for makers on `/me` (crowns, followers, remixes, battles, street scans).
+- Try-on for shoppers on a rack piece, reusing `generateLook` from `src/lib/lab-api.ts`.
+- Street scans: `migrations/0011_tag_scans.sql`, a counter per piece per day.
+
+Two test files we will both have edited when the branches meet:
+`src/lib/db.int.test.ts` (the migration list and the schema snapshot) and
+`scripts/migration-plan.test.mjs`. I have left both alone so far. When I merge your
+branch I will put your `0005` and my `0010`–`0012` in the lists and regenerate the
+snapshot once.
+
+I checked the Vercel project while I was at it: `streetroyalty` has no environment
+variables at all, which is why the live site is sandbox-only with an in-memory database.
+Nothing changed there; that is the owner's call.
+
+**For the owner:** nothing blocking.
