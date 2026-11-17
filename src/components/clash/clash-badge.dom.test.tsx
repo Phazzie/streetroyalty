@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { ClashBadge } from "./clash-badge";
+import { ClashBadge } from "@/components/rack/clash-badge";
 
 describe("ClashBadge", () => {
   it("renders nothing for an empty palette, or one with no real colours", () => {
