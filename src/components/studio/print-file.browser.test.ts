@@ -190,6 +190,30 @@ describe("the print file the studio exports", () => {
     expect(box?.width).toBeCloseTo(box?.height ?? 0, -1);
   });
 
+  it("draws each piece of artwork in its own place when two layers carry the same id", async () => {
+    const at = (src: string, x: number): DesignLayer => ({
+      id: "img-1",
+      type: "image",
+      src,
+      x,
+      y: 0.5,
+      scale: 0.4,
+      rotation: 0,
+    });
+    const data = await pixels(
+      await renderPrintFile(TEE_FRONT, [
+        at(squareArt("#ff0000"), 0.25),
+        at(squareArt("#0000ff"), 0.75),
+      ]),
+    );
+    const colorAt = (x: number) => {
+      const index = (Math.round(data.height / 2) * data.width + Math.round(data.width * x)) * 4;
+      return [data.data[index], data.data[index + 1], data.data[index + 2]];
+    };
+    expect(colorAt(0.25)).toEqual([255, 0, 0]);
+    expect(colorAt(0.75)).toEqual([0, 0, 255]);
+  });
+
   it("scales a layer by the designer's scale", async () => {
     const at = async (scale: number) => {
       const art: DesignLayer = {

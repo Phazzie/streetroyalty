@@ -89,7 +89,8 @@ describe("one paid order, two signals at once", () => {
       completeSandboxPayment("u1", order.orderId),
     ]);
 
-    expect(webhook.status).toBe(200);
+    // Whichever loses is told the order is in hand: the webhook with a 503 that Stripe retries.
+    expect([200, 503]).toContain(webhook.status);
     expect(click.status).toBe("submitted");
     expect(timesPrinted(order.providerOrderId)).toBe(1);
     expect(await statusOf(order.orderId)).toBe("submitted");
@@ -107,9 +108,16 @@ describe("one paid order, two signals at once", () => {
       Array.from({ length: 5 }, () => receiveStripeWebhook(paid.raw, paid.signature)),
     );
 
-    expect(answers.map((answer) => answer.status)).toEqual([200, 200, 200, 200, 200]);
+    const statuses = answers.map((answer) => answer.status);
+    expect(statuses).toContain(200);
+    expect(statuses.filter((status) => status !== 200 && status !== 503)).toEqual([]);
     expect(timesPrinted(order.providerOrderId)).toBe(1);
     expect(await statusOf(order.orderId)).toBe("submitted");
+
+    // Stripe sends the ones that got a 503 again. By then the order is in, and the event is on record.
+    const retry = await receiveStripeWebhook(paid.raw, paid.signature);
+    expect(retry).toEqual({ status: 200, body: { duplicate: true } });
+    expect(timesPrinted(order.providerOrderId)).toBe(1);
   });
 
   it("does not depend on how the printer words a refusal to print twice", async () => {
@@ -131,8 +139,18 @@ describe("one paid order, two signals at once", () => {
       receiveStripeWebhook(second.raw, second.signature),
     ]);
 
-    expect(answers.map((answer) => answer.status)).toEqual([200, 200]);
+    const statuses = answers.map((answer) => answer.status).sort();
+    expect(statuses).toEqual([200, 503]);
     expect(await statusOf(order.orderId)).toBe("submitted");
+    expect(timesPrinted(order.providerOrderId)).toBe(1);
+
+    // The retry of the one that was turned away finds the order already in.
+    const loser = answers[0]?.status === 503 ? first : second;
+    expect((await receiveStripeWebhook(loser.raw, loser.signature)).body).toEqual({
+      ok: true,
+      action: "ignored",
+      reason: "already_fulfilled",
+    });
   });
 });
 

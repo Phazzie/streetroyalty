@@ -5,8 +5,10 @@ import { defineConfig } from "@playwright/test";
  * Browser journeys against the built app, not the dev server, because that is
  * what ships. With no E2E_BASE_URL this builds nothing itself: it starts the
  * production preview on 8081 (run `npm run build` first) or reuses one already
- * up. Point E2E_BASE_URL at a deployment to walk that instead; journeys that
- * write data only run where the shop is in sandbox.
+ * up. Point E2E_BASE_URL at a deployment to walk that instead. The journeys
+ * that create accounts and orders are then skipped, unless E2E_ALLOW_WRITES=1
+ * says the deployment is a disposable sandbox, and they still stop if the shop
+ * does not show its sandbox badge.
  */
 
 const baseURL = process.env.E2E_BASE_URL || "http://127.0.0.1:8081";

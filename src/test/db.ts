@@ -1,4 +1,5 @@
 import { getSql, type Sql } from "@/lib/db.ts";
+import { assertDisposableDatabase } from "./db-guard.ts";
 
 /**
  * The app's own database handle. With no DATABASE_URL that is Postgres in
@@ -12,6 +13,7 @@ export function testSql(): Promise<Sql> {
 
 /** Empty every table but keep the schema, so each test starts from nothing. */
 export async function truncateAll(): Promise<void> {
+  assertDisposableDatabase();
   const sql = await getSql();
   const tables = await sql<{ tablename: string }>`
     select tablename from pg_tables where schemaname = 'public' and tablename <> '_migrations'

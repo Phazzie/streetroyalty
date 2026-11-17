@@ -202,8 +202,9 @@ describe("a live payment", () => {
       syncStripeReturn("ada", "cs_test_1"),
     ]);
 
-    expect(webhook.status).toBe(200);
-    expect(back.ok).toBe(true);
+    // One of the two prints. The other is told the order is already in hand.
+    expect([webhook.status === 200, back.ok]).toContain(true);
+    expect([200, 503]).toContain(webhook.status);
     expect(printful.confirms).toHaveLength(1);
     expect((await order(orderId))?.status).toBe("submitted");
   });

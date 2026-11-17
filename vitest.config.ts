@@ -70,8 +70,10 @@ export default defineConfig({
           environment: "node",
           include: ["src/**/*.int.test.ts"],
           setupFiles: ["src/test/setup/integration.ts"],
-          // One database per file, and the files share nothing.
+          // In memory, every file gets its own database. A configured Postgres is one
+          // database shared by all of them, so there the files run one at a time.
           pool: "forks",
+          fileParallelism: !process.env.DATABASE_URL?.trim(),
           testTimeout: 20_000,
           hookTimeout: 30_000,
         },

@@ -3,6 +3,7 @@ import {
   CLAIMABLE,
   CLAIM_HOLD_MS,
   HOLDABLE,
+  IN_PROGRESS,
   assertLivePaymentHasPrinter,
   fulfillPaidOrder,
   processPrintfulWebhook,
@@ -255,6 +256,8 @@ export async function completeSandboxPayment(userId: string, orderId: string) {
     podMode: config.podMode,
     paymentsMode: config.paymentsMode,
   });
+  // A second click while the first is still going in is not a failure. The first one finishes the job.
+  if (!result.ok && result.reason === IN_PROGRESS) return { orderId, status: "submitted" };
   if (!result.ok) throw new Error(`Payment could not submit the print order (${result.reason}).`);
   await dbStore(sql).clearPurchasedLines(orderId);
   return { orderId, status: "submitted" };
@@ -328,7 +331,9 @@ export async function retryFulfillment(userId: string, orderId: string) {
     podMode: config.podMode,
     paymentsMode: config.paymentsMode,
   });
-  if (!result.ok) throw new Error(`The printer still did not take the order (${result.reason}).`);
+  if (!result.ok && result.reason !== IN_PROGRESS) {
+    throw new Error(`The printer still did not take the order (${result.reason}).`);
+  }
   return { orderId, status: "submitted" as const };
 }
 

@@ -35,6 +35,9 @@ export const CLAIMABLE: OrderStatus[] = ["draft", "awaiting_payment", "failed"];
  */
 export const HOLDABLE: OrderStatus[] = ["draft", "awaiting_payment", "failed", "canceled"];
 
+/** Another caller holds the print claim right now. Ask again shortly. */
+export const IN_PROGRESS = "in_progress";
+
 /** How long a claim holds before another paid signal may take it over, in case the first one died mid-confirm. */
 export const CLAIM_HOLD_MS = 2 * 60 * 1000;
 
@@ -218,7 +221,9 @@ export async function fulfillPaidOrder(
   if (!providerOrderId) return { ok: false, reason: "missing_provider_order" };
   // The read above can be stale by now. Only the caller that wins the claim talks to the printer.
   if (!(await store.claimForPrint(input.orderId))) {
-    return { ok: true, action: "ignored", reason: "already_in_hand" };
+    // Someone else holds it. That is not success: if they died mid-confirm the
+    // order is still unprinted, so the caller has to be able to come back.
+    return { ok: false, reason: IN_PROGRESS };
   }
   try {
     await provider.confirmOrder(providerOrderId);
@@ -399,6 +404,11 @@ export async function processStripeWebhook(args: {
       podMode: args.podMode,
       paymentsMode: args.paymentsMode,
     });
+    if (!result.ok && result.reason === IN_PROGRESS) {
+      // Not recorded, so Stripe sends it again. By then the holder has either
+      // finished, and this is a no-op, or died, and the retry takes the claim over.
+      return { status: 503, body: { retry: true, reason: IN_PROGRESS } };
+    }
     if (result.ok) await args.store.clearPurchasedLines(event.orderId);
     await args.store.recordEvent(event.id, "stripe", event.type);
     return { status: 200, body: result };

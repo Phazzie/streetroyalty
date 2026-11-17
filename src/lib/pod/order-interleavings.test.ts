@@ -110,7 +110,9 @@ describe("payments that arrive together", () => {
           const answers = await scheduler.waitFor(Promise.all(running));
 
           expect(printer.asked, "sent to print more than once").toEqual([PRINTER_ORDER]);
-          expect(answers.every((status) => status === 200)).toBe(true);
+          // One caller prints. Any other either sees it done, or is told to come back while it is in hand.
+          expect(answers).toContain(200);
+          expect(answers.filter((status) => ![200, 409, 503].includes(status))).toEqual([]);
           expect(base.orders.get(ORDER)).toMatchObject({
             status: "submitted",
             paymentStatus: "paid",

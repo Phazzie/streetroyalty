@@ -54,6 +54,31 @@ export async function interactive(page: Page, selector: string): Promise<void> {
   );
 }
 
+/**
+ * Journeys that create accounts, designs or orders. Against the local preview
+ * that is a throwaway database in sandbox. Against a deployment named by
+ * E2E_BASE_URL it would be real accounts, and in live mode real Printful
+ * drafts and Stripe sessions, so those are skipped unless the deployment is a
+ * disposable sandbox and E2E_ALLOW_WRITES=1 says so.
+ */
+export function writesData(): void {
+  test.skip(
+    Boolean(process.env.E2E_BASE_URL) && process.env.E2E_ALLOW_WRITES !== "1",
+    "writes data; set E2E_ALLOW_WRITES=1 only for a disposable sandbox deployment",
+  );
+}
+
+/** Stop before spending anything if the shop under test is not in sandbox, whatever the flags say. */
+export async function expectSandbox(page: Page): Promise<void> {
+  await expect(
+    page
+      .locator(".tag")
+      .filter({ hasText: /^Sandbox$/i })
+      .first(),
+    "this journey places an order and only runs against a sandbox shop",
+  ).toBeVisible();
+}
+
 let serial = 0;
 
 /** A fresh account, signed in, landed on the studio. */
@@ -82,6 +107,7 @@ export async function signUp(
 export async function publishTee(page: Page, title: string): Promise<void> {
   await page.goto("/studio");
   await interactive(page, "#piece-title");
+  await expectSandbox(page);
   await expect(page.getByText("Size", { exact: true })).toBeVisible();
   await page.getByLabel("Name", { exact: true }).fill(title);
   // The page can still be settling as fonts arrive, and a click that lands mid-shift misses.

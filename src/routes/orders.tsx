@@ -11,6 +11,7 @@ import {
   studioAccess,
 } from "@/lib/studio/api";
 import type { OrderSummary } from "@/lib/studio/models";
+import { returnNote } from "@/lib/studio/return-note";
 
 export const Route = createFileRoute("/orders")({
   validateSearch: (search: Record<string, unknown>): { session_id?: string } => {
@@ -44,7 +45,7 @@ function OrdersPage() {
   useEffect(() => {
     if (sessionId) {
       void confirmStripeReturn({ data: { sessionId } })
-        .then(() => setNote("Payment landed. The print order was submitted."))
+        .then((result) => setNote(returnNote(result)))
         .catch((reason: unknown) =>
           setNote(reason instanceof Error ? reason.message : "Could not confirm payment."),
         )

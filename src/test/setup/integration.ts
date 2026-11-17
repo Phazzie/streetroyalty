@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
+import { assertDisposableDatabase } from "../db-guard.ts";
 import { seen, server } from "../msw/server.ts";
 import { resetRequest } from "../request.ts";
 
@@ -57,6 +58,9 @@ const CACHES = [
 let envBefore: NodeJS.ProcessEnv = {};
 
 process.env.TZ = "UTC";
+
+// Before any test file is loaded, and so before the app opens a connection or a seed writes a row.
+assertDisposableDatabase();
 
 beforeAll(() => {
   server.listen({ onUnhandledRequest: "error" });

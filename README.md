@@ -127,7 +127,7 @@ Orders are created with v2 `POST /v2/orders`, which leaves them in `draft`. `POS
 Tests are found by file name, so a new one runs without being registered anywhere.
 
 - `*.test.ts` is a unit test of plain logic.
-- `*.int.test.ts` is an integration test. It uses the app's own database handle on in-memory Postgres with every file in `migrations/` applied, and fails on any network request that has no mock. Set `DATABASE_URL` to run the same tests on a real Postgres, after `npm run db:migrate`.
+- `*.int.test.ts` is an integration test. It uses the app's own database handle on in-memory Postgres with every file in `migrations/` applied, and fails on any network request that has no mock. Set `DATABASE_URL` to run the same tests on a real Postgres, after `npm run db:migrate`. Because these tests empty every table, they refuse to start unless that database's name contains `test`.
 - `*.dom.test.tsx` is a component test in happy-dom.
 - `*.browser.test.ts` runs in Chromium, for code that draws on a canvas.
 - `*.live.test.ts` calls the real services and only runs with `LIVE=1`.
@@ -137,7 +137,7 @@ Shared pieces live in `src/test/`: the database and request helpers, a stand-in 
 - `contracts/order-store.contract.ts` is every rule an order store has to keep. It runs against the in-memory store the unit tests use and the SQL store production uses, so the two cannot drift.
 - `contracts/order-lifecycle.model.ts` invents random sequences of payments, replays, printer notices and outages for one order and checks after every step that nothing printed without matching money, no status went backwards, and a charged order always says so.
 
-`e2e/` holds the browser journeys. `E2E_BASE_URL` points them at a deployment instead of the local preview. The journeys that write data need the shop in sandbox.
+`e2e/` holds the browser journeys. `E2E_BASE_URL` points them at a deployment instead of the local preview. The journeys that create accounts and orders are skipped there unless `E2E_ALLOW_WRITES=1` is also set, which is only for a disposable deployment in sandbox. They stop on their own if the shop does not show its sandbox badge.
 
 Coverage floors are in `vitest.config.ts`: 90% of lines and 85% of branches on printing, payments, the studio's server code and the AI caps, and 50% overall.
 

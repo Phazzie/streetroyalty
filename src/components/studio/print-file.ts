@@ -28,9 +28,10 @@ export async function renderPrintFile(area: PrintArea, layers: DesignLayer[]): P
     await document.fonts.load(`40px "Archivo Black"`).catch(() => undefined);
     await document.fonts.load(`40px "Outfit"`).catch(() => undefined);
   }
-  const images = new Map<string, HTMLImageElement>();
+  // Kept by position, not by id: two layers can carry the same id and must not share a picture.
+  const images: (HTMLImageElement | null)[] = [];
   for (const layer of layers) {
-    if (layer.type === "image") images.set(layer.id, await loadImage(layer.src));
+    images.push(layer.type === "image" ? await loadImage(layer.src) : null);
   }
   let file = "";
   for (const step of SIZE_STEPS) {
@@ -44,7 +45,7 @@ function draw(
   targetWidth: number,
   targetHeight: number,
   layers: DesignLayer[],
-  images: Map<string, HTMLImageElement>,
+  images: (HTMLImageElement | null)[],
 ): string {
   const width = Math.max(240, targetWidth);
   const height = Math.max(240, targetHeight);
@@ -54,7 +55,7 @@ function draw(
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("This browser cannot export a print file.");
   ctx.clearRect(0, 0, width, height);
-  for (const layer of layers) {
+  layers.forEach((layer, index) => {
     ctx.save();
     ctx.translate(layer.x * width, layer.y * height);
     ctx.rotate((layer.rotation * Math.PI) / 180);
@@ -66,7 +67,7 @@ function draw(
       ctx.textBaseline = "middle";
       ctx.fillText(layer.text, 0, 0, width * 0.92);
     } else {
-      const image = images.get(layer.id);
+      const image = images[index];
       if (image) {
         const dw = width * 0.52 * layer.scale;
         const dh = dw * (image.height / Math.max(1, image.width));
@@ -74,6 +75,6 @@ function draw(
       }
     }
     ctx.restore();
-  }
+  });
   return canvas.toDataURL("image/png");
 }

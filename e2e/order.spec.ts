@@ -1,6 +1,8 @@
-import { ADDRESS, expect, publishTee, signUp, test } from "./fixtures";
+import { ADDRESS, expect, publishTee, signUp, test, writesData } from "./fixtures";
 
 test.describe("from nothing to a placed order", () => {
+  writesData();
+
   test("a new account designs a tee, buys it, and sees it on its way to print", async ({
     page,
   }) => {

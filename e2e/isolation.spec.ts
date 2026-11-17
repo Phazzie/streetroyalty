@@ -1,10 +1,11 @@
-import { ADDRESS, expect, publishTee, signUp, test } from "./fixtures";
+import { ADDRESS, expect, publishTee, signUp, test, writesData } from "./fixtures";
 
 /** Two people, two browsers. The second one goes looking for the first one's things. */
 test("one account cannot see or reach another account's design, cart or order", async ({
   page,
   browser,
 }) => {
+  writesData();
   // Ada designs a tee, leaves one in her cart, and places an order.
   await signUp(page, "ada");
   const title = `Ada Private ${Date.now()}`;

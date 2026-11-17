@@ -1,6 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
+  CLAIM_HOLD_MS,
   fulfillPaidOrder,
   processPrintfulWebhook,
   processStripeWebhook,
@@ -59,13 +60,12 @@ describe("sending a paid order to print", () => {
     expect(now()).toMatchObject({ status: "submitted", paymentStatus: "paid" });
   });
 
-  it("does not ask the printer when another caller already holds the order", async () => {
+  it("does not ask the printer when another caller already holds the order, and says to come back", async () => {
     const { store, printer, paid, now } = setup();
     await store.claimForPrint("ord-1");
     expect(await fulfillPaidOrder(store, printer, paid)).toEqual({
-      ok: true,
-      action: "ignored",
-      reason: "already_in_hand",
+      ok: false,
+      reason: "in_progress",
     });
     expect(printer.asked).toEqual([]);
     expect(now()?.status).toBe("paid");
@@ -258,6 +258,47 @@ describe("the Stripe webhook", () => {
     printer.down = false;
     expect((await stripe()).body).toEqual({ ok: true, action: "confirmed" });
     expect(now()?.status).toBe("submitted");
+  });
+
+  it("asks Stripe to send the event again while another worker holds the order, and records nothing", async () => {
+    const { store, printer, stripe, now } = setup();
+    await store.claimForPrint("ord-1");
+
+    const answer = await stripe();
+
+    expect(answer).toEqual({ status: 503, body: { retry: true, reason: "in_progress" } });
+    expect(await store.hasEvent("evt_1")).toBe(false);
+    expect(store.events).not.toContain("cart:ord-1");
+    expect(printer.asked).toEqual([]);
+    expect(now()?.status).toBe("paid");
+  });
+
+  it("prints on Stripe's retry when the worker that held the order died before printing", async () => {
+    const { store, printer, stripe, now } = setup();
+    // A worker claimed the order and never came back.
+    await store.claimForPrint("ord-1");
+    expect((await stripe()).status).toBe(503);
+
+    // Stripe retries after the claim has gone stale.
+    store.claims.set("ord-1", Date.now() - CLAIM_HOLD_MS - 1);
+    const retry = await stripe();
+
+    expect(retry).toEqual({ status: 200, body: { ok: true, action: "confirmed" } });
+    expect(printer.asked).toEqual(["pf-1"]);
+    expect(now()?.status).toBe("submitted");
+    expect(store.events).toContain("cart:ord-1");
+  });
+
+  it("acknowledges Stripe's retry once the worker that held the order has finished", async () => {
+    const { store, stripe } = setup();
+    await store.claimForPrint("ord-1");
+    expect((await stripe()).status).toBe(503);
+    await store.markSubmitted("ord-1", "pending");
+
+    expect(await stripe()).toEqual({
+      status: 200,
+      body: { ok: true, action: "ignored", reason: "already_fulfilled" },
+    });
   });
 
   it("holds a live charge for refund when printing is still in sandbox", async () => {
