@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MakerLine } from "@/components/rack/maker-line";
 import { RackCard } from "@/components/rack/rack-card";
 import { StudioShell } from "@/components/studio/shell";
 import { filterByTerms, searchTerms } from "@/lib/ai/local";
@@ -9,7 +10,7 @@ import { vibeTerms } from "@/lib/ai/api";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { createSingleFlight } from "@/lib/ui/single-flight";
 import { rackList } from "@/lib/social/api";
-import type { RackPiece, RackSort } from "@/lib/social/types";
+import type { MakerRef, RackPiece, RackSort } from "@/lib/social/types";
 
 const SORTS: { id: RackSort; label: string; hint: string }[] = [
   { id: "fresh", label: "Fresh", hint: "Newest first." },
@@ -68,6 +69,21 @@ function RackPage() {
   }, [pieces, query, terms]);
 
   const signedOutFollowing = sort === "following" && !isPending && !user;
+
+  // Everyone with a piece showing, most crowned first, so the rack reads as people and not only products.
+  const makers = useMemo(() => {
+    const seen = new Map<string, { maker: MakerRef; pieces: number; crowns: number }>();
+    for (const piece of pieces ?? []) {
+      if (!piece.maker.handle) continue;
+      const entry = seen.get(piece.maker.handle) ?? { maker: piece.maker, pieces: 0, crowns: 0 };
+      entry.pieces += 1;
+      entry.crowns += piece.crowns;
+      seen.set(piece.maker.handle, entry);
+    }
+    return [...seen.values()].sort(
+      (left, right) => right.crowns - left.crowns || right.pieces - left.pieces,
+    );
+  }, [pieces]);
 
   return (
     <StudioShell current="/rack">
@@ -140,6 +156,27 @@ function RackPage() {
         ))}
       </div>
       <p className="mb-5 text-sm text-muted">{SORTS.find((item) => item.id === sort)?.hint}</p>
+      {makers.length > 1 || (user && !isPending) ? (
+        <nav aria-label="Makers on the rack" className="mb-5 border-y-2 border-line py-2">
+          <ul className="flex items-stretch gap-2 overflow-x-auto pb-1">
+            {user && !isPending ? (
+              <li className="shrink-0">
+                <Link to="/me" className="chip h-full whitespace-nowrap">
+                  Your maker page
+                </Link>
+              </li>
+            ) : null}
+            {makers.map((entry) => (
+              <li
+                key={entry.maker.handle}
+                className="max-w-56 shrink-0 border-2 border-line bg-surface px-2"
+              >
+                <MakerLine maker={entry.maker} />
+              </li>
+            ))}
+          </ul>
+        </nav>
+      ) : null}
       {source ? (
         <p className="mb-4 text-sm text-muted">
           Matched with {source === "grok" ? "the crown" : "the words you typed"}.
