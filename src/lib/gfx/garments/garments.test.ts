@@ -227,6 +227,8 @@ describe("garment mockups", () => {
     expect(resolveView("hat", "sleeve_left")).toBe("front");
     expect(resolveView("tote", "sleeve_right")).toBe("front");
     expect(resolveView("tee", "inside_label")).toBe("front");
+    expect(resolveView("crew", "embroidery_back")).toBe("back");
+    expect(resolveView("hoodie", "front_large")).toBe("front");
     const svg = garmentMockupMarkup({
       shape: "tee",
       colorHex: "#141414",
@@ -423,6 +425,55 @@ describe("the art sits where it prints", () => {
     expect(Number(text?.[4])).toBeLessThanOrEqual(area.w * 0.92 + 0.05);
     const image = /<image [^>]*width="([\d.]+)"/.exec(svg);
     expect(Number(image?.[1])).toBeCloseTo(area.w * 0.52, 1);
+  });
+
+  it("takes the proportions of a real print area when it is given one", () => {
+    const read = (
+      printArea: { widthIn: number; heightIn: number } | undefined,
+      placement = "front",
+    ) => {
+      const svg = garmentMockupMarkup({
+        shape: "jogger",
+        colorHex: "#141414",
+        placement,
+        layers: [WORD],
+        printArea,
+      });
+      const clip =
+        /<clipPath id="p"><rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/.exec(
+          svg,
+        );
+      return {
+        x: Number(clip?.[1]),
+        y: Number(clip?.[2]),
+        w: Number(clip?.[3]),
+        h: Number(clip?.[4]),
+        svg,
+      };
+    };
+    const drawn = read(undefined);
+    const square = read({ widthIn: 5, heightIn: 5 });
+    expect(square.w / square.h).toBeCloseTo(1, 2);
+    // Same top edge, same centre line.
+    expect(square.y).toBeCloseTo(drawn.y, 1);
+    expect(square.x + square.w / 2).toBeCloseTo(drawn.x + drawn.w / 2, 1);
+    const tall = read({ widthIn: 3, heightIn: 30 });
+    expect(tall.w / tall.h).toBeCloseTo(0.125, 2);
+    expect(tall.h).toBeLessThanOrEqual(drawn.h * 1.25 + 0.1);
+    // The layer follows the new area.
+    expect(square.svg).toContain(`<text x="${Math.round((square.x + square.w / 2) * 10) / 10}"`);
+    for (const bad of [
+      { widthIn: 0, heightIn: 4 },
+      { widthIn: Number.NaN, heightIn: 4 },
+      { widthIn: -2, heightIn: -2 },
+    ]) {
+      expect(read(bad).svg).toBe(drawn.svg);
+    }
+    // The sandbox blanks already match their own areas, so passing them changes nothing.
+    const tee = { shape: "tee", colorHex: "#141414", placement: "front", layers: [WORD] };
+    expect(garmentMockupSvg({ ...tee, printArea: { widthIn: 12, heightIn: 16 } })).toBe(
+      garmentMockupSvg(tee),
+    );
   });
 
   it("clips the art to the print area and to the garment", () => {

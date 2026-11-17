@@ -31,6 +31,12 @@ export type GarmentMockupInput = {
   colorHex: string;
   placement: string;
   layers: DesignLayer[];
+  /**
+   * The blank's real print area, when the caller has it (a MockupRequest carries one).
+   * The drawn area takes its proportions, so art sits where the print file puts it.
+   * Left out, each shape uses the area of its sandbox blank.
+   */
+  printArea?: { widthIn: number; heightIn: number };
 };
 
 type Rgb = readonly [number, number, number];
@@ -221,6 +227,35 @@ function layerMarkup(layer: DesignLayer, window: PrintWindow, fallbackInk: strin
   return `<image href="${href}" x="${f(cx - width / 2)}" y="${f(cy - height / 2)}" width="${f(width)}" height="${f(height)}" preserveAspectRatio="xMidYMid meet" transform="${turn}"/>`;
 }
 
+/**
+ * Reshapes the drawn print area to a blank's real one. A chest or back area keeps its
+ * top edge and its centre line, so the print still rides high. A sleeve area keeps its
+ * centre. It never grows more than a quarter taller than the drawn one.
+ */
+function fitWindow(
+  window: PrintWindow,
+  area: { widthIn: number; heightIn: number } | undefined,
+): PrintWindow {
+  const wide = num(area?.widthIn, 0, 0, 1000);
+  const tall = num(area?.heightIn, 0, 0, 1000);
+  if (!(wide > 0 && tall > 0)) return window;
+  const ratio = Math.min(8, Math.max(0.125, wide / tall));
+  let w = window.w;
+  let h = w / ratio;
+  const most = window.h * 1.25;
+  if (h > most) {
+    h = most;
+    w = h * ratio;
+  }
+  return {
+    x: window.x + (window.w - w) / 2,
+    y: window.rot === 0 ? window.y : window.y + (window.h - h) / 2,
+    w,
+    h,
+    rot: window.rot,
+  };
+}
+
 /* --------------------------------------------------------------- painter */
 
 function paint(part: Part, tones: Palette): string {
@@ -249,11 +284,13 @@ function compose(options: {
   colorHex: string;
   layers: DesignLayer[];
   square: boolean;
+  printArea?: { widthIn: number; heightIn: number };
 }): string {
   const hex = garmentHex(options.colorHex);
   const tones = palette(hex);
   const drawing: Drawing = drawGarment(options.shape, options.view);
-  const { window, camera } = drawing;
+  const window = fitWindow(drawing.window, options.printArea);
+  const { camera } = drawing;
   const fallbackInk = tones.trim;
 
   const art = options.layers
@@ -339,6 +376,7 @@ export function garmentMockupMarkup(input: GarmentMockupInput): string {
     colorHex: input?.colorHex,
     layers: Array.isArray(input?.layers) ? input.layers : [],
     square: false,
+    printArea: input?.printArea,
   });
 }
 

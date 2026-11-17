@@ -1277,7 +1277,7 @@ export function resolveShape(shape: string): GarmentShape {
 /** Which way up the garment lies for a placement. Anything unknown is the front. */
 export function resolveView(shape: GarmentShape, placement: string): GarmentView {
   const name = String(placement ?? "").toLowerCase();
-  if (name.startsWith("back")) return "back";
+  if (name.includes("back")) return "back";
   const sleeved = shape !== "jogger" && shape !== "tote" && shape !== "hat";
   if (sleeved && name.includes("sleeve")) {
     return name.includes("right") ? "sleeve_right" : "sleeve_left";
