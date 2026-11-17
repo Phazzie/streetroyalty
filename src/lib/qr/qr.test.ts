@@ -132,7 +132,10 @@ describe("the centre mark", () => {
       const matrix = encodeQr("crown", { minVersion: version });
       expect(matrix.version).toBe(version);
       const mark = markZone(matrix);
+      // Every version carries a crown, and from version 2 up it is big enough to read as one.
+      expect(mark).not.toBeNull();
       if (!mark) continue;
+      if (version >= 2) expect(mark.crown.width).toBeGreaterThanOrEqual(5);
       const { zone } = mark;
       let hidden = 0;
       for (let y = 0; y < matrix.size; y += 1) {

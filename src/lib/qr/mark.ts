@@ -4,8 +4,9 @@ import { alignmentPatterns, KIND, type QrMatrix } from "./encode.ts";
  * Where the crown sits in the middle of a code.
  *
  * The mark only ever hides data modules, which level H can rebuild. It never hides a
- * finder, a timing line or an alignment eye. Versions 7 to 13 have an alignment eye
- * dead centre, so there the crown sits on top of the eye and the eye stays drawn.
+ * finder, a timing line or an alignment eye. Many versions (7 to 13 among them) have an
+ * alignment eye in the middle, so there the crown sits on top of the eye and the eye
+ * stays drawn.
  */
 
 /** The crown from the site header (src/components/site/shell.tsx), as one path in a 32 by 22 box. */
@@ -29,6 +30,9 @@ export type MarkZone = {
   /** That count as a share of the whole code, 0 to 1. */
   share: number;
 };
+
+/** An alignment eye this close to the middle, in modules, is the one the crown sits on. */
+const EYE_REACH = 4;
 
 /** The mark is never allowed to hide more of the code than this. */
 export const MAX_MARK_SHARE = 0.15;
@@ -77,8 +81,13 @@ function largestOdd(value: number): number {
 /** Work out the mark for a code, or null when the code is too small to carry one. */
 export function markZone(matrix: QrMatrix): MarkZone | null {
   const { size, version } = matrix;
-  const centre = (size - 1) / 2;
-  const eye = alignmentPatterns(version).find((p) => p.x === centre && p.y === centre) ?? null;
+  const middle = (size - 1) / 2;
+  // The eye nearest the middle. In big codes it can sit a few modules off dead centre.
+  const eye =
+    alignmentPatterns(version).find(
+      (p) => Math.abs(p.x - middle) <= EYE_REACH && Math.abs(p.y - middle) <= EYE_REACH,
+    ) ?? null;
+  const centre = eye ? eye.x : middle;
 
   for (let width = largestOdd(size * (eye ? 0.27 : 0.31)); width >= 3; width -= 2) {
     const half = (width - 1) / 2;
