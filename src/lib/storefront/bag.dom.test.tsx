@@ -1,10 +1,12 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { MAX_LINE_QUANTITY, type BagLine } from "./types.ts";
 
 /**
- * The shop bag lives in the browser. These run the real store against a real
- * localStorage, with a fresh copy of the module standing in for a new visit.
+ * The shop bag lives in the browser. These run the real store against an
+ * in-memory localStorage that starts empty for each test, with a fresh copy of
+ * the module standing in for a new visit. A real browser's storage is covered
+ * by the shop journey in e2e/shop.spec.ts.
  */
 
 const HOODIE: BagLine = {
@@ -24,10 +26,6 @@ async function visit() {
   act(() => hook.result.current.hydrate());
   return hook;
 }
-
-beforeEach(() => {
-  localStorage.clear();
-});
 
 describe("the shop bag", () => {
   it("is still there on the next visit", async () => {
