@@ -28,7 +28,7 @@ export function PieceTag({
       aria-label="Scan the fit"
       className="mt-6 flex items-center gap-4 border-2 border-ink bg-surface p-3"
     >
-      <div className="grid w-28 flex-none place-items-center border-2 border-ink bg-[#fffaf2] text-[#17101f] sm:w-32">
+      <div className="grid w-28 flex-none place-items-center border-2 border-ink bg-[#fffaf2] text-[#17101f] sm:w-36">
         {origin ? (
           <QrFigure
             url={tagUrl(origin, slug)}

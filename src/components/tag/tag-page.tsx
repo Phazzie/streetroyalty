@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Note, StudioShell } from "@/components/studio/shell";
 import { encodeQr, qrPngDataUrl, qrSvg, svgDataUrl, tagUrl } from "@/lib/qr";
 import { shopPiece } from "@/lib/studio/api";
 import { HangTag, TagStyles, type TagFacts } from "./hang-tag";
+import { atRest, step } from "./pendulum";
 import { QrFigure } from "./qr-figure";
 import { drawStoryCard } from "./story-card";
 
@@ -18,6 +19,73 @@ function save(href: string, name: string): void {
   document.body.append(link);
   link.click();
   link.remove();
+}
+
+/**
+ * One tag on its string. It drops in with a swing, and swings again when it is
+ * pushed: by a pointer passing over it, by a tap, or by the button. With motion
+ * turned down it hangs still.
+ */
+function Hanging({ kick, lag, children }: { kick: number; lag: number; children: ReactNode }) {
+  const holder = useRef<HTMLDivElement>(null);
+  const push = useRef<(speed: number) => void>(() => undefined);
+
+  useEffect(() => {
+    const element = holder.current;
+    if (!element || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let swing = { angle: 0, speed: 0 };
+    let frame = 0;
+    let last = 0;
+    const tick = (now: number) => {
+      swing = step(swing, (now - last) / 1000);
+      last = now;
+      if (atRest(swing)) {
+        swing = { angle: 0, speed: 0 };
+        element.style.transform = "";
+        frame = 0;
+        return;
+      }
+      element.style.transform = `rotate(${swing.angle.toFixed(3)}deg)`;
+      frame = requestAnimationFrame(tick);
+    };
+    push.current = (speed) => {
+      swing = { ...swing, speed: swing.speed + speed };
+      if (frame) return;
+      last = performance.now();
+      frame = requestAnimationFrame(tick);
+    };
+    const timer = window.setTimeout(() => push.current(72), lag);
+    return () => {
+      window.clearTimeout(timer);
+      cancelAnimationFrame(frame);
+      push.current = () => undefined;
+      element.style.transform = "";
+    };
+  }, [lag]);
+
+  useEffect(() => {
+    // The second tag gets a lighter push the other way, so the two never move as one.
+    if (kick > 0) push.current((kick % 2 === 1 ? -84 : 84) * (lag > 300 ? -0.7 : 1));
+  }, [kick, lag]);
+
+  return (
+    <div
+      ref={holder}
+      className="srt-hang"
+      onPointerMove={(event) => {
+        // A mouse brushing past drags the tag along with it. A positive angle leans left.
+        if (event.pointerType === "mouse") {
+          push.current(Math.max(-26, Math.min(26, -event.movementX * 1.4)));
+        }
+      }}
+      onPointerDown={(event) => {
+        const box = event.currentTarget.getBoundingClientRect();
+        push.current(event.clientX < box.left + box.width / 2 ? -80 : 80);
+      }}
+    >
+      {children}
+    </div>
+  );
 }
 
 /** The sheet that goes to the printer: both faces at true size, side by side, and nothing else. */
@@ -285,14 +353,14 @@ export function TagPage({ slug, makerHandle }: { slug: string; makerHandle?: str
           <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
             <section aria-labelledby="srt-hang" className="min-w-0">
               <div className="border-2 border-ink bg-cream">
-                <div className="srt-stage" key={swing}>
+                <div className="srt-stage">
                   <span className="srt-rail" aria-hidden="true" />
-                  <div className="srt-hang">
+                  <Hanging kick={swing} lag={250}>
                     <HangTag face="front" facts={facts} />
-                  </div>
-                  <div className="srt-hang">
+                  </Hanging>
+                  <Hanging kick={swing} lag={420}>
                     <HangTag face="back" facts={facts} />
-                  </div>
+                  </Hanging>
                 </div>
               </div>
               <h2 id="srt-hang" className="mt-4 font-display text-sm tracking-wide uppercase">

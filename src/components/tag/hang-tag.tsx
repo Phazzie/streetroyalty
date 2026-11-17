@@ -299,9 +299,9 @@ const CSS = `
   position: relative;
   padding-top: 62px;
   transform-origin: 50% 19px;
-  animation: srt-drop 2.6s cubic-bezier(0.3, 0.6, 0.4, 1) both, srt-sway 5.5s ease-in-out 2.6s infinite alternate;
+  touch-action: manipulation;
+  will-change: transform;
 }
-.srt-hang:nth-child(3) { animation-delay: 0.18s, 2.78s; animation-duration: 2.9s, 6.4s; }
 .srt-hang::before {
   content: "";
   position: absolute;
@@ -313,23 +313,6 @@ const CSS = `
   background: repeating-linear-gradient(180deg, #f5ebdd 0 5px, #d8c8b1 5px 8px);
   z-index: 3;
 }
-@keyframes srt-drop {
-  0% { transform: translateY(-40px) rotate(11deg); opacity: 0; }
-  12% { opacity: 1; }
-  22% { transform: translateY(0) rotate(-7deg); }
-  42% { transform: rotate(4.5deg); }
-  62% { transform: rotate(-2.6deg); }
-  82% { transform: rotate(1.4deg); }
-  100% { transform: rotate(-0.7deg); }
-}
-@keyframes srt-sway {
-  from { transform: rotate(-0.7deg); }
-  to { transform: rotate(0.9deg); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .srt-hang { animation: none; }
-}
-
 /* The sheet only exists on paper. */
 .srt-sheet { display: none; }
 @media print {
