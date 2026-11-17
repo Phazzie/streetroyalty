@@ -16,9 +16,16 @@ export type TagFacts = {
   handle?: string;
   /** What the piece is, such as "Hoodie · Black". */
   detail: string;
+  /** The garment's colour as #rrggbb, for the swatch on the front. */
+  colorHex?: string;
   /** Where the code sends people. */
   url: string;
 };
+
+/** The colour, only if it really is one. It goes straight into a style. */
+function swatch(value: string | undefined): string | undefined {
+  return value && /^#[0-9a-f]{6}$/i.test(value) ? value : undefined;
+}
 
 function Stitching({ color }: { color: string }) {
   return (
@@ -65,7 +72,12 @@ export function HangTag({ face, facts }: { face: "front" | "back"; facts: TagFac
               </p>
             ) : null}
             <div className="srt-foot">
-              <span>{facts.detail}</span>
+              <span>
+                {swatch(facts.colorHex) ? (
+                  <i className="srt-swatch" style={{ background: swatch(facts.colorHex) }} />
+                ) : null}
+                {facts.detail}
+              </span>
               <span>Made to order</span>
             </div>
           </div>
@@ -199,20 +211,29 @@ const CSS = `
 .srt-title:last-of-type { margin-bottom: auto; }
 .srt-foot {
   display: flex;
-  justify-content: space-between;
-  gap: calc(0.08 * var(--in));
+  flex-direction: column;
+  align-items: center;
+  gap: calc(0.035 * var(--in));
   width: 100%;
   margin-top: calc(0.1 * var(--in));
-  padding-top: calc(0.07 * var(--in));
+  padding-top: calc(0.08 * var(--in));
   border-top: calc(0.012 * var(--in)) solid #3a2d52;
   font-family: var(--font-display);
-  font-size: calc(0.068 * var(--in));
-  letter-spacing: 0.08em;
+  font-size: calc(0.072 * var(--in));
+  line-height: 1.2;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  text-align: left;
-  color: #d5cbe8;
+  color: #f5ebdd;
 }
-.srt-foot span:last-child { text-align: right; flex: none; }
+.srt-foot span:last-child { color: #b7a8d4; }
+.srt-swatch {
+  display: inline-block;
+  width: calc(0.085 * var(--in));
+  height: calc(0.085 * var(--in));
+  margin-right: calc(0.045 * var(--in));
+  vertical-align: -12%;
+  border: calc(0.012 * var(--in)) solid #f5ebdd;
+}
 .srt-code {
   width: calc(1.46 * var(--in));
   border: calc(0.02 * var(--in)) solid #17101f;

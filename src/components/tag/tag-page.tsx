@@ -195,7 +195,8 @@ function CodeAlone({ facts, slug }: { facts: TagFacts; slug: string }) {
 
 export function TagPage({ slug, makerHandle }: { slug: string; makerHandle?: string }) {
   const [piece, setPiece] = useState<Piece | null>(null);
-  const [missing, setMissing] = useState(false);
+  const [problem, setProblem] = useState<"" | "missing" | "failed">("");
+  const [attempt, setAttempt] = useState(0);
   const [origin, setOrigin] = useState("");
   const [swing, setSwing] = useState(0);
 
@@ -204,18 +205,21 @@ export function TagPage({ slug, makerHandle }: { slug: string; makerHandle?: str
   useEffect(() => {
     let live = true;
     setPiece(null);
-    setMissing(false);
+    setProblem("");
     void shopPiece({ data: { slug } })
       .then((next) => {
         if (live) setPiece(next);
       })
-      .catch(() => {
-        if (live) setMissing(true);
+      .catch((reason: unknown) => {
+        if (!live) return;
+        // The rack says so in words when a piece is not there. Anything else is the connection.
+        const gone = reason instanceof Error && /not on the rack/i.test(reason.message);
+        setProblem(gone ? "missing" : "failed");
       });
     return () => {
       live = false;
     };
-  }, [slug]);
+  }, [slug, attempt]);
 
   const facts: TagFacts | null =
     piece && origin
@@ -223,6 +227,7 @@ export function TagPage({ slug, makerHandle }: { slug: string; makerHandle?: str
           title: piece.title,
           handle: makerHandle,
           detail: [piece.productType, piece.colorName].filter(Boolean).join(" · "),
+          colorHex: piece.colorHex,
           url: tagUrl(origin, piece.slug),
         }
       : null;
@@ -233,7 +238,16 @@ export function TagPage({ slug, makerHandle }: { slug: string; makerHandle?: str
       <p className="tag">Scan the fit</p>
       <h1 className="mt-3 font-display text-4xl leading-none">The crown tag</h1>
 
-      {missing ? (
+      {problem === "failed" ? (
+        <div className="mt-6 max-w-xl">
+          <Note>The tag did not load. Check the connection and try again.</Note>
+          <Button variant="ghost" className="mt-3" onClick={() => setAttempt((count) => count + 1)}>
+            Try again
+          </Button>
+        </div>
+      ) : null}
+
+      {problem === "missing" ? (
         <div className="empty-state mt-6 max-w-xl">
           <h2 className="font-display text-xl uppercase">No piece behind this tag</h2>
           <p className="mt-2 text-muted">
@@ -248,7 +262,7 @@ export function TagPage({ slug, makerHandle }: { slug: string; makerHandle?: str
         </div>
       ) : null}
 
-      {!missing && !facts ? (
+      {!problem && !facts ? (
         <p className="pending-pulse mt-6 text-muted" role="status">
           Cutting the tag.
         </p>
