@@ -44,6 +44,9 @@ export default defineConfig({
       reporter: ["text-summary", "html"],
       reportsDirectory: "coverage",
       thresholds: {
+        // The floor for everything, set just under where it stands. Raise it as the lab's client code gets tests.
+        lines: 50,
+        branches: 50,
         "src/lib/pod/**": moneyAndAccess,
         "src/lib/payments/**": moneyAndAccess,
         "src/lib/studio/*.server.ts": moneyAndAccess,
