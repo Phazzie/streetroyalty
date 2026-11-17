@@ -40,6 +40,7 @@ export function ReportsQueue() {
   const [phase, setPhase] = useState<Phase>({ name: "loading" });
   const [settled, setSettled] = useState<Record<string, string>>({});
   const [said, setSaid] = useState("");
+  const [checking, setChecking] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const timers = useRef<number[]>([]);
 
@@ -94,6 +95,19 @@ export function ReportsQueue() {
     );
   }
 
+  // Until the server has said who is asking, the page shows nothing about the queue.
+  if (phase.name === "loading") {
+    return (
+      <>
+        <p className="pending-pulse text-muted">One moment.</p>
+        {/* With script off the check above never finishes, so say the plain thing. */}
+        <noscript>
+          <p className="mt-2">{REPORT_MESSAGES.staffOnly}</p>
+        </noscript>
+      </>
+    );
+  }
+
   if (phase.name === "closed") {
     return <p>{REPORT_MESSAGES.staffOnly}</p>;
   }
@@ -116,12 +130,14 @@ export function ReportsQueue() {
           <button
             type="button"
             className="chip"
+            aria-disabled={checking}
             onClick={() => {
-              setPhase({ name: "loading" });
-              void load();
+              if (checking) return;
+              setChecking(true);
+              void load().finally(() => setChecking(false));
             }}
           >
-            Check again
+            {checking ? "Checking" : "Check again"}
           </button>
         ) : null}
       </div>
@@ -132,10 +148,6 @@ export function ReportsQueue() {
       <p role="status" aria-live="polite" className="sr-only">
         {said}
       </p>
-
-      {phase.name === "loading" ? (
-        <p className="pending-pulse mt-6 text-muted">Opening the back room.</p>
-      ) : null}
 
       {phase.name === "error" ? (
         <div className="mt-6 border-2 border-pipe bg-surface p-4">
