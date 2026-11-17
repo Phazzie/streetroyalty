@@ -10,20 +10,33 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BattlesRouteImport } from './routes/battles'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as ClashRouteImport } from './routes/clash'
+import { Route as EpisodesRouteImport } from './routes/episodes'
 import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as LabRouteImport } from './routes/lab'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as MadeRouteImport } from './routes/made'
+import { Route as MathRouteImport } from './routes/math'
+import { Route as MeRouteImport } from './routes/me'
 import { Route as OrdersRouteImport } from './routes/orders'
+import { Route as PatternsRouteImport } from './routes/patterns'
 import { Route as RackRouteImport } from './routes/rack'
+import { Route as SayRouteImport } from './routes/say'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as StudioRouteImport } from './routes/studio'
+import { Route as EpisodesIndexRouteImport } from './routes/episodes.index'
+import { Route as EpisodesSlugRouteImport } from './routes/episodes.$slug'
+import { Route as MHandleRouteImport } from './routes/m.$handle'
 import { Route as RackIndexRouteImport } from './routes/rack.index'
 import { Route as RackSlugRouteImport } from './routes/rack.$slug'
 import { Route as ShopIndexRouteImport } from './routes/shop.index'
 import { Route as ShopSlugRouteImport } from './routes/shop.$slug'
+import { Route as TagSlugRouteImport } from './routes/tag.$slug'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiDevSeedRouteImport } from './routes/api/dev/seed'
 import { Route as ApiPrintFilesIdRouteImport } from './routes/api/print-files/$id'
 import { Route as ApiWebhooksPrintfulRouteImport } from './routes/api/webhooks/printful'
 import { Route as ApiWebhooksStripeRouteImport } from './routes/api/webhooks/stripe'
@@ -31,6 +44,11 @@ import { Route as ApiWebhooksStripeRouteImport } from './routes/api/webhooks/str
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BattlesRoute = BattlesRouteImport.update({
+  id: '/battles',
+  path: '/battles',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CartRoute = CartRouteImport.update({
@@ -41,6 +59,16 @@ const CartRoute = CartRouteImport.update({
 const CheckoutRoute = CheckoutRouteImport.update({
   id: '/checkout',
   path: '/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClashRoute = ClashRouteImport.update({
+  id: '/clash',
+  path: '/clash',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EpisodesRoute = EpisodesRouteImport.update({
+  id: '/episodes',
+  path: '/episodes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GalleryRoute = GalleryRouteImport.update({
@@ -58,14 +86,39 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MadeRoute = MadeRouteImport.update({
+  id: '/made',
+  path: '/made',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MathRoute = MathRouteImport.update({
+  id: '/math',
+  path: '/math',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeRoute = MeRouteImport.update({
+  id: '/me',
+  path: '/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrdersRoute = OrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PatternsRoute = PatternsRouteImport.update({
+  id: '/patterns',
+  path: '/patterns',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RackRoute = RackRouteImport.update({
   id: '/rack',
   path: '/rack',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SayRoute = SayRouteImport.update({
+  id: '/say',
+  path: '/say',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShopRoute = ShopRouteImport.update({
@@ -76,6 +129,21 @@ const ShopRoute = ShopRouteImport.update({
 const StudioRoute = StudioRouteImport.update({
   id: '/studio',
   path: '/studio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EpisodesIndexRoute = EpisodesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => EpisodesRoute,
+} as any)
+const EpisodesSlugRoute = EpisodesSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => EpisodesRoute,
+} as any)
+const MHandleRoute = MHandleRouteImport.update({
+  id: '/m/$handle',
+  path: '/m/$handle',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RackIndexRoute = RackIndexRouteImport.update({
@@ -98,9 +166,19 @@ const ShopSlugRoute = ShopSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => ShopRoute,
 } as any)
+const TagSlugRoute = TagSlugRouteImport.update({
+  id: '/tag/$slug',
+  path: '/tag/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDevSeedRoute = ApiDevSeedRouteImport.update({
+  id: '/api/dev/seed',
+  path: '/api/dev/seed',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPrintFilesIdRoute = ApiPrintFilesIdRouteImport.update({
@@ -121,38 +199,63 @@ const ApiWebhooksStripeRoute = ApiWebhooksStripeRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/battles': typeof BattlesRoute
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
+  '/clash': typeof ClashRoute
+  '/episodes': typeof EpisodesRouteWithChildren
   '/gallery': typeof GalleryRoute
   '/lab': typeof LabRoute
   '/login': typeof LoginRoute
+  '/made': typeof MadeRoute
+  '/math': typeof MathRoute
+  '/me': typeof MeRoute
   '/orders': typeof OrdersRoute
+  '/patterns': typeof PatternsRoute
   '/rack': typeof RackRouteWithChildren
+  '/say': typeof SayRoute
   '/shop': typeof ShopRouteWithChildren
   '/studio': typeof StudioRoute
+  '/episodes/$slug': typeof EpisodesSlugRoute
+  '/m/$handle': typeof MHandleRoute
   '/rack/$slug': typeof RackSlugRoute
   '/shop/$slug': typeof ShopSlugRoute
+  '/tag/$slug': typeof TagSlugRoute
+  '/episodes/': typeof EpisodesIndexRoute
   '/rack/': typeof RackIndexRoute
   '/shop/': typeof ShopIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/dev/seed': typeof ApiDevSeedRoute
   '/api/print-files/$id': typeof ApiPrintFilesIdRoute
   '/api/webhooks/printful': typeof ApiWebhooksPrintfulRoute
   '/api/webhooks/stripe': typeof ApiWebhooksStripeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/battles': typeof BattlesRoute
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
+  '/clash': typeof ClashRoute
   '/gallery': typeof GalleryRoute
   '/lab': typeof LabRoute
   '/login': typeof LoginRoute
+  '/made': typeof MadeRoute
+  '/math': typeof MathRoute
+  '/me': typeof MeRoute
   '/orders': typeof OrdersRoute
+  '/patterns': typeof PatternsRoute
+  '/say': typeof SayRoute
   '/studio': typeof StudioRoute
+  '/episodes/$slug': typeof EpisodesSlugRoute
+  '/m/$handle': typeof MHandleRoute
   '/rack/$slug': typeof RackSlugRoute
   '/shop/$slug': typeof ShopSlugRoute
+  '/tag/$slug': typeof TagSlugRoute
+  '/episodes': typeof EpisodesIndexRoute
   '/rack': typeof RackIndexRoute
   '/shop': typeof ShopIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/dev/seed': typeof ApiDevSeedRoute
   '/api/print-files/$id': typeof ApiPrintFilesIdRoute
   '/api/webhooks/printful': typeof ApiWebhooksPrintfulRoute
   '/api/webhooks/stripe': typeof ApiWebhooksStripeRoute
@@ -160,20 +263,33 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/battles': typeof BattlesRoute
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
+  '/clash': typeof ClashRoute
+  '/episodes': typeof EpisodesRouteWithChildren
   '/gallery': typeof GalleryRoute
   '/lab': typeof LabRoute
   '/login': typeof LoginRoute
+  '/made': typeof MadeRoute
+  '/math': typeof MathRoute
+  '/me': typeof MeRoute
   '/orders': typeof OrdersRoute
+  '/patterns': typeof PatternsRoute
   '/rack': typeof RackRouteWithChildren
+  '/say': typeof SayRoute
   '/shop': typeof ShopRouteWithChildren
   '/studio': typeof StudioRoute
+  '/episodes/$slug': typeof EpisodesSlugRoute
+  '/m/$handle': typeof MHandleRoute
   '/rack/$slug': typeof RackSlugRoute
   '/shop/$slug': typeof ShopSlugRoute
+  '/tag/$slug': typeof TagSlugRoute
+  '/episodes/': typeof EpisodesIndexRoute
   '/rack/': typeof RackIndexRoute
   '/shop/': typeof ShopIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/dev/seed': typeof ApiDevSeedRoute
   '/api/print-files/$id': typeof ApiPrintFilesIdRoute
   '/api/webhooks/printful': typeof ApiWebhooksPrintfulRoute
   '/api/webhooks/stripe': typeof ApiWebhooksStripeRoute
@@ -182,58 +298,96 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/battles'
     | '/cart'
     | '/checkout'
+    | '/clash'
+    | '/episodes'
     | '/gallery'
     | '/lab'
     | '/login'
+    | '/made'
+    | '/math'
+    | '/me'
     | '/orders'
+    | '/patterns'
     | '/rack'
+    | '/say'
     | '/shop'
     | '/studio'
+    | '/episodes/$slug'
+    | '/m/$handle'
     | '/rack/$slug'
     | '/shop/$slug'
+    | '/tag/$slug'
+    | '/episodes/'
     | '/rack/'
     | '/shop/'
     | '/api/auth/$'
+    | '/api/dev/seed'
     | '/api/print-files/$id'
     | '/api/webhooks/printful'
     | '/api/webhooks/stripe'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/battles'
     | '/cart'
     | '/checkout'
+    | '/clash'
     | '/gallery'
     | '/lab'
     | '/login'
+    | '/made'
+    | '/math'
+    | '/me'
     | '/orders'
+    | '/patterns'
+    | '/say'
     | '/studio'
+    | '/episodes/$slug'
+    | '/m/$handle'
     | '/rack/$slug'
     | '/shop/$slug'
+    | '/tag/$slug'
+    | '/episodes'
     | '/rack'
     | '/shop'
     | '/api/auth/$'
+    | '/api/dev/seed'
     | '/api/print-files/$id'
     | '/api/webhooks/printful'
     | '/api/webhooks/stripe'
   id:
     | '__root__'
     | '/'
+    | '/battles'
     | '/cart'
     | '/checkout'
+    | '/clash'
+    | '/episodes'
     | '/gallery'
     | '/lab'
     | '/login'
+    | '/made'
+    | '/math'
+    | '/me'
     | '/orders'
+    | '/patterns'
     | '/rack'
+    | '/say'
     | '/shop'
     | '/studio'
+    | '/episodes/$slug'
+    | '/m/$handle'
     | '/rack/$slug'
     | '/shop/$slug'
+    | '/tag/$slug'
+    | '/episodes/'
     | '/rack/'
     | '/shop/'
     | '/api/auth/$'
+    | '/api/dev/seed'
     | '/api/print-files/$id'
     | '/api/webhooks/printful'
     | '/api/webhooks/stripe'
@@ -241,16 +395,27 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BattlesRoute: typeof BattlesRoute
   CartRoute: typeof CartRoute
   CheckoutRoute: typeof CheckoutRoute
+  ClashRoute: typeof ClashRoute
+  EpisodesRoute: typeof EpisodesRouteWithChildren
   GalleryRoute: typeof GalleryRoute
   LabRoute: typeof LabRoute
   LoginRoute: typeof LoginRoute
+  MadeRoute: typeof MadeRoute
+  MathRoute: typeof MathRoute
+  MeRoute: typeof MeRoute
   OrdersRoute: typeof OrdersRoute
+  PatternsRoute: typeof PatternsRoute
   RackRoute: typeof RackRouteWithChildren
+  SayRoute: typeof SayRoute
   ShopRoute: typeof ShopRouteWithChildren
   StudioRoute: typeof StudioRoute
+  MHandleRoute: typeof MHandleRoute
+  TagSlugRoute: typeof TagSlugRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiDevSeedRoute: typeof ApiDevSeedRoute
   ApiPrintFilesIdRoute: typeof ApiPrintFilesIdRoute
   ApiWebhooksPrintfulRoute: typeof ApiWebhooksPrintfulRoute
   ApiWebhooksStripeRoute: typeof ApiWebhooksStripeRoute
@@ -265,6 +430,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/battles': {
+      id: '/battles'
+      path: '/battles'
+      fullPath: '/battles'
+      preLoaderRoute: typeof BattlesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cart': {
       id: '/cart'
       path: '/cart'
@@ -277,6 +449,20 @@ declare module '@tanstack/react-router' {
       path: '/checkout'
       fullPath: '/checkout'
       preLoaderRoute: typeof CheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clash': {
+      id: '/clash'
+      path: '/clash'
+      fullPath: '/clash'
+      preLoaderRoute: typeof ClashRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/episodes': {
+      id: '/episodes'
+      path: '/episodes'
+      fullPath: '/episodes'
+      preLoaderRoute: typeof EpisodesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/gallery': {
@@ -300,6 +486,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/made': {
+      id: '/made'
+      path: '/made'
+      fullPath: '/made'
+      preLoaderRoute: typeof MadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/math': {
+      id: '/math'
+      path: '/math'
+      fullPath: '/math'
+      preLoaderRoute: typeof MathRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/me': {
+      id: '/me'
+      path: '/me'
+      fullPath: '/me'
+      preLoaderRoute: typeof MeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/orders': {
       id: '/orders'
       path: '/orders'
@@ -307,11 +514,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/patterns': {
+      id: '/patterns'
+      path: '/patterns'
+      fullPath: '/patterns'
+      preLoaderRoute: typeof PatternsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/rack': {
       id: '/rack'
       path: '/rack'
       fullPath: '/rack'
       preLoaderRoute: typeof RackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/say': {
+      id: '/say'
+      path: '/say'
+      fullPath: '/say'
+      preLoaderRoute: typeof SayRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/shop': {
@@ -326,6 +547,27 @@ declare module '@tanstack/react-router' {
       path: '/studio'
       fullPath: '/studio'
       preLoaderRoute: typeof StudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/episodes/': {
+      id: '/episodes/'
+      path: '/'
+      fullPath: '/episodes/'
+      preLoaderRoute: typeof EpisodesIndexRouteImport
+      parentRoute: typeof EpisodesRoute
+    }
+    '/episodes/$slug': {
+      id: '/episodes/$slug'
+      path: '/$slug'
+      fullPath: '/episodes/$slug'
+      preLoaderRoute: typeof EpisodesSlugRouteImport
+      parentRoute: typeof EpisodesRoute
+    }
+    '/m/$handle': {
+      id: '/m/$handle'
+      path: '/m/$handle'
+      fullPath: '/m/$handle'
+      preLoaderRoute: typeof MHandleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/rack/': {
@@ -356,11 +598,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShopSlugRouteImport
       parentRoute: typeof ShopRoute
     }
+    '/tag/$slug': {
+      id: '/tag/$slug'
+      path: '/tag/$slug'
+      fullPath: '/tag/$slug'
+      preLoaderRoute: typeof TagSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/dev/seed': {
+      id: '/api/dev/seed'
+      path: '/api/dev/seed'
+      fullPath: '/api/dev/seed'
+      preLoaderRoute: typeof ApiDevSeedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/print-files/$id': {
@@ -386,6 +642,20 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface EpisodesRouteChildren {
+  EpisodesSlugRoute: typeof EpisodesSlugRoute
+  EpisodesIndexRoute: typeof EpisodesIndexRoute
+}
+
+const EpisodesRouteChildren: EpisodesRouteChildren = {
+  EpisodesSlugRoute: EpisodesSlugRoute,
+  EpisodesIndexRoute: EpisodesIndexRoute,
+}
+
+const EpisodesRouteWithChildren = EpisodesRoute._addFileChildren(
+  EpisodesRouteChildren,
+)
 
 interface RackRouteChildren {
   RackSlugRoute: typeof RackSlugRoute
@@ -413,16 +683,27 @@ const ShopRouteWithChildren = ShopRoute._addFileChildren(ShopRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BattlesRoute: BattlesRoute,
   CartRoute: CartRoute,
   CheckoutRoute: CheckoutRoute,
+  ClashRoute: ClashRoute,
+  EpisodesRoute: EpisodesRouteWithChildren,
   GalleryRoute: GalleryRoute,
   LabRoute: LabRoute,
   LoginRoute: LoginRoute,
+  MadeRoute: MadeRoute,
+  MathRoute: MathRoute,
+  MeRoute: MeRoute,
   OrdersRoute: OrdersRoute,
+  PatternsRoute: PatternsRoute,
   RackRoute: RackRouteWithChildren,
+  SayRoute: SayRoute,
   ShopRoute: ShopRouteWithChildren,
   StudioRoute: StudioRoute,
+  MHandleRoute: MHandleRoute,
+  TagSlugRoute: TagSlugRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiDevSeedRoute: ApiDevSeedRoute,
   ApiPrintFilesIdRoute: ApiPrintFilesIdRoute,
   ApiWebhooksPrintfulRoute: ApiWebhooksPrintfulRoute,
   ApiWebhooksStripeRoute: ApiWebhooksStripeRoute,
