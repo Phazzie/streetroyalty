@@ -24,8 +24,11 @@ const CSS = `
 .ep-slate-cell {
   border-top: 2px solid var(--color-ink);
   border-right: 2px solid var(--color-ink);
-  padding: 0.6rem 0.8rem;
+  padding: 0.6rem 0.55rem;
   min-width: 0;
+}
+@media (min-width: 640px) {
+  .ep-slate-cell { padding: 0.6rem 0.8rem; }
 }
 .ep-slate-cell:last-child { border-right: 0; }
 .ep-lamp {
@@ -248,20 +251,23 @@ export function StatusLine({ status, className }: { status: EpisodeStatus; class
 /** A clapper slate: a row of labelled cells under a striped stick. */
 export function Slate({
   cells,
+  columns,
   className,
 }: {
   cells: { label: string; value: ReactNode }[];
+  /** Grid columns, when one cell needs more room than the others. */
+  columns?: string;
   className?: string;
 }) {
   return (
     <dl
       className={cn("ep-slate grid", className)}
-      style={{ gridTemplateColumns: `repeat(${cells.length}, minmax(0, 1fr))` }}
+      style={{ gridTemplateColumns: columns ?? `repeat(${cells.length}, minmax(0, 1fr))` }}
     >
       {cells.map((cell) => (
         <div key={cell.label} className="ep-slate-cell">
-          <dt className="eyebrow text-subtle">{cell.label}</dt>
-          <dd className="ep-tc mt-1 truncate text-lg sm:text-2xl">{cell.value}</dd>
+          <dt className="eyebrow truncate text-subtle">{cell.label}</dt>
+          <dd className="ep-tc mt-1 truncate text-base sm:text-2xl">{cell.value}</dd>
         </div>
       ))}
     </dl>

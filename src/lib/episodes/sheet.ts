@@ -102,7 +102,7 @@ export function sheetPieceFromDesign(design: RackFields): SheetPiece {
     name: design.title.trim() || blank || "Untitled piece",
     garment:
       blank && type && !blank.toLowerCase().includes(type)
-        ? `${type}, ${blank}`
+        ? `${blank} (${type})`
         : blank || type || "piece",
     baseColor: design.colorName ? { name: design.colorName, hex: cleanHex(design.colorHex) } : null,
     print: words(design.placement).toLowerCase() || null,

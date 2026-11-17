@@ -80,6 +80,20 @@ describe("a piece from the rack", () => {
     expect(text).not.toMatch(/panel|piping/i);
   });
 
+  it("names the blank and its type without repeating itself", () => {
+    expect(sheetPieceFromDesign(RACK).garment).toBe("Heavy Hoodie");
+    expect(
+      sheetPieceFromDesign({
+        ...RACK,
+        productName: "Heavyweight Street Tee",
+        productType: "t-shirt",
+      }).garment,
+    ).toBe("Heavyweight Street Tee (t shirt)");
+    expect(sheetPieceFromDesign({ ...RACK, title: " ", productName: "" }).name).toBe(
+      "Untitled piece",
+    );
+  });
+
   it("reads a placement with underscores as words", () => {
     expect(sheetPieceFromDesign({ ...RACK, placement: "left_chest" }).print).toBe("left chest");
   });

@@ -1,5 +1,6 @@
 import {
   BOARD_HEIGHT,
+  BOARD_SLOTS,
   BOARD_WIDTH,
   boardLayout,
   containRect,
@@ -90,12 +91,12 @@ function drawCell(
   image: HTMLImageElement | null,
   palette: string[],
 ) {
-  const { frame, picture, caption } = cell;
+  const { frame, picture, text, swatches, divider } = cell;
   ctx.fillStyle = TILE;
   ctx.fillRect(frame.x, frame.y, frame.w, frame.h);
 
   if (image) {
-    const inner = { x: picture.x + 10, y: picture.y + 10, w: picture.w - 20, h: picture.h - 20 };
+    const inner = { x: picture.x + 12, y: picture.y + 12, w: picture.w - 24, h: picture.h - 24 };
     const box = containRect(inner, image.naturalWidth, image.naturalHeight);
     ctx.drawImage(image, box.x, box.y, box.w, box.h);
   } else {
@@ -108,81 +109,80 @@ function drawCell(
     ctx.textAlign = "left";
   }
 
-  const pad = 20;
-  const left = caption.x + pad;
-  const width = caption.w - pad * 2;
-  const bottom = frame.y + frame.h;
-
+  // Number, name, garment: written from the top of the text box, and stopped at its floor.
+  const floor = text.y + text.h - 8;
   ctx.fillStyle = MUTED;
   ctx.font = `400 22px ${DISPLAY}`;
   ctx.fillText(
     `${String(cell.index + 1).padStart(2, "0")} · ${piece.source === "shop" ? "THE DROP" : "THE RACK"}`,
-    left,
-    frame.y + 40,
+    text.x,
+    text.y + 40,
   );
 
   ctx.fillStyle = INK;
   ctx.font = `400 28px ${DISPLAY}`;
-  let y = frame.y + 80;
-  for (const line of wrap(ctx, piece.name.toUpperCase(), width, 3)) {
-    ctx.fillText(line, left, y);
+  let y = text.y + 80;
+  for (const line of wrap(ctx, piece.name.toUpperCase(), text.w, 3)) {
+    ctx.fillText(line, text.x, y);
     y += 32;
   }
 
   ctx.fillStyle = MUTED;
   ctx.font = `400 21px ${BODY}`;
   y += 2;
-  const about = piece.print ? `${piece.garment}, print on the ${piece.print}` : piece.garment;
-  for (const line of wrap(ctx, about, width, 2)) {
-    if (y > bottom - 214) break;
-    ctx.fillText(line, left, y);
+  const about = wrap(ctx, piece.garment, text.w, 2);
+  if (piece.print) about.push(`Print: ${piece.print}`);
+  for (const line of about) {
+    if (y > floor) break;
+    ctx.fillText(line, text.x, y);
     y += 25;
   }
 
   // Base colour: the one colour the record gives a hex for.
+  const left = swatches.x;
+  const top = swatches.y;
+  const width = swatches.w;
   ctx.fillStyle = MUTED;
   ctx.font = `400 15px ${DISPLAY}`;
-  ctx.fillText("BASE COLOUR", left, bottom - 190);
+  ctx.fillText("BASE COLOUR", left, top + 14);
   const base = piece.baseColor;
   ctx.fillStyle = base?.hex ?? TILE;
-  ctx.fillRect(left, bottom - 180, width, 60);
+  ctx.fillRect(left, top + 24, width, 60);
   ctx.strokeStyle = INK;
   ctx.lineWidth = 2;
   ctx.setLineDash(base?.hex ? [] : [6, 6]);
-  ctx.strokeRect(left + 1, bottom - 179, width - 2, 58);
+  ctx.strokeRect(left + 1, top + 25, width - 2, 58);
   ctx.setLineDash([]);
   ctx.fillStyle = base?.hex ? inkOn(base.hex) : MUTED;
   ctx.font = `600 19px ${BODY}`;
-  ctx.fillText(
-    wrap(ctx, base?.name ?? "See picture", width - 20, 1)[0] ?? "",
-    left + 10,
-    bottom - 155,
-  );
+  ctx.fillText(wrap(ctx, base?.name ?? "See picture", width - 20, 1)[0] ?? "", left + 10, top + 49);
   ctx.font = `400 16px ${MONO}`;
-  ctx.fillText(base?.hex ?? "no hex on record", left + 10, bottom - 132);
+  ctx.fillText(base?.hex ?? "no hex on record", left + 10, top + 72);
 
-  ctx.fillStyle = MUTED;
-  ctx.font = `400 15px ${DISPLAY}`;
-  ctx.fillText(palette.length > 0 ? "MEASURED FROM PICTURE" : "", left, bottom - 92);
-  const gap = 8;
-  const chip = (width - gap * 3) / 4;
-  palette.slice(0, 4).forEach((hex, index) => {
-    const x = left + index * (chip + gap);
-    ctx.fillStyle = hex;
-    ctx.fillRect(x, bottom - 82, chip, 40);
-    ctx.strokeStyle = INK;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x + 1, bottom - 81, chip - 2, 38);
-    ctx.fillStyle = INK;
-    ctx.font = `400 12px ${MONO}`;
-    ctx.fillText(hex, x, bottom - 24);
-  });
+  if (palette.length > 0) {
+    ctx.fillStyle = MUTED;
+    ctx.font = `400 15px ${DISPLAY}`;
+    ctx.fillText("MEASURED FROM PICTURE", left, top + 112);
+    const gap = 8;
+    const chip = (width - gap * 3) / 4;
+    palette.slice(0, 4).forEach((hex, index) => {
+      const x = left + index * (chip + gap);
+      ctx.fillStyle = hex;
+      ctx.fillRect(x, top + 122, chip, 40);
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x + 1, top + 123, chip - 2, 38);
+      ctx.fillStyle = INK;
+      ctx.font = `400 12px ${MONO}`;
+      ctx.fillText(hex, x, top + 180);
+    });
+  }
 
   ctx.strokeStyle = INK;
   ctx.lineWidth = 3;
   ctx.strokeRect(frame.x + 1.5, frame.y + 1.5, frame.w - 3, frame.h - 3);
   ctx.fillStyle = INK;
-  ctx.fillRect(caption.x - 1, frame.y, 2, frame.h);
+  ctx.fillRect(divider.x, divider.y, divider.w, divider.h);
 }
 
 export type BoardResult = {
@@ -201,8 +201,9 @@ export async function drawBoard(
   input: { character: string; pieces: SheetPiece[] },
   stale: () => boolean = () => false,
 ): Promise<BoardResult | null> {
-  const layout = boardLayout();
-  const pieces = input.pieces.slice(0, layout.cells.length);
+  const shown = input.pieces.slice(0, BOARD_SLOTS);
+  const layout = boardLayout(shown.length);
+  const pieces = shown;
   const [images] = await Promise.all([
     Promise.all(pieces.map((piece) => (piece.imageUrl ? loadPicture(piece.imageUrl) : null))),
     document.fonts

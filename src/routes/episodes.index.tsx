@@ -47,8 +47,9 @@ function EpisodesPage() {
 
         <Slate
           className="mt-8"
+          columns="minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1.75fr)"
           cells={[
-            { label: "Out now", value: String(out).padStart(2, "0") },
+            { label: "Out", value: String(out).padStart(2, "0") },
             { label: "Planned", value: String(EPISODES.length - out).padStart(2, "0") },
             { label: "Your clock", value: <StationClock /> },
           ]}

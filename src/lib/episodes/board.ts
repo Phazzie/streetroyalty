@@ -7,9 +7,8 @@
 export const BOARD_WIDTH = 1920;
 export const BOARD_HEIGHT = 1080;
 export const BOARD_COLUMNS = 3;
-export const BOARD_ROWS = 2;
-/** The grid never grows. Six pieces is a full outfit and still readable as one reference. */
-export const BOARD_SLOTS = BOARD_COLUMNS * BOARD_ROWS;
+/** The grid never grows past six. That is a full outfit and still reads as one reference. */
+export const BOARD_SLOTS = BOARD_COLUMNS * 2;
 
 export type Rect = { x: number; y: number; w: number; h: number };
 
@@ -18,23 +17,41 @@ export type BoardCell = {
   frame: Rect;
   /** Where the picture goes, inside the frame. */
   picture: Rect;
-  /** The strip under the picture for swatches and the name. */
-  caption: Rect;
+  /** Where the number, name and garment are written. */
+  text: Rect;
+  /** Where the colour swatches go. Always the same size, so swatches compare across boards. */
+  swatches: Rect;
+  /** The rule between the picture and the words. */
+  divider: Rect;
 };
 
-export type BoardLayout = { width: number; height: number; header: Rect; cells: BoardCell[] };
+export type BoardLayout = {
+  width: number;
+  height: number;
+  rows: 1 | 2;
+  header: Rect;
+  cells: BoardCell[];
+};
 
 const MARGIN = 48;
 const HEADER = 132;
 const GAP = 24;
+const PAD = 20;
+export const SWATCH_BLOCK = { w: 229, h: 196 };
 
-/** Always six cells, in reading order, whatever is put in them. */
-export function boardLayout(): BoardLayout {
+/**
+ * The grid for a given number of pieces. Two fixed shapes and nothing in between:
+ * up to three pieces sit in one row of tall cells, so each picture is as big as
+ * the board allows, and four to six sit in two rows. Cells that are not used are
+ * still in the list, so a board never reflows.
+ */
+export function boardLayout(count: number): BoardLayout {
+  const rows: 1 | 2 = count > BOARD_COLUMNS ? 2 : 1;
   const top = MARGIN + HEADER;
   const cellW = (BOARD_WIDTH - MARGIN * 2 - GAP * (BOARD_COLUMNS - 1)) / BOARD_COLUMNS;
-  const cellH = (BOARD_HEIGHT - top - MARGIN - GAP * (BOARD_ROWS - 1)) / BOARD_ROWS;
+  const cellH = (BOARD_HEIGHT - top - MARGIN - GAP * (rows - 1)) / rows;
   const cells: BoardCell[] = [];
-  for (let index = 0; index < BOARD_SLOTS; index += 1) {
+  for (let index = 0; index < BOARD_COLUMNS * rows; index += 1) {
     const column = index % BOARD_COLUMNS;
     const row = Math.floor(index / BOARD_COLUMNS);
     const frame = {
@@ -43,23 +60,56 @@ export function boardLayout(): BoardLayout {
       w: cellW,
       h: cellH,
     };
-    // Picture on the left, caption on the right: a wide cell fits a tall garment photo better that way.
-    const pictureW = Math.round(frame.h * 0.78);
+    if (rows === 1) {
+      // One row: the picture on top, the words and swatches side by side beneath it.
+      const strip = SWATCH_BLOCK.h + PAD * 2;
+      const stripY = frame.y + frame.h - strip;
+      cells.push({
+        index,
+        frame,
+        picture: { x: frame.x, y: frame.y, w: frame.w, h: frame.h - strip },
+        text: {
+          x: frame.x + PAD,
+          y: stripY,
+          w: frame.w - SWATCH_BLOCK.w - PAD * 3,
+          h: strip,
+        },
+        swatches: {
+          x: frame.x + frame.w - SWATCH_BLOCK.w - PAD,
+          y: stripY + PAD,
+          w: SWATCH_BLOCK.w,
+          h: SWATCH_BLOCK.h,
+        },
+        divider: { x: frame.x, y: stripY - 1, w: frame.w, h: 2 },
+      });
+      continue;
+    }
+    // Two rows: the picture on the left, the words above the swatches on the right.
+    const captionW = SWATCH_BLOCK.w + PAD * 2;
+    const pictureW = frame.w - captionW;
     cells.push({
       index,
       frame,
       picture: { x: frame.x, y: frame.y, w: pictureW, h: frame.h },
-      caption: {
-        x: frame.x + pictureW,
+      text: {
+        x: frame.x + pictureW + PAD,
         y: frame.y,
-        w: frame.w - pictureW,
-        h: frame.h,
+        w: SWATCH_BLOCK.w,
+        h: frame.h - SWATCH_BLOCK.h - PAD,
       },
+      swatches: {
+        x: frame.x + pictureW + PAD,
+        y: frame.y + frame.h - SWATCH_BLOCK.h - PAD,
+        w: SWATCH_BLOCK.w,
+        h: SWATCH_BLOCK.h,
+      },
+      divider: { x: frame.x + pictureW - 1, y: frame.y, w: 2, h: frame.h },
     });
   }
   return {
     width: BOARD_WIDTH,
     height: BOARD_HEIGHT,
+    rows,
     header: { x: MARGIN, y: MARGIN, w: BOARD_WIDTH - MARGIN * 2, h: HEADER - GAP },
     cells,
   };

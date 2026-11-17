@@ -11,30 +11,64 @@ import {
 } from "./board.ts";
 
 describe("boardLayout", () => {
-  const layout = boardLayout();
-
-  it("is always the same six cells inside the board", () => {
-    expect(layout.cells).toHaveLength(BOARD_SLOTS);
-    expect(boardLayout()).toEqual(layout);
-    for (const cell of layout.cells) {
-      expect(cell.frame.x).toBeGreaterThanOrEqual(0);
-      expect(cell.frame.y).toBeGreaterThan(layout.header.y + layout.header.h);
-      expect(cell.frame.x + cell.frame.w).toBeLessThanOrEqual(BOARD_WIDTH);
-      expect(cell.frame.y + cell.frame.h).toBeLessThanOrEqual(BOARD_HEIGHT);
-      expect(cell.picture.w + cell.caption.w).toBeCloseTo(cell.frame.w);
+  it("is one row of three for up to three pieces, and two rows for four to six", () => {
+    for (const count of [0, 1, 2, 3]) {
+      expect(boardLayout(count).rows).toBe(1);
+      expect(boardLayout(count).cells).toHaveLength(3);
+    }
+    for (const count of [4, 5, 6]) {
+      expect(boardLayout(count).rows).toBe(2);
+      expect(boardLayout(count).cells).toHaveLength(BOARD_SLOTS);
     }
   });
 
+  it("gives the same grid for the same count, every time", () => {
+    expect(boardLayout(2)).toEqual(boardLayout(2));
+    expect(boardLayout(2).cells).toEqual(boardLayout(3).cells);
+    expect(boardLayout(4).cells).toEqual(boardLayout(6).cells);
+  });
+
+  it("keeps every part of every cell inside its frame, and every frame on the board", () => {
+    for (const count of [1, 6]) {
+      const layout = boardLayout(count);
+      for (const cell of layout.cells) {
+        expect(cell.frame.x).toBeGreaterThanOrEqual(0);
+        expect(cell.frame.y).toBeGreaterThan(layout.header.y + layout.header.h);
+        expect(cell.frame.x + cell.frame.w).toBeLessThanOrEqual(BOARD_WIDTH);
+        expect(cell.frame.y + cell.frame.h).toBeLessThanOrEqual(BOARD_HEIGHT);
+        for (const part of [cell.picture, cell.text, cell.swatches]) {
+          expect(part.x).toBeGreaterThanOrEqual(cell.frame.x);
+          expect(part.y).toBeGreaterThanOrEqual(cell.frame.y);
+          expect(part.x + part.w).toBeLessThanOrEqual(cell.frame.x + cell.frame.w + 0.001);
+          expect(part.y + part.h).toBeLessThanOrEqual(cell.frame.y + cell.frame.h + 0.001);
+          expect(part.w).toBeGreaterThan(100);
+          expect(part.h).toBeGreaterThan(100);
+        }
+      }
+    }
+  });
+
+  it("keeps the swatch block the same size on both grids, and the picture bigger on one row", () => {
+    const one = boardLayout(3).cells[0]!;
+    const two = boardLayout(6).cells[0]!;
+    expect(one.swatches.w).toBe(two.swatches.w);
+    expect(one.swatches.h).toBe(two.swatches.h);
+    expect(one.picture.w * one.picture.h).toBeGreaterThan(two.picture.w * two.picture.h * 2);
+  });
+
   it("never lets two cells overlap", () => {
-    for (const a of layout.cells) {
-      for (const b of layout.cells) {
-        if (a.index >= b.index) continue;
-        const apart =
-          a.frame.x + a.frame.w <= b.frame.x ||
-          b.frame.x + b.frame.w <= a.frame.x ||
-          a.frame.y + a.frame.h <= b.frame.y ||
-          b.frame.y + b.frame.h <= a.frame.y;
-        expect(apart).toBe(true);
+    for (const count of [3, 6]) {
+      const layout = boardLayout(count);
+      for (const a of layout.cells) {
+        for (const b of layout.cells) {
+          if (a.index >= b.index) continue;
+          const apart =
+            a.frame.x + a.frame.w <= b.frame.x ||
+            b.frame.x + b.frame.w <= a.frame.x ||
+            a.frame.y + a.frame.h <= b.frame.y ||
+            b.frame.y + b.frame.h <= a.frame.y;
+          expect(apart).toBe(true);
+        }
       }
     }
   });

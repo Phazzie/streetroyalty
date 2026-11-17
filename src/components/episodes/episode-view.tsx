@@ -148,7 +148,7 @@ export function EpisodeView({
               Your browser cannot play this video.
             </video>
           ) : (
-            <TestCard className="aspect-video w-full border-2 border-ink">
+            <TestCard className="aspect-[4/5] w-full border-2 border-ink sm:aspect-video">
               <div className="flex h-full flex-col justify-between p-3 sm:p-5">
                 <div className="flex items-start justify-between gap-2">
                   <span className="ep-burn ep-tc text-xs sm:text-base">
@@ -158,7 +158,7 @@ export function EpisodeView({
                 </div>
                 <div
                   key={scene?.id ?? "gap"}
-                  className="ep-plate ep-cut mx-auto w-full max-w-xl px-4 py-3 sm:px-6 sm:py-5"
+                  className="ep-plate ep-cut mx-auto my-2 w-full max-w-xl px-4 py-3 sm:px-6 sm:py-5"
                 >
                   <p className="eyebrow">
                     Storyboard
