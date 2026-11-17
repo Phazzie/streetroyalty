@@ -172,7 +172,9 @@ export function clashScore(palette: readonly unknown[]): ClashResult {
 
   const reasons: string[] = [];
   for (const entry of fights) {
-    if (reasons.length >= 3 || entry.tension < 0.3) break;
+    if (reasons.length >= 3 || entry.tension < 0.2) break;
+    // Quiet neighbours are a family, not a fight. They only get a mention once they start to buzz.
+    if (entry.kind === "buzz" && entry.tension < 0.3) continue;
     const first = colors[entry.a];
     const other = colors[entry.b];
     if (!first || !other) continue;
@@ -189,7 +191,11 @@ export function clashScore(palette: readonly unknown[]): ClashResult {
       reasons.push(`${colorName(chromatic[0]?.hex)} has the floor to itself`);
     else if (fights.every((entry) => entry.kind === "buzz"))
       reasons.push("all one family, sitting easy");
-    else reasons.push("soft colours, keeping it down");
+    else if (score >= 15) {
+      // Nobody is fighting, but somebody is loud. Name them.
+      const lead = chromatic.reduce((a, b) => (b.color.c > a.color.c ? b : a));
+      reasons.push(`${colorName(lead.hex)} is doing most of the talking`);
+    } else reasons.push("soft colours, keeping it down");
   }
 
   return { score, label: clashLabel(score), reasons };

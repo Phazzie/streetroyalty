@@ -190,3 +190,39 @@ describe("reasons match the volume", () => {
     );
   });
 });
+
+describe("reasons never contradict the label", () => {
+  it("does not call a loud palette soft", () => {
+    const result = clashScore(["#7a4a26", "#c8f52e", "#a5dccb"]);
+    expect(result.score).toBeGreaterThanOrEqual(15);
+    expect(result.reasons.join(" ")).not.toMatch(/keeping it down|nobody raising/);
+  });
+
+  it("only says soft when the score is in the quiet band", () => {
+    const reel = [
+      "#b9a3ee",
+      "#f6ecd9",
+      "#ff8a3d",
+      "#a5dccb",
+      "#f9c4a6",
+      "#3d5fd0",
+      "#ff2d95",
+      "#c8f52e",
+      "#0d0d10",
+      "#7a4a26",
+      "#73782a",
+      "#141f52",
+    ];
+    for (const a of reel) {
+      for (const b of reel) {
+        for (const c of reel) {
+          const result = clashScore([a, b, c]);
+          if (/keeping it down/.test(result.reasons.join(" ")))
+            expect(result.score).toBeLessThan(15);
+          if (/fighting|squaring up|all the way up/.test(result.reasons.join(" ")))
+            expect(result.score).toBeGreaterThanOrEqual(35);
+        }
+      }
+    }
+  });
+});

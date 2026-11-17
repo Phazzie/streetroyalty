@@ -276,7 +276,7 @@ export function ClashMachine({ colors, onChange }: Props) {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start">
         {/* Stage: the drawing on cream paper, like the product pictures, with the score beside it. */}
-        <section className="paper relative border-2 border-ink" aria-label="The colourway">
+        <section className="cm-stage paper relative border-2 border-ink" aria-label="The colourway">
           <div
             key={landings}
             className={`cm-score px-3 pt-3 ${rolling ? "cm-rolling" : "cm-landed"} ${result.score >= 60 ? "cm-shake" : ""}`}
@@ -743,6 +743,8 @@ const CSS = `
   transform-origin: left bottom;
 }
 .cm-rolling { opacity: 0.3; }
+/* The cloth takes its new colour like dye, not like a light switch. */
+.cm-stage [data-panel] { transition: fill 320ms ease-out, stroke 320ms ease-out; }
 .cm-landed .cm-label { animation: cm-stamp 420ms cubic-bezier(0.16, 1, 0.3, 1) both; }
 .cm-landed.cm-shake .cm-label { animation: cm-stamp 420ms cubic-bezier(0.16, 1, 0.3, 1) both, cm-buzz 1.1s steps(2, end) 420ms 3; }
 @keyframes cm-stamp {
@@ -759,6 +761,7 @@ const CSS = `
 }
 @media (prefers-reduced-motion: reduce) {
   .cm-strip { transition: none !important; }
+  .cm-stage [data-panel] { transition: none; }
   .cm-landed .cm-label,
   .cm-landed.cm-shake .cm-label { animation: none; }
   .cm-step:active { transform: none; }
