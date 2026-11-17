@@ -98,18 +98,32 @@ describe("the go-live panel", () => {
   });
 
   it("says people can pay once payments and printing are both live", () => {
-    const board = switchboard({
+    const env = {
+      DATABASE_URL: "postgresql://x",
       STRIPE_SECRET_KEY: "a",
       STRIPE_WEBHOOK_SECRET: "b",
       PRINTFUL_API_KEY: "c",
       PRINT_FILE_SIGNING_SECRET: "d",
       APP_PUBLIC_URL: "https://shop.example",
       PRINTFUL_WEBHOOK_SECRET: "e",
-    });
-    const { container } = render(<GoLivePanel view={{ view: "admin", board }} />);
+    };
+    const { container, unmount } = render(
+      <GoLivePanel view={{ view: "admin", board: switchboard(env) }} />,
+    );
     expect(screen.getByText("People can pay.", { selector: ".display" })).toBeTruthy();
     expect(faces(container)).toContain("sw-test:on");
     expect(screen.getByText("Ready to try")).toBeTruthy();
+    unmount();
+
+    // Real cards with nowhere to keep the order is not ready, and the board says why.
+    const forgetful = render(
+      <GoLivePanel
+        view={{ view: "admin", board: switchboard({ ...env, DATABASE_URL: undefined }) }}
+      />,
+    );
+    expect(screen.getByText("People can pay. Orders are not kept.")).toBeTruthy();
+    expect(faces(forgetful.container)).toContain("sw-test:off");
+    expect(screen.getByText(/a real, paid order is forgotten/)).toBeTruthy();
   });
 
   it("copies a setting's name, never anything else, and says so", async () => {

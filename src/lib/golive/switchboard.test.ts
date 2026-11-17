@@ -102,6 +102,17 @@ describe("switchboard", () => {
     expect(service(board, "admins").missing).toEqual(["STUDIO_ADMIN_EMAILS"]);
   });
 
+  it("will not call payments on while a paid order would be forgotten", () => {
+    const board = switchboard({ ...SECRETS, DATABASE_URL: undefined });
+    const payments = service(board, "payments");
+    expect(payments.lamp).toBe("partly");
+    expect(payments.waitsOn).toEqual(["database"]);
+    expect(payments.now).toMatch(/lost when it restarts/);
+    expect(board.canPay).toBe(true);
+    expect(board.ordersKept).toBe(false);
+    expect(switchboard(SECRETS).ordersKept).toBe(true);
+  });
+
   it("holds sign-in at partly until the database is on", () => {
     const board = switchboard({ ...SECRETS, DATABASE_URL: undefined });
     const signin = service(board, "signin");

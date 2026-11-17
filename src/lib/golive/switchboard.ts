@@ -54,6 +54,8 @@ export type Switchboard = {
   next: ServiceId | null;
   /** True when a customer can get through checkout with a real card. */
   canPay: boolean;
+  /** True when an order outlives a server restart. A paid order that does not is a lost order. */
+  ordersKept: boolean;
   podMode: PodMode;
   paymentsMode: PodMode;
   caps: AiLimits;
@@ -182,7 +184,7 @@ function readPrinting(env: Env): Reading {
   return { lamp: "on", now: "Paid orders go to Printful to be made and shipped." };
 }
 
-function readPayments(env: Env): Reading {
+function readPayments(env: Env, databaseOn: boolean): Reading {
   const mode = readPaymentsMode(env);
   if (mode === "sandbox") {
     return {
@@ -209,6 +211,13 @@ function readPayments(env: Env): Reading {
       lamp: "partly",
       now: "Stripe is ready, but checkout refuses real money while printing is in sandbox. It is waiting on printing.",
       waitsOn: ["printing"],
+    };
+  }
+  if (!databaseOn) {
+    return {
+      lamp: "partly",
+      now: "People can pay, but the order is only held in the server's memory and is lost when it restarts. It is waiting on the database.",
+      waitsOn: ["database"],
     };
   }
   if (!has(env, "STRIPE_WEBHOOK_SECRET")) {
@@ -268,7 +277,7 @@ export function switchboard(env: Env): Switchboard {
     admins: readAdmins(env),
     database,
     signin: readSignIn(env, database.lamp === "on"),
-    payments: readPayments(env),
+    payments: readPayments(env, database.lamp === "on"),
     printing: readPrinting(env),
     pictures: readPictures(env, caps),
     drop: readDrop(env),
@@ -283,6 +292,7 @@ export function switchboard(env: Env): Switchboard {
     services,
     next: services.find((service) => service.lamp !== "on")?.id ?? null,
     canPay,
+    ordersKept: database.lamp === "on",
     podMode,
     paymentsMode,
     caps,

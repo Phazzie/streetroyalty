@@ -594,6 +594,7 @@ export function GoLivePanel({ view }: { view: PanelView }) {
   >;
   const onCount = board ? board.services.filter((service) => service.lamp === "on").length : 0;
   const nextId: ServiceId | null = board ? board.next : "admins";
+  const ready = Boolean(board?.canPay && board.ordersKept);
   const tiles: { id: string; name: string; face: Face }[] = [
     ...SERVICES.map((spec) => ({
       id: spec.id,
@@ -603,12 +604,14 @@ export function GoLivePanel({ view }: { view: PanelView }) {
     {
       id: "test",
       name: "The test order",
-      face: board ? (board.canPay ? "on" : "off") : "covered",
+      face: board ? (ready ? "on" : "off") : "covered",
     },
   ];
   const verdict = board
     ? board.canPay
-      ? "People can pay."
+      ? board.ordersKept
+        ? "People can pay."
+        : "People can pay. Orders are not kept."
       : "Nobody can pay yet."
     : "The live readings are under a cover.";
 
@@ -727,7 +730,7 @@ export function GoLivePanel({ view }: { view: PanelView }) {
           <li
             id="sw-test"
             className="gl-row"
-            data-face={board ? (board.canPay ? "on" : "off") : "covered"}
+            data-face={board ? (ready ? "on" : "off") : "covered"}
             style={{ "--gl-i": SERVICES.length } as CSSProperties}
           >
             <div className="gl-head">
@@ -741,7 +744,7 @@ export function GoLivePanel({ view }: { view: PanelView }) {
                   </span>
                   <h2 className="tape">The test order</h2>
                   {board ? (
-                    <span className="gl-state">{board.canPay ? "Ready to try" : "Not yet"}</span>
+                    <span className="gl-state">{ready ? "Ready to try" : "Not yet"}</span>
                   ) : null}
                 </div>
                 <p className="mt-2 max-w-prose text-lg leading-snug">
@@ -761,8 +764,14 @@ export function GoLivePanel({ view }: { view: PanelView }) {
                   no charge, nothing made.
                 </p>
               ) : null}
+              {board && board.canPay && !board.ordersKept ? (
+                <p className="max-w-prose border-2 border-amber bg-bg px-3 py-2 text-sm">
+                  Switch the database on first. Without it a real, paid order is forgotten the next
+                  time the server restarts.
+                </p>
+              ) : null}
               <p>
-                <Link to="/studio" className={`chip ${board?.canPay ? "chip-on" : ""}`}>
+                <Link to="/studio" className={`chip ${ready ? "chip-on" : ""}`}>
                   Open the studio
                 </Link>
               </p>
