@@ -16,7 +16,11 @@ describe("who makes what", () => {
       const claims = [maker.whoMakesIt, maker.noMinimum, ...Object.values(maker.methods)];
       for (const claim of claims) {
         if (claim.status !== "says-yes") continue;
-        expect(new URL(claim.sourceUrl).hostname).toContain(maker.id);
+        const url = new URL(claim.sourceUrl);
+        expect(url.protocol).toBe("https:");
+        expect(url.hostname === `${maker.id}.com` || url.hostname === `www.${maker.id}.com`).toBe(
+          true,
+        );
         expect(claim.saw.length).toBeGreaterThan(8);
       }
       expect(sourcesOf(maker).length).toBeGreaterThan(0);

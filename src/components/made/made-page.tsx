@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
-import { Diagram, DIAGRAM_CSS, DiagramKey, PrintedOrSewn } from "@/components/made/diagrams";
+import {
+  Diagram,
+  DIAGRAM_CSS,
+  DiagramKey,
+  PrintedOrSewn,
+  TodayOrComing,
+} from "@/components/made/diagrams";
 import { DpiDemo } from "@/components/made/dpi-demo";
 import { SiteShell } from "@/components/site/shell";
 import { ENTRIES, type Entry } from "@/lib/made/glossary";
@@ -187,8 +193,15 @@ export function MadePage() {
         <h2 className="display text-5xl sm:text-6xl">What we can make today</h2>
         <div className="mt-8 grid gap-5 lg:grid-cols-2">
           <div className="border-2 border-ink bg-surface p-5">
-            <p className="eyebrow text-subtle">Today</p>
-            <p className="display mt-2 text-4xl">One graphic on a blank</p>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="eyebrow text-subtle">Today</p>
+                <p className="display mt-2 text-4xl">One graphic on a blank</p>
+              </div>
+              <div className="w-28 flex-none sm:w-40 lg:w-48">
+                <TodayOrComing kind="today" />
+              </div>
+            </div>
             <ul className="mt-4 grid gap-2">
               <li>Your art and your words, placed on a tee, a hoodie, a crewneck or a hat.</li>
               <li>Tees, hoodies and crewnecks are printed. The hat is stitched.</li>
@@ -211,8 +224,15 @@ export function MadePage() {
             </Link>
           </div>
           <div className="border-2 border-dashed border-ink p-5">
-            <p className="eyebrow text-subtle">What is coming</p>
-            <p className="display mt-2 text-4xl">The whole garment</p>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="eyebrow text-subtle">What is coming</p>
+                <p className="display mt-2 text-4xl">The whole garment</p>
+              </div>
+              <div className="w-28 flex-none sm:w-40 lg:w-48">
+                <TodayOrComing kind="coming" />
+              </div>
+            </div>
             <ul className="mt-4 grid gap-2">
               <li>A full-garment designer. It is being built now.</li>
               <li>Colour every panel: body, sleeves, hood, cuffs, pocket.</li>

@@ -385,3 +385,32 @@ export function PrintedOrSewn({ kind }: { kind: "printed" | "sewn" }) {
     </Plate>
   );
 }
+
+/** Today against soon, in the same hand: a solid tee with one graphic, a dotted hoodie in panels. */
+export function TodayOrComing({ kind }: { kind: "today" | "coming" }) {
+  if (kind === "today") {
+    return (
+      <Plate label="A tee drawn in a solid line with one graphic on the chest.">
+        <Tee />
+        <path
+          className="mw-fill"
+          d="M80 46 l5 11 h12 l-10 8 l4 12 l-11 -7 l-11 7 l4 -12 l-10 -8 h12 z"
+        />
+      </Plate>
+    );
+  }
+  return (
+    <Plate label="A hoodie drawn in dotted lines, split into a hood, a body, two sleeves, cuffs and a pocket, some of them coloured in.">
+      <g strokeDasharray="4 3.5" strokeWidth="1.8">
+        <path d="M65 37 Q61 10 80 8 Q99 10 95 37 Z" fill="var(--color-lilac-soft)" />
+        <path d="M56 37 H104 L106 96 H54 Z" />
+        <path d="M56 37 L36 46 L20 84 L34 90 L55 62 Z" fill="var(--color-pipe)" />
+        <path d="M104 37 L124 46 L140 84 L126 90 L105 62 Z" />
+        <path d="M20 84 L34 90 L31 99 L17 93 Z" />
+        <path d="M140 84 L126 90 L129 99 L143 93 Z" fill="var(--color-mint-soft)" />
+        <path d="M54 96 H106 V104 H54 Z" />
+        <path d="M66 70 H94 L98 88 H62 Z" fill="var(--color-pipe)" />
+      </g>
+    </Plate>
+  );
+}

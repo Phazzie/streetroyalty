@@ -239,3 +239,78 @@ describe("splitRetail", () => {
     expect(splitRetail(4800, 0).leftCents).toBe(0);
   });
 });
+
+describe("the plan, pushed hard", () => {
+  const plans = [
+    {},
+    { priceCents: 6000, makeCents: 2895, houseBps: 1500 },
+    { priceCents: 1, makeCents: 0, shipChargedCents: 0, shipPaidCents: 0 },
+    { priceCents: 2500, makeCents: 2400, shipChargedCents: 0, shipPaidCents: 799 },
+    { priceCents: 100_000_000, makeCents: 1, shipChargedCents: 100_000_000 },
+    { priceCents: 9999, feeBps: 333, feeFixedCents: 49, houseBps: 777 },
+    { priceCents: 0, makeCents: 0, shipChargedCents: 0, shipPaidCents: 0, feeFixedCents: 0 },
+  ];
+
+  it("accounts for every cent of a sale that does not lose money", () => {
+    for (const input of plans) {
+      const result = runPlan(input);
+      if (result.keepCents < 0) continue;
+      const { making, shipping, cardFee: fee, house, keep } = result.parts;
+      expect(making + shipping + fee + house + keep, JSON.stringify(input)).toBe(
+        result.collectedCents,
+      );
+    }
+  });
+
+  it("names the one price where a piece stops losing money", () => {
+    for (const input of plans) {
+      const plan = cleanPlan(input);
+      const edge = runPlan(plan).breakEvenPriceCents;
+      if (edge == null) continue;
+      expect(runPlan({ ...plan, priceCents: edge }).keepCents).toBeGreaterThanOrEqual(0);
+      if (edge > 1) {
+        expect(runPlan({ ...plan, priceCents: edge - 1 }).keepCents).toBeLessThan(0);
+      }
+    }
+  });
+
+  it("says no price works when the cuts take everything", () => {
+    const result = runPlan({ feeBps: 5000, houseBps: 6000 });
+    expect(result.breakEvenPriceCents).toBeNull();
+    expect(result.piecesForAds).toBeNull();
+    expect(result.piecesForTarget).toBeNull();
+  });
+
+  it("stays in whole, safe numbers at the caps", () => {
+    const result = runPlan({
+      priceCents: 1e12,
+      shipChargedCents: 1e12,
+      perMonth: 1e12,
+      makeCents: 0,
+      shipPaidCents: 0,
+      feeBps: 0,
+      feeFixedCents: 0,
+    });
+    expect(Number.isSafeInteger(result.keepPerMonthCents)).toBe(true);
+    expect(result.keepCents).toBe(200_000_000);
+    expect(result.keepPerMonthCents).toBe(200_000_000 * 100_000);
+  });
+
+  it("never throws on what a link can carry", () => {
+    const odd: Record<string, unknown>[] = [
+      { p: {}, m: [], sc: true, sp: null, f: "2.9%", x: "0x10", h: [5], n: "ten", b: {} },
+      { p: "1e3", m: " 12 ", b: "<script>" },
+      { p: Number.MAX_VALUE, n: -0, t: "Infinity", b: 42 },
+    ];
+    for (const search of odd) {
+      const read = readPlanSearch(search);
+      for (const value of Object.values(read)) {
+        if (typeof value === "number") expect(Number.isSafeInteger(value)).toBe(true);
+      }
+      expect(() => runPlan(planFromSearch(search))).not.toThrow();
+    }
+    expect(readPlanSearch({ b: "<script>" }).b).toBeUndefined();
+    expect(readPlanSearch({ b: 42 }).b).toBe("42");
+    expect(readPlanSearch({ p: "1e3", m: " 12 " })).toEqual({ p: 1000, m: 12 });
+  });
+});
