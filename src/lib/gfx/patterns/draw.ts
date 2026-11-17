@@ -276,19 +276,24 @@ function paisley(
   ctx.setLineDash([]);
   paisleyPath(ctx);
   ctx.fill();
-  const inner = (scale: number, color: string) => {
-    ctx.save();
-    ctx.translate(0.01, 0.1);
-    ctx.scale(scale, scale);
-    ctx.translate(-0.01, -0.1);
-    ctx.fillStyle = color;
+  // rings that follow the outline all the way into the tail: clip to the shape, then stroke inward
+  ctx.save();
+  paisleyPath(ctx);
+  ctx.clip();
+  ctx.fillStyle = accent;
+  ctx.fillRect(-1, -1, 2, 2);
+  ctx.lineJoin = "round";
+  for (const [color, width] of [
+    [ink, 0.34],
+    [bg, 0.25],
+    [ink, 0.11],
+  ] as const) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
     paisleyPath(ctx);
-    ctx.fill();
-    ctx.restore();
-  };
-  inner(0.8, bg);
-  inner(0.62, ink);
-  inner(0.47, accent);
+    ctx.stroke();
+  }
+  ctx.restore();
   ctx.fillStyle = bg;
   dot(ctx, 0.0, 0.2, 0.075);
   ctx.fillStyle = ink;
@@ -600,7 +605,7 @@ function crown(
   tips.forEach(([tx, ty], index) => {
     ctx.lineTo(tx, ty);
     const next = tips[index + 1];
-    if (next) ctx.lineTo((tx + next[0]) / 2, 0.02);
+    if (next) ctx.lineTo((tx + next[0]) / 2, points === 5 ? -0.07 : 0.02);
   });
   ctx.lineTo(0.44, 0.2);
   ctx.closePath();

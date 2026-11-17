@@ -14,12 +14,14 @@
  *   defaultSpec(id?, seed?)                               a spec with the pattern's own colours
  *
  *   drawPatternTile(ctx, spec, tilePx)                    one seamless tile at 0,0
- *   drawPattern(ctx, spec, widthPx, heightPx, { unit }?)  fills 0,0..width,height by repeating the tile,
+ *   drawPattern(ctx, spec, widthPx, heightPx, options?)   fills 0,0..width,height by repeating the tile,
  *                                                         honouring scale and rotation. To fill a garment
  *                                                         panel: ctx.save(), clip to the panel, translate
  *                                                         to its corner, drawPattern, ctx.restore().
  *       unit is the pixel size of one tile at scale 1 (default 256). A preview and a print
  *       file match when unit grows with the canvas: unit = 256 * printWidth / previewWidth.
+ *       draft: true is for live previews while something is being dragged: fast, a little soft.
+ *       Never use it for a print file.
  *   patternDataUrl(spec, widthPx, heightPx, mime?)        browser only
  *   patternTileDataUrl(spec, tilePx, mime?)               browser only
  *   patternDataUrlUnder(spec, w, h, maxChars)             browser only, shrinks until it fits

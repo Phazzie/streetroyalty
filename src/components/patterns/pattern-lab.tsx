@@ -164,23 +164,28 @@ export function PatternLab({
     return () => watcher.disconnect();
   }, []);
 
-  // The swatch and the tee, once per frame at most.
+  // The swatch and the tee, once per frame at most: a fast draft while things move, then a sharp one.
   useEffect(() => {
-    const frame = requestAnimationFrame(() => {
+    const paint = (draft: boolean) => {
       const big = swatch.current;
       const bigCtx = big?.getContext("2d");
       if (big && bigCtx) {
         const width = backing(big, SWATCH_MAX);
-        drawPattern(bigCtx, spec, width, width, { unit: width / TILES_ACROSS });
+        drawPattern(bigCtx, spec, width, width, { unit: width / TILES_ACROSS, draft });
       }
       const tee = garment.current;
       const teeCtx = tee?.getContext("2d");
       if (tee && teeCtx) {
         const width = backing(tee, GARMENT_MAX, GARMENT_BOX.height / GARMENT_BOX.width);
-        drawGarment(teeCtx, spec, width, "#f6f1ff");
+        drawGarment(teeCtx, spec, width, "#f6f1ff", draft);
       }
-    });
-    return () => cancelAnimationFrame(frame);
+    };
+    const frame = requestAnimationFrame(() => paint(true));
+    const settle = setTimeout(() => paint(false), 160);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(settle);
+    };
   }, [spec, size]);
 
   // The strip only changes with the seed, or the colours of the pattern in use.
@@ -322,37 +327,37 @@ export function PatternLab({
         ))}
       </div>
 
-      <div className="mt-3 grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="min-w-0">
-          <div className="grid gap-4 sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-            <div ref={stage} className="min-w-0 border-2 border-ink bg-surface p-2">
-              <canvas
-                ref={swatch}
-                className="block aspect-square w-full bg-bg"
-                role="img"
-                aria-label={`${info.name} pattern, roll ${spec.seed}`}
-              />
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <p className="font-display text-sm uppercase">
-                  {info.name} <span className="text-muted">No. {spec.seed}</span>
-                </p>
-                <p className="text-sm text-muted">Preview</p>
-              </div>
-            </div>
-            <div className="plab-stage flex min-w-0 flex-col border-2 border-ink bg-surface p-2">
-              <canvas
-                ref={garment}
-                className="m-auto block w-full max-w-[20rem]"
-                style={{ aspectRatio: `${GARMENT_BOX.width} / ${GARMENT_BOX.height}` }}
-                role="img"
-                aria-label="The pattern on a tee shape"
-              />
-              <p className="mt-2 text-sm text-muted">
-                On a tee shape. A sketch, not the printed piece.
-              </p>
-            </div>
+      <div className="mt-3 grid gap-4 sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)_22rem]">
+        <div ref={stage} className="order-1 min-w-0 self-start border-2 border-ink bg-surface p-2">
+          <canvas
+            ref={swatch}
+            className="block aspect-square w-full bg-bg"
+            role="img"
+            aria-label={`${info.name} pattern, roll ${spec.seed}`}
+          />
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <p className="font-display text-sm uppercase">
+              {info.name} <span className="text-muted">No. {spec.seed}</span>
+            </p>
+            <p className="text-sm text-muted">Preview</p>
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
+        </div>
+
+        <div className="plab-stage order-3 flex min-w-0 flex-col self-start border-2 border-ink bg-surface p-2 sm:order-2">
+          <canvas
+            ref={garment}
+            className="m-auto block w-full max-w-[20rem]"
+            style={{ aspectRatio: `${GARMENT_BOX.width} / ${GARMENT_BOX.height}` }}
+            role="img"
+            aria-label="The pattern on a tee shape"
+          />
+          <p className="mt-2 text-sm text-muted">
+            On a tee shape. A sketch, not the printed piece.
+          </p>
+        </div>
+
+        <div className="order-2 min-w-0 space-y-4 sm:order-3 sm:col-span-2 lg:col-span-1">
+          <div className="grid grid-cols-2 gap-3">
             <Button variant="ghost" size="lg" onClick={roll}>
               <span ref={dice} className="inline-flex">
                 <Dice />
@@ -368,56 +373,6 @@ export function PatternLab({
               Clash it
             </Button>
           </div>
-        </div>
-
-        <div className="min-w-0 space-y-4">
-          <section className="border-2 border-ink bg-surface p-4" aria-labelledby="plab-colours">
-            <h2 id="plab-colours" className="font-display text-sm tracking-wide uppercase">
-              Colours
-            </h2>
-            <div className="mt-3 flex flex-wrap gap-3">
-              {spec.colors.map((color, slot) => (
-                <label key={slot} className="flex flex-col items-center gap-1 text-xs text-muted">
-                  <input
-                    type="color"
-                    className="plab-ink"
-                    value={color}
-                    onChange={(event) => setColor(slot, event.target.value)}
-                    aria-label={`${SLOT_NAMES[slot] ?? `Colour ${slot + 1}`} colour`}
-                  />
-                  {SLOT_NAMES[slot] ?? slot + 1}
-                </label>
-              ))}
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {PRESETS.map((preset) => (
-                <button
-                  key={preset.name}
-                  type="button"
-                  className="chip gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg"
-                  onClick={() => change({ colors: preset.colors.slice(0, info.colorSlots) })}
-                >
-                  <span className="flex" aria-hidden="true">
-                    {preset.colors.slice(0, 3).map((color) => (
-                      <span
-                        key={color}
-                        className="-ml-1 h-4 w-4 rounded-full border border-ink first:ml-0"
-                        style={{ background: color }}
-                      />
-                    ))}
-                  </span>
-                  {preset.name}
-                </button>
-              ))}
-              <button
-                type="button"
-                className="chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg"
-                onClick={() => change({ colors: [...info.defaultColors] })}
-              >
-                Reset
-              </button>
-            </div>
-          </section>
 
           <section className="border-2 border-ink bg-surface p-4" aria-label="Size and turn">
             <label className="block">
@@ -448,6 +403,54 @@ export function PatternLab({
                 onChange={(event) => change({ rotation: Number(event.target.value) })}
               />
             </label>
+          </section>
+
+          <section className="border-2 border-ink bg-surface p-4" aria-labelledby="plab-colours">
+            <h2 id="plab-colours" className="font-display text-sm tracking-wide uppercase">
+              Colours
+            </h2>
+            <div className="mt-3 flex flex-wrap gap-3">
+              {spec.colors.map((color, slot) => (
+                <label key={slot} className="flex flex-col items-center gap-1 text-xs text-muted">
+                  <input
+                    type="color"
+                    className="plab-ink"
+                    value={color}
+                    onChange={(event) => setColor(slot, event.target.value)}
+                    aria-label={`${SLOT_NAMES[slot] ?? `Colour ${slot + 1}`} colour`}
+                  />
+                  {SLOT_NAMES[slot] ?? slot + 1}
+                </label>
+              ))}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {PRESETS.map((preset) => (
+                <button
+                  key={preset.name}
+                  type="button"
+                  className="chip gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg"
+                  onClick={() => change({ colors: preset.colors.slice(0, info.colorSlots) })}
+                >
+                  <span className="flex" aria-hidden="true">
+                    {preset.colors.slice(0, 3).map((color, index) => (
+                      <span
+                        key={index}
+                        className="-ml-1 h-4 w-4 rounded-full border border-ink first:ml-0"
+                        style={{ background: color }}
+                      />
+                    ))}
+                  </span>
+                  {preset.name}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg"
+                onClick={() => change({ colors: [...info.defaultColors] })}
+              >
+                Reset
+              </button>
+            </div>
           </section>
 
           <div className="grid gap-3">

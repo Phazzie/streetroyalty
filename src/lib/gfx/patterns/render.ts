@@ -16,6 +16,12 @@ export type DrawOptions = {
    * showed, multiply the preview's unit by print pixels over preview pixels.
    */
   unit?: number;
+  /**
+   * For live previews while a slider is moving. The tile is drawn once at a round
+   * size and stretched to fit, so a change of scale costs almost nothing. A little
+   * soft. Leave it off for anything that gets printed or saved.
+   */
+  draft?: boolean;
 };
 
 const MIN_TILE = 8;
@@ -96,18 +102,26 @@ export function drawPattern(
   const width = Math.max(1, widthPx);
   const height = Math.max(1, heightPx);
   const t = tileSize(clean, options.unit ?? DEFAULT_TILE_PX);
-  const fill = ctx.createPattern(tileFor(clean, t), "repeat");
+  const drawn = options.draft ? draftEdge(t) : t;
+  const zoom = t / drawn;
+  const fill = ctx.createPattern(tileFor(clean, drawn), "repeat");
   if (!fill) return;
-  const reach = Math.hypot(width, height) / 2 + 2;
+  const reach = (Math.hypot(width, height) / 2 + 2) / zoom;
   ctx.save();
   ctx.beginPath();
   ctx.rect(0, 0, width, height);
   ctx.clip();
   ctx.translate(width / 2, height / 2);
   ctx.rotate(((clean.rotation ?? 0) * Math.PI) / 180);
+  ctx.scale(zoom, zoom);
   ctx.fillStyle = fill;
   ctx.fillRect(-reach, -reach, reach * 2, reach * 2);
   ctx.restore();
+}
+
+/** The round tile size a draft is drawn at: the next power of two, from 64 to 512. */
+export function draftEdge(tilePx: number): number {
+  return clamp(2 ** Math.ceil(Math.log2(Math.max(1, tilePx))), 64, 512);
 }
 
 function page(

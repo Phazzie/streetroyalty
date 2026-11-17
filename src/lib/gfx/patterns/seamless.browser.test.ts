@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   PATTERNS,
   defaultSpec,
+  draftEdge,
   drawPattern,
   drawPatternTile,
   patternDataUrl,
@@ -188,6 +189,37 @@ describe("drawPattern", () => {
     expect(holes).toBe(0);
     expect(spill).toBe(0);
     expect(differing).toBe(0);
+  });
+
+  it("draws a draft that fills the area, repeats, and stays close to the sharp one", () => {
+    const spec = { ...defaultSpec("camo", 21), scale: 0.8, rotation: 12 };
+    expect([draftEdge(1), draftEdge(64), draftEdge(65), draftEdge(300), draftEdge(4000)]).toEqual([
+      64, 64, 128, 512, 512,
+    ]);
+    const shot = (draft: boolean) => {
+      const { ctx } = canvasOf(200, 200);
+      drawPattern(ctx, spec, 200, 200, { unit: 150, draft });
+      return ctx.getImageData(0, 0, 200, 200).data;
+    };
+    const sharp = shot(false);
+    const draft = shot(true);
+    const again = shot(true);
+    let holes = 0;
+    let off = 0;
+    let changed = 0;
+    for (let index = 0; index < sharp.length; index += 4) {
+      if (draft[index + 3] !== 255) holes += 1;
+      if (draft[index] !== again[index]) changed += 1;
+      // an edge pixel may land on the other side of a shape, a flat area may not move at all
+      if (
+        Math.abs(sharp[index]! - draft[index]!) + Math.abs(sharp[index + 1]! - draft[index + 1]!) >
+        90
+      )
+        off += 1;
+    }
+    expect(holes).toBe(0);
+    expect(changed).toBe(0);
+    expect(off / (200 * 200)).toBeLessThan(0.06);
   });
 
   it("draws the default pattern for a spec it cannot read, instead of throwing", () => {

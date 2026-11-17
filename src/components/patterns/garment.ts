@@ -21,7 +21,13 @@ function silhouette(ctx: Ctx2D): void {
   ctx.closePath();
 }
 
-export function drawGarment(ctx: Ctx2D, spec: PatternSpec, widthPx: number, outline: string): void {
+export function drawGarment(
+  ctx: Ctx2D,
+  spec: PatternSpec,
+  widthPx: number,
+  outline: string,
+  draft = false,
+): void {
   const k = widthPx / GARMENT_BOX.width;
   const height = GARMENT_BOX.height * k;
   ctx.clearRect(0, 0, widthPx, height);
@@ -33,7 +39,7 @@ export function drawGarment(ctx: Ctx2D, spec: PatternSpec, widthPx: number, outl
   ctx.restore();
   ctx.save();
   ctx.clip();
-  drawPattern(ctx, spec, widthPx, height, { unit: widthPx / 3.4 });
+  drawPattern(ctx, spec, widthPx, height, { unit: widthPx / 3.4, draft });
   ctx.restore();
 
   ctx.save();
