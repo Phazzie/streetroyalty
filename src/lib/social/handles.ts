@@ -158,8 +158,84 @@ function houseFlat(text: string): string {
  * True when a name or handle would pass for Street Royalty itself or its staff, however
  * it is spaced, cased or numbered: "Street Royalty", "street_royalty2", "Admin 2".
  */
+/** Cyrillic and Greek letters that look like Latin ones, mapped to the Latin letter they pass for. */
+const LOOK_ALIKES: Record<string, string> = {
+  а: "a",
+  в: "b",
+  е: "e",
+  к: "k",
+  м: "m",
+  н: "h",
+  о: "o",
+  р: "p",
+  с: "c",
+  т: "t",
+  у: "y",
+  х: "x",
+  і: "i",
+  ј: "j",
+  ѕ: "s",
+  ԁ: "d",
+  ӏ: "l",
+  ԛ: "q",
+  ԝ: "w",
+  А: "A",
+  В: "B",
+  Е: "E",
+  К: "K",
+  М: "M",
+  Н: "H",
+  О: "O",
+  Р: "P",
+  С: "C",
+  Т: "T",
+  У: "Y",
+  Х: "X",
+  І: "I",
+  Ј: "J",
+  Ѕ: "S",
+  Ԁ: "D",
+  Ӏ: "l",
+  Ԛ: "Q",
+  Ԝ: "W",
+  α: "a",
+  β: "b",
+  ε: "e",
+  ι: "i",
+  κ: "k",
+  ν: "v",
+  ο: "o",
+  ρ: "p",
+  τ: "t",
+  υ: "u",
+  χ: "x",
+  Α: "A",
+  Β: "B",
+  Ε: "E",
+  Ζ: "Z",
+  Η: "H",
+  Ι: "I",
+  Κ: "K",
+  Μ: "M",
+  Ν: "N",
+  Ο: "O",
+  Ρ: "P",
+  Τ: "T",
+  Υ: "Y",
+  Χ: "X",
+};
+
+/**
+ * What a name looks like on screen, in plain Latin letters. Fullwidth letters fold to
+ * normal ones and look-alike Cyrillic or Greek letters to their Latin twins. Only used
+ * to spot a name passing for the house; real Cyrillic or Greek names are still allowed.
+ */
+export function asItLooks(name: string): string {
+  return [...name.normalize("NFKC")].map((letter) => LOOK_ALIKES[letter] ?? letter).join("");
+}
+
 export function isHouseName(name: string): boolean {
-  const flat = houseFlat(name);
+  const flat = houseFlat(asItLooks(name));
   return flat.includes("streetroyalty") || HOUSE_NAMES.has(flat);
 }
 

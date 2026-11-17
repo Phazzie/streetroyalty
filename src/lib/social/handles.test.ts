@@ -71,6 +71,23 @@ describe("a handle made from an account name", () => {
 });
 
 describe("a display name and a bio", () => {
+  it("sees through look-alike letters, and still welcomes names in other alphabets", () => {
+    // A Cyrillic у, a Cyrillic А, fullwidth letters and a Greek Ο.
+    expect(checkDisplayName("Street Royalt\u0443").ok).toBe(false);
+    expect(checkDisplayName("\u0410dmin").ok).toBe(false);
+    expect(
+      checkDisplayName(
+        "\uff33\uff34\uff32\uff25\uff25\uff34 \uff32\uff2f\uff39\uff21\uff2c\uff34\uff39",
+      ).ok,
+    ).toBe(false);
+    expect(checkDisplayName("Street R\u039fyalty").ok).toBe(false);
+    expect(checkDisplayName("\u0414\u043c\u0438\u0442\u0440\u0438\u0439")).toEqual({
+      ok: true,
+      value: "\u0414\u043c\u0438\u0442\u0440\u0438\u0439",
+    });
+    expect(checkDisplayName("\u0391\u03b8\u03b7\u03bd\u03ac").ok).toBe(true);
+  });
+
   it("wants a name of 2 to 40 characters on one line", () => {
     expect(checkDisplayName(" Ada   Royal ")).toEqual({ ok: true, value: "Ada Royal" });
     expect(checkDisplayName("A").ok).toBe(false);
