@@ -50,6 +50,11 @@ export type CatalogProduct = {
   colors: CatalogColor[];
   sizes: string[];
   variants: CatalogVariant[];
+  /** placement = one print on a blank. aop = a panel-built sublimation garment. */
+  construction?: "placement" | "aop";
+  /** Shown on all-over pieces. Names the fabric and the print method. */
+  materialNote?: string;
+  aopTemplateId?: string;
 };
 
 export type CatalogPage = {
@@ -79,6 +84,11 @@ export type DesignLayer =
       y: number;
       scale: number;
       rotation: number;
+      /** Bend in degrees. Absent means flat, which is how older layers were saved. */
+      arc?: number;
+      outline?: boolean;
+      /** Letter spacing as a fraction of the font size. */
+      tracking?: number;
     };
 
 export type MockupRequest = {

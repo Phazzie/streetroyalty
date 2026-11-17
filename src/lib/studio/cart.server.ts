@@ -1,6 +1,7 @@
 import { getSql } from "../db.ts";
 import { getPodProvider } from "../pod/index.ts";
 import type { CatalogProduct } from "../pod/types.ts";
+import { parseStoredGarment } from "./garments.ts";
 import { canBuyDesign, parseRecipient } from "./validate.ts";
 import { cartDelta, normalizeCartQuantity } from "./cart-qty.ts";
 import type { CartLine } from "./models.ts";
@@ -10,6 +11,7 @@ export async function addToCart(
   userId: string,
   designId: string,
   variantId: string,
+  colorwayId = "",
 ): Promise<void> {
   const sql = await getSql();
   const rows = await sql<DesignRow>`select * from designs where id = ${designId}`;
@@ -22,12 +24,17 @@ export async function addToCart(
     (item) => item.id === variantId && item.color === design.color_name,
   );
   if (!variant) throw new Error("Pick a size in this color.");
+  const colorway = colorwayId
+    ? parseStoredGarment(design.garment_json)?.colorways.find((item) => item.id === colorwayId)
+    : undefined;
+  if (colorwayId && !colorway) throw new Error("That colorway is not on this piece.");
+  const label = colorway ? `${variant.name} · ${colorway.name}` : variant.name;
   const id = crypto.randomUUID();
   await sql`
-    insert into cart_items (id, user_id, design_id, variant_id, variant_label, quantity)
-    values (${id}, ${userId}, ${design.id}, ${variant.id}, ${variant.name}, 1)
+    insert into cart_items (id, user_id, design_id, variant_id, variant_label, quantity, colorway_id)
+    values (${id}, ${userId}, ${design.id}, ${variant.id}, ${label}, 1, ${colorwayId})
     on conflict (user_id, design_id, variant_id)
-    do update set quantity = least(10, cart_items.quantity + 1)
+    do update set quantity = least(10, cart_items.quantity + 1), colorway_id = excluded.colorway_id, variant_label = excluded.variant_label
   `;
 }
 
@@ -60,13 +67,14 @@ type CartJoin = DesignRow & {
   cart_id: string;
   cart_variant_id: string;
   cart_variant_label: string;
+  cart_colorway_id: string;
   quantity: number;
 };
 
 export async function cartRows(userId: string): Promise<CartJoin[]> {
   const sql = await getSql();
   return sql<CartJoin>`
-    select d.*, c.id as cart_id, c.variant_id as cart_variant_id, c.variant_label as cart_variant_label, c.quantity
+    select d.*, c.id as cart_id, c.variant_id as cart_variant_id, c.variant_label as cart_variant_label, c.colorway_id as cart_colorway_id, c.quantity
     from cart_items c
     join designs d on d.id = c.design_id
     where c.user_id = ${userId}
@@ -123,17 +131,22 @@ export async function priceCart(userId: string) {
       throw new Error(`${row.title} is not available in that size.`);
     const area =
       variant.printAreas.find((item) => item.placement === row.placement) ?? variant.printAreas[0];
+    const colorway = row.cart_colorway_id
+      ? parseStoredGarment(row.garment_json)?.colorways.find((item) => item.id === row.cart_colorway_id)
+      : undefined;
     lines.push({
       designId: row.id,
       title: row.title,
       variantId: variant.id,
-      variantLabel: variant.name,
+      variantLabel: colorway ? `${variant.name} · ${colorway.name}` : variant.name,
       quantity: Number(row.quantity),
       unitCents: variant.retailCents,
       placement: row.placement,
       technique: row.technique,
       fileUrl: fileUrl(row.print_file_id),
       printArea: area,
+      colorwayId: colorway?.id,
+      colorwayName: colorway?.name,
     });
   }
   return { provider, lines };

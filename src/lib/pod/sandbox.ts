@@ -1,4 +1,7 @@
 import { luminance } from "../color.ts";
+import { renderGarmentSvg } from "../studio/garments.ts";
+import { arcLayout, clampFx, isFlatText } from "../studio/textfx.ts";
+import { AOP_MATERIAL, PRINTFUL_AOP } from "./aop-printful.ts";
 import { applyMarkup } from "./money.ts";
 import type {
   CatalogPage,
@@ -44,6 +47,25 @@ const CREW: PrintArea[] = [
   { placement: "back", widthIn: 12, heightIn: 16, dpi: 150 },
 ];
 
+const LONGSLEEVE: PrintArea[] = [
+  { placement: "front", widthIn: 12, heightIn: 16, dpi: 150 },
+  { placement: "back", widthIn: 12, heightIn: 16, dpi: 150 },
+  { placement: "sleeve_left", widthIn: 3.5, heightIn: 12, dpi: 150 },
+  { placement: "sleeve_right", widthIn: 3.5, heightIn: 12, dpi: 150 },
+];
+
+const JOGGER: PrintArea[] = [
+  { placement: "front", widthIn: 5, heightIn: 5, dpi: 150 },
+  { placement: "back", widthIn: 8, heightIn: 4, dpi: 150 },
+];
+
+const TOTE: PrintArea[] = [
+  { placement: "front", widthIn: 12, heightIn: 12, dpi: 150 },
+  { placement: "back", widthIn: 12, heightIn: 12, dpi: 150 },
+];
+
+const CHEST: PrintArea[] = [{ placement: "front", widthIn: 4, heightIn: 3, dpi: 150 }];
+
 type Blank = {
   id: string;
   name: string;
@@ -56,7 +78,10 @@ type Blank = {
   colors: { name: string; hex: string }[];
   sizes: string[];
   wholesaleCents: number;
-  shape: "tee" | "hoodie" | "hat" | "crew";
+  shape: "tee" | "hoodie" | "hat" | "crew" | "tote" | "joggers" | "aop";
+  construction?: "placement" | "aop";
+  materialNote?: string;
+  aopTemplateId?: string;
 };
 
 const BLANKS: Blank[] = [
@@ -144,7 +169,99 @@ const BLANKS: Blank[] = [
     wholesaleCents: 2495,
     shape: "crew",
   },
+  {
+    id: "longsleeve-block",
+    name: "Block Long-Sleeve",
+    type: "Long-Sleeve",
+    description: "Long sleeves carry their own print run, down the arm, not just the chest.",
+    technique: "dtg",
+    techniqueTitle: "DTG printing",
+    placements: [
+      { placement: "front", title: "Front" },
+      { placement: "back", title: "Back" },
+      { placement: "sleeve_left", title: "Left sleeve" },
+      { placement: "sleeve_right", title: "Right sleeve" },
+    ],
+    areas: LONGSLEEVE,
+    colors: [
+      { name: "Black", hex: "#141414" },
+      { name: "Bone", hex: "#efe6d6" },
+      { name: "Violet", hex: "#7c5cff" },
+    ],
+    sizes: ["S", "M", "L", "XL", "2XL"],
+    wholesaleCents: 1895,
+    shape: "tee",
+  },
+  {
+    id: "jogger-court",
+    name: "Court Joggers",
+    type: "Joggers",
+    description: "Tapered fleece joggers. A thigh hit on the front, a block print across the back.",
+    technique: "dtg",
+    techniqueTitle: "DTG printing",
+    placements: [
+      { placement: "front", title: "Front thigh" },
+      { placement: "back", title: "Back" },
+    ],
+    areas: JOGGER,
+    colors: [
+      { name: "Black", hex: "#141414" },
+      { name: "Bone", hex: "#efe6d6" },
+      { name: "Royal", hex: "#2f5bff" },
+    ],
+    sizes: ["S", "M", "L", "XL", "2XL"],
+    wholesaleCents: 2695,
+    shape: "joggers",
+  },
+  {
+    id: "tote-corner",
+    name: "Corner Store Tote",
+    type: "Tote",
+    description: "Heavy canvas tote, both sides printable.",
+    technique: "dtg",
+    techniqueTitle: "DTG printing",
+    placements: [
+      { placement: "front", title: "Front" },
+      { placement: "back", title: "Back" },
+    ],
+    areas: TOTE,
+    colors: [
+      { name: "Bone", hex: "#efe6d6" },
+      { name: "Black", hex: "#141414" },
+    ],
+    sizes: ["One size"],
+    wholesaleCents: 995,
+    shape: "tote",
+  },
+  aopBlank("aop-hoodie", "AOP Hoodie", "Hoodie", PRINTFUL_AOP.hoodie),
+  aopBlank("aop-joggers", "AOP Joggers", "Joggers", PRINTFUL_AOP.joggers),
+  aopBlank("aop-track-jacket", "AOP Track Jacket", "Jacket", PRINTFUL_AOP.jacket),
 ];
+
+function aopBlank(
+  id: string,
+  name: string,
+  type: string,
+  printful: (typeof PRINTFUL_AOP)[keyof typeof PRINTFUL_AOP],
+): Blank {
+  return {
+    id,
+    name,
+    type,
+    description: `${AOP_MATERIAL} Matched to Printful ${printful.catalogProductId}, ${printful.name}. Panel colors are the print, not a dyed blank. Printful's template pixel sizes are not confirmed yet.`,
+    technique: "sublimation",
+    techniqueTitle: "Sublimation",
+    placements: [{ placement: "front", title: "Chest logo" }],
+    areas: CHEST,
+    colors: [{ name: "Printed", hex: "#c4a6e0" }],
+    sizes: ["S", "M", "L", "XL", "2XL"],
+    wholesaleCents: printful.startingPriceCents,
+    shape: "aop",
+    construction: "aop",
+    materialNote: AOP_MATERIAL,
+    aopTemplateId: id,
+  };
+}
 
 function sizePremium(size: string): number {
   if (size === "XL") return 200;
@@ -193,6 +310,9 @@ function toProduct(blank: Blank, markup: number, withVariants: boolean): Catalog
     colors: blank.colors,
     sizes: blank.sizes,
     variants: withVariants ? variantsFor(blank, markup) : [],
+    construction: blank.construction ?? "placement",
+    materialNote: blank.materialNote,
+    aopTemplateId: blank.aopTemplateId,
   };
 }
 
@@ -227,6 +347,12 @@ function garmentPath(shape: Blank["shape"]): string {
   if (shape === "crew") {
     return "M150 70 Q220 40 290 70 L348 108 L322 156 L286 136 V400 H154 V136 L118 156 L92 108 Z";
   }
+  if (shape === "tote") {
+    return "M170 130 C170 70 270 70 270 130 M140 130 H300 L316 400 H124 Z";
+  }
+  if (shape === "joggers") {
+    return "M150 60 H290 V110 L306 400 H244 L224 190 L216 400 H134 L134 110 Z";
+  }
   return "M148 72 L188 44 H252 L292 72 L368 112 L334 162 L292 140 V420 H148 V140 L106 162 L72 112 Z";
 }
 
@@ -235,6 +361,10 @@ function printWindow(
   placement: string,
 ): { x: number; y: number; w: number; h: number } {
   if (shape === "hat") return { x: 150, y: 118, w: 140, h: 52 };
+  if (shape === "tote") return { x: 160, y: 180, w: 120, h: 120 };
+  if (shape === "joggers") {
+    return placement === "back" ? { x: 165, y: 120, w: 110, h: 44 } : { x: 168, y: 128, w: 52, h: 52 };
+  }
   if (placement === "sleeve_left") return { x: 86, y: 150, w: 48, h: 48 };
   if (placement === "sleeve_right") return { x: 306, y: 150, w: 48, h: 48 };
   if (placement === "back") return { x: 155, y: 120, w: 130, h: 180 };
@@ -258,7 +388,22 @@ export function buildMockupSvg(input: {
         const byWidth = (window.w * 0.88) / Math.max(layer.text.length * 0.62, 1);
         const byHeight = window.h * 0.42 * layer.scale;
         const size = Math.max(8, Math.min(byWidth, byHeight));
-        return `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" fill="${escapeXml(layer.color)}" font-family="Arial Black, sans-serif" font-size="${size}" text-anchor="middle" dominant-baseline="middle" transform="rotate(${layer.rotation.toFixed(1)} ${cx.toFixed(1)} ${cy.toFixed(1)})">${escapeXml(layer.text).slice(0, 80)}</text>`;
+        const fx = clampFx({ arc: layer.arc, outline: layer.outline, tracking: layer.tracking });
+        const paint = fx.outline
+          ? `fill="none" stroke="${escapeXml(layer.color)}" stroke-width="${Math.max(1, size * 0.07).toFixed(1)}"`
+          : `fill="${escapeXml(layer.color)}"`;
+        const spacing = fx.tracking ? ` letter-spacing="${(fx.tracking * size).toFixed(1)}"` : "";
+        if (isFlatText(fx) || Math.abs(fx.arc) < 0.001) {
+          return `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" ${paint}${spacing} font-family="Arial Black, sans-serif" font-size="${size}" text-anchor="middle" dominant-baseline="middle" transform="rotate(${layer.rotation.toFixed(1)} ${cx.toFixed(1)} ${cy.toFixed(1)})">${escapeXml(layer.text).slice(0, 80)}</text>`;
+        }
+        return arcLayout(layer.text, fx)
+          .map((cell) => {
+            const x = cx + cell.along * size;
+            const y = cy + cell.lift * size;
+            const rotate = layer.rotation + cell.rotate;
+            return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" ${paint} font-family="Arial Black, sans-serif" font-size="${size}" text-anchor="middle" dominant-baseline="middle" transform="rotate(${rotate.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})">${escapeXml(cell.char)}</text>`;
+          })
+          .join("");
       }
       const href = safeHref(layer.src);
       if (!href) return "";
@@ -371,15 +516,18 @@ export function createSandboxProvider(
       findVariant(blank, input.variantId, markup);
       const allowed = blank.placements.some((placement) => placement.placement === input.placement);
       if (!allowed) throw new PodError(`${blank.name} has no ${input.placement} placement`, 400);
+      const label = input.layers.find((layer) => layer.type === "text")?.text;
       return {
         id: nextId(),
         status: "completed",
-        mockupUrl: buildMockupSvg({
-          shape: blank.shape,
-          colorHex: input.colorHex,
-          placement: input.placement,
-          layers: input.layers,
-        }),
+        mockupUrl: blank.aopTemplateId
+          ? renderGarmentSvg({ templateId: blank.aopTemplateId, label })
+          : buildMockupSvg({
+              shape: blank.shape,
+              colorHex: input.colorHex,
+              placement: input.placement,
+              layers: input.layers,
+            }),
       };
     },
     async getMockup(taskId) {

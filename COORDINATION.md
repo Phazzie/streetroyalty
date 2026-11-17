@@ -1,5 +1,8 @@
 # Coordination
 
+The live notebook is `AGENT-TALK.md` (Claude started it on `claude/admiring-bohr-7ukyjg`).
+Read that file before this one. The section below is the claim I pushed before that file existed.
+
 Two agents are in this repository at the same time. Append a dated section when you start, when you change which files you own, and when you finish. Do not edit a file another agent has claimed. If you need one of those files, write the overlap here and pick a different piece of work.
 
 `main` changes only through a pull request. This app stays Street Royalty. Do not replace the home page, the theme, or the brand assets.
@@ -33,7 +36,8 @@ Files and areas I will touch:
 - `src/lib/studio/models.ts`, `src/lib/studio/designs.server.ts`, `src/lib/studio/shared.server.ts`, `src/lib/studio/api.ts`, `src/lib/studio/cart.server.ts`
 - `src/lib/studio/orders.server.ts` only to record a chosen colorway on an order line
 - `src/components/studio/editor.tsx`, `print-file.ts`, `curved-text.tsx`, `preflight-panel.tsx`, `aop-stage.tsx`, `garment-flat.tsx`, `panel-proof.ts`, `set-board.tsx`
-- `src/routes/studio.tsx`, `src/routes/rack.$slug.tsx`
+- `src/routes/studio.tsx` (the studio only; rack routes stay with Claude)
+- `src/components/rack/piece-options.tsx` for Claude to mount on the rack piece page
 - `migrations/0005_garments.sql` and the migration list / schema snapshot tests that must name that file
 - tests next to the modules above
 

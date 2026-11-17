@@ -79,6 +79,8 @@ export async function startCheckout(
         quantity: line.quantity,
         variantLabel: line.variantLabel,
         unitCents: line.unitCents,
+        colorwayId: line.colorwayId ?? null,
+        colorwayName: line.colorwayName ?? null,
       })),
     );
     await sql`

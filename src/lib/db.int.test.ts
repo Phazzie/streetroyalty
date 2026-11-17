@@ -13,6 +13,7 @@ describe("the database handle", () => {
       "0002_studio.sql",
       "0003_order_flags.sql",
       "0004_ai_usage.sql",
+      "0005_garments.sql",
     ]);
   });
 

@@ -1,4 +1,5 @@
 import type { DesignLayer } from "../pod/types.ts";
+import type { Colorway, GarmentDesign } from "./garments.ts";
 
 export type StudioConfig = {
   podMode: "live" | "sandbox";
@@ -30,9 +31,28 @@ export type DesignSummary = {
   updatedAt: string;
 };
 
+export type ShopPiece = DesignSummary & {
+  sizes: { variantId: string; label: string; retailCents: number }[];
+  colorways: Colorway[];
+  activeColorwayId: string | null;
+  materialNote: string | null;
+  construction: "aop" | "placement";
+  set: {
+    id: string;
+    title: string;
+    slug: string;
+    provider: string;
+    colorways: Colorway[];
+    activeColorwayId: string;
+    pieces: { id: string; title: string; slug: string; productType: string }[];
+  } | null;
+};
+
 export type DesignRecord = DesignSummary & {
   layers: DesignLayer[];
   printFileId: string | null;
+  garment: GarmentDesign | null;
+  setId: string | null;
 };
 
 export type CollectionRecord = {

@@ -3,6 +3,7 @@ import { type Sql } from "../db.ts";
 import { getPodProvider, readPaymentsMode, readPodMode, readMarkup } from "../pod/index.ts";
 import type { CatalogProduct } from "../pod/types.ts";
 import { printFileAuthorized, printSigningSecret, signedPrintFileUrl } from "../pod/print-access.ts";
+import { parseStoredGarment } from "./garments.ts";
 import { parseLayers } from "./validate.ts";
 import type { DesignRecord, DesignSummary, StudioConfig } from "./models.ts";
 
@@ -30,6 +31,8 @@ export type DesignRow = {
   retail_cents: number;
   currency: string;
   provider_product_id: string | null;
+  garment_json?: string | null;
+  set_id?: string | null;
   updated_at: string;
 };
 
@@ -63,6 +66,8 @@ export function record(row: DesignRow): DesignRecord {
     ...summary(row),
     layers: parseLayers(JSON.parse(row.layers_json)),
     printFileId: row.print_file_id,
+    garment: parseStoredGarment(row.garment_json),
+    setId: row.set_id ?? null,
   };
 }
 
@@ -117,6 +122,8 @@ export async function loadCatalog(offset: number, limit: number) {
       imageUrl: product.imageUrl,
       placements: product.placements,
       colors: product.colors,
+      construction: product.construction ?? "placement",
+      materialNote: product.materialNote,
     })),
     total: page.total,
     offset: page.offset,
