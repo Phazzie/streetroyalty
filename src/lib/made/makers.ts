@@ -64,7 +64,11 @@ export const MAKERS: Maker[] = [
         sourceUrl: "https://www.printful.com/dtg-printing",
         saw: "A digital printer applies water-based inks to fabric.",
       },
-      dtf: NOT_CHECKED,
+      dtf: {
+        status: "says-yes",
+        sourceUrl: "https://www.printful.com/dtflex",
+        saw: "Sold as DTFlex, which it calls direct-to-film printing, perfected.",
+      },
       embroidery: {
         status: "says-yes",
         sourceUrl: "https://www.printful.com/custom-embroidery",
@@ -101,9 +105,21 @@ export const MAKERS: Maker[] = [
       saw: "No upfront costs, no minimums.",
     },
     methods: {
-      dtg: NOT_CHECKED,
-      dtf: NOT_CHECKED,
-      embroidery: NOT_CHECKED,
+      dtg: {
+        status: "says-yes",
+        sourceUrl: "https://printify.com/blog/dtf-vs-dtg-printing/",
+        saw: "Printify offers both DTG and DTF products.",
+      },
+      dtf: {
+        status: "says-yes",
+        sourceUrl: "https://printify.com/blog/dtf-vs-dtg-printing/",
+        saw: "Printify offers both DTG and DTF products.",
+      },
+      embroidery: {
+        status: "says-yes",
+        sourceUrl: "https://printify.com/guide/embroidery-guide/",
+        saw: "It has an embroidery catalog and a guide to designing for it.",
+      },
       puff: NOT_CHECKED,
       "all-over": {
         status: "says-yes",

@@ -30,7 +30,12 @@ describe("who makes what", () => {
   it("finds makers by what they can do", () => {
     expect(makersFor(["dtg", "embroidery"]).map((maker) => maker.id)).toEqual([
       "printful",
+      "printify",
       "gooten",
+    ]);
+    expect(makersFor(["cut-and-sew", "dtf"]).map((maker) => maker.id)).toEqual([
+      "printful",
+      "printify",
     ]);
     expect(makersFor(["screen"])).toEqual([]);
     expect(makersFor([])).toHaveLength(MAKERS.length);
