@@ -121,7 +121,8 @@ export async function startCheckout(
   }
 }
 
-function dbStore(sql: Sql): OrderStore {
+/** The SQL order store. Exported so the store contract can run against it. */
+export function dbStore(sql: Sql): OrderStore {
   return {
     async getOrder(id) {
       const rows = await sql<

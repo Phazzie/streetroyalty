@@ -4,7 +4,11 @@ import { publishDesign, saveDesign } from "@/lib/studio/designs.server.ts";
 import { pngDataUrl } from "./png.ts";
 
 /** Sandbox catalog ids. The built-in blank list is the fixture. */
-export const TEE = { productId: "tee-heavy", variantId: "tee-heavy-black-m", otherSize: "tee-heavy-black-l" };
+export const TEE = {
+  productId: "tee-heavy",
+  variantId: "tee-heavy-black-m",
+  otherSize: "tee-heavy-black-l",
+};
 
 export const RECIPIENT = {
   name: "Ada Royal",
@@ -47,6 +51,7 @@ export async function seedDesign(
 export async function seedCart(userId: string, quantity = 1) {
   await seedUser(userId);
   const design = await seedDesign(userId);
-  for (let index = 0; index < quantity; index += 1) await addToCart(userId, design.id, TEE.variantId);
+  for (let index = 0; index < quantity; index += 1)
+    await addToCart(userId, design.id, TEE.variantId);
   return design;
 }
