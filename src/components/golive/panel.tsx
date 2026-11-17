@@ -807,8 +807,8 @@ export function GoLivePanel({ view }: { view: PanelView }) {
                       <th scope="row" className="font-normal">
                         {label}
                       </th>
-                      <td>{cap.visitor} a day</td>
-                      <td>{cap.global} a day</td>
+                      <td>{cap.visitor === 0 ? "Off" : `${cap.visitor} a day`}</td>
+                      <td>{cap.global === 0 ? "Off" : `${cap.global} a day`}</td>
                     </tr>
                   ))}
                 </tbody>
