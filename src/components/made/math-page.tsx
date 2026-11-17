@@ -64,7 +64,12 @@ function useCatalog(): Catalog {
                 wholesaleCents: costs.length > 0 ? Math.min(...costs) : null,
               };
             } catch {
-              return { id: product.id, name: product.name, type: product.type, wholesaleCents: null };
+              return {
+                id: product.id,
+                name: product.name,
+                type: product.type,
+                wholesaleCents: null,
+              };
             }
           }),
         );
@@ -199,6 +204,17 @@ export function MathPage({
         forecast. Nobody can tell you how many you will sell.
       </p>
 
+      <p
+        aria-hidden="true"
+        className="sticky top-16 z-10 -mx-4 mt-4 flex items-baseline justify-between gap-3 border-y-2 border-ink bg-bg px-4 py-2 lg:hidden"
+      >
+        <span className="eyebrow text-subtle">You keep, per piece</span>
+        <span className="font-display text-xl tabular-nums">
+          {losing ? "- " : ""}
+          {formatMoney(Math.abs(result.keepCents))}
+        </span>
+      </p>
+
       <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:items-start">
         <form className="grid min-w-0 gap-6" onSubmit={(event) => event.preventDefault()}>
           <fieldset className="grid min-w-0 gap-3">
@@ -225,8 +241,7 @@ export function MathPage({
                   </span>
                 ) : (
                   catalog.presets.map((preset) => {
-                    const on =
-                      search.b === preset.id && plan.makeCents === preset.wholesaleCents;
+                    const on = search.b === preset.id && plan.makeCents === preset.wholesaleCents;
                     return (
                       <button
                         key={preset.id}
@@ -322,7 +337,9 @@ export function MathPage({
               inputMode="numeric"
               hint="Your guess. Try a low one and a high one."
               value={String(plan.perMonth)}
-              onCommit={(text) => set({ perMonth: Number.parseInt(text.replace(/\D/g, ""), 10) || 0 })}
+              onCommit={(text) =>
+                set({ perMonth: Number.parseInt(text.replace(/\D/g, ""), 10) || 0 })
+              }
             />
             <div className="grid grid-cols-2 gap-3">
               <Field
@@ -477,7 +494,10 @@ export function MathPage({
             <li>Tax is not in here. Returns and reprints are not either.</li>
             <li>
               Not sure what a blank or a print area is?{" "}
-              <Link to="/made" className="underline decoration-2 underline-offset-4">
+              <Link
+                to="/made"
+                className="inline-flex min-h-11 items-center underline decoration-2 underline-offset-4"
+              >
                 How it's made
               </Link>
             </li>

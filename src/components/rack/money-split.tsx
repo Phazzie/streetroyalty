@@ -84,8 +84,8 @@ export function MoneySplit({
               The card fee, about {formatMoney(split.cardFeeCents, config.currency)}
             </dt>
             <dd>
-              {bpsToPercent(CARD_FEE_BPS)} percent plus {CARD_FEE_FIXED_CENTS} cents, a common
-              rate for taking a card. The real fee can differ.
+              {bpsToPercent(CARD_FEE_BPS)} percent plus {CARD_FEE_FIXED_CENTS} cents, a common rate
+              for taking a card. The real fee can differ.
             </dd>
           </div>
           <div>

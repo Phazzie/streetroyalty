@@ -169,6 +169,14 @@ describe("the plan in the address bar", () => {
     expect(readPlanSearch({ p: "abc", m: -5, n: "12", b: "<script>", zz: 1 })).toEqual({ n: 12 });
   });
 
+  it("falls back to the default when the router passes junk straight through", () => {
+    const plan = planFromSearch({ p: "abc", m: -4, h: 99_999, n: 1e99 });
+    expect(plan.priceCents).toBe(DEFAULT_PLAN.priceCents);
+    expect(plan.makeCents).toBe(DEFAULT_PLAN.makeCents);
+    expect(plan.houseBps).toBe(10_000);
+    expect(plan.perMonth).toBe(100_000);
+  });
+
   it("keeps a zero that someone typed on purpose", () => {
     expect(planFromSearch(readPlanSearch({ sc: 0 })).shipChargedCents).toBe(0);
   });

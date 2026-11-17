@@ -53,7 +53,8 @@ export const ENTRIES: Entry[] = [
     short: "Embroidery",
     name: "Stitched with thread",
     body: "A machine stitches the design in thread, one colour at a time. It is raised, tough and lasts. Tiny words and soft fades do not stitch well, so keep it bold. The studio's hat is made this way.",
-    drawing: "A needle carrying thread goes down through cloth in a hoop and leaves a row of stitches.",
+    drawing:
+      "A needle carrying thread goes down through cloth in a hoop and leaves a row of stitches.",
     group: "method",
   },
   {
@@ -61,7 +62,8 @@ export const ENTRIES: Entry[] = [
     short: "Puff print",
     name: "Ink that rises",
     body: "An ink that swells under heat, the way bread rises in an oven. The print stands up off the fabric and you can feel it with your eyes shut. Best for thick letters and simple shapes. Fine detail gets lost when it rises.",
-    drawing: "From the side: a thin flat layer of ink, then the same ink swollen into a dome after heat.",
+    drawing:
+      "From the side: a thin flat layer of ink, then the same ink swollen into a dome after heat.",
     group: "method",
   },
   {
@@ -69,7 +71,8 @@ export const ENTRIES: Entry[] = [
     short: "AOP",
     name: "All-over print, and sublimation",
     body: "The whole garment is the picture, edge to edge. Sublimation is how: heat pushes dye into white polyester until the colour is part of the thread. Nothing sits on top, so nothing cracks or peels. The printed fabric is then cut and sewn into the piece.",
-    drawing: "A sheet of fabric printed all over, with the outline of a body and two sleeves to cut from it.",
+    drawing:
+      "A sheet of fabric printed all over, with the outline of a body and two sleeves to cut from it.",
     group: "method",
   },
   {

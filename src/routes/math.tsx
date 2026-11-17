@@ -9,7 +9,8 @@ export const Route = createFileRoute("/math")({
 });
 
 function MathRoute() {
-  const search = Route.useSearch();
+  // Read it again: keys the validator dropped still come through from the raw link.
+  const search = readPlanSearch(Route.useSearch());
   const navigate = Route.useNavigate();
   return (
     <MathPage

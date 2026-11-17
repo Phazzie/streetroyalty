@@ -212,9 +212,14 @@ export function readPlanSearch(search: Record<string, unknown>): PlanSearch {
   return out;
 }
 
-export function planFromSearch(search: PlanSearch): Plan {
+/**
+ * The router hands back whatever was in the link for any key validateSearch left out, so
+ * this reads the search again and trusts nothing: junk falls back to the default.
+ */
+export function planFromSearch(search: PlanSearch | Record<string, unknown>): Plan {
+  const safe = readPlanSearch(search as Record<string, unknown>);
   const raw: Partial<Record<keyof Plan, unknown>> = {};
-  for (const [short, long] of KEYS) raw[long] = search[short];
+  for (const [short, long] of KEYS) raw[long] = safe[short];
   return cleanPlan(raw);
 }
 

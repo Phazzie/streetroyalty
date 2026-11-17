@@ -7,7 +7,8 @@
  * No prices live here.
  */
 
-export type MethodId = "dtg" | "dtf" | "embroidery" | "puff" | "all-over" | "cut-and-sew" | "screen";
+export type MethodId =
+  "dtg" | "dtf" | "embroidery" | "puff" | "all-over" | "cut-and-sew" | "screen";
 
 export const METHODS: { id: MethodId; label: string }[] = [
   { id: "dtg", label: "Direct to garment" },
@@ -20,8 +21,7 @@ export const METHODS: { id: MethodId; label: string }[] = [
 ];
 
 export type Claim =
-  | { status: "says-yes"; sourceUrl: string; saw: string; note?: string }
-  | { status: "not-checked" };
+  { status: "says-yes"; sourceUrl: string; saw: string; note?: string } | { status: "not-checked" };
 
 export type MakerId = "printful" | "printify" | "contrado" | "gooten";
 

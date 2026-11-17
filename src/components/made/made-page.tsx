@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
-import { Diagram, DIAGRAM_CSS, PrintedOrSewn } from "@/components/made/diagrams";
+import { Diagram, DIAGRAM_CSS, DiagramKey, PrintedOrSewn } from "@/components/made/diagrams";
 import { SiteShell } from "@/components/site/shell";
 import { ENTRIES, type Entry } from "@/lib/made/glossary";
 import { MAKERS, METHODS, sourcesOf, type Claim, type Maker } from "@/lib/made/makers";
@@ -64,7 +64,10 @@ function Mark({ claim }: { claim: Claim }) {
   return (
     <span className="flex min-h-11 items-center justify-center gap-1.5 text-xs text-subtle">
       <span aria-hidden="true" className="mw-unknown" />
-      <span className="sr-only sm:not-sr-only">Not checked</span>
+      <span className="sr-only">Not checked</span>
+      <span aria-hidden="true" className="hidden md:inline">
+        Not checked
+      </span>
     </span>
   );
 }
@@ -132,8 +135,8 @@ export function MadePage() {
         <p className="eyebrow text-subtle">Field guide</p>
         <h1 className="display mt-3 text-7xl sm:text-8xl lg:text-9xl">How it's made</h1>
         <p className="mt-5 max-w-xl text-lg text-muted">
-          Print shops talk in letters. DTG. DTF. AOP. Here is what each one means, what it does
-          to the cloth, and what the studio can and can not make today.
+          Print shops talk in letters. DTG. DTF. AOP. Here is what each one means, what it does to
+          the cloth, and what the studio can and can not make today.
         </p>
         <nav aria-label="On this page" className="mt-6 flex flex-wrap gap-2">
           {JUMPS.map((jump) => (
@@ -142,10 +145,6 @@ export function MadePage() {
             </a>
           ))}
         </nav>
-        <p className="mt-6 max-w-xl text-sm text-subtle">
-          How to read the drawings: the garment is drawn in plain line. Whatever the method adds,
-          ink or thread or dye, is drawn in pink. Dotted means it is not there yet.
-        </p>
       </header>
 
       <section id="words" className="paper mw-jump border-y-2 border-ink">
@@ -155,8 +154,23 @@ export function MadePage() {
             {methods.map((entry, index) => (
               <EntryCard key={entry.id} entry={entry} index={index} />
             ))}
+            <aside className="mw-card border-dashed" aria-label="How to read the drawings">
+              <div className="mw-stage border-dashed">
+                <DiagramKey />
+              </div>
+              <div className="flex flex-1 flex-col p-4">
+                <h3 className="display text-4xl">The key</h3>
+                <p className="eyebrow mt-1.5 text-subtle">How to read the drawings</p>
+                <p className="mt-3 text-[0.98rem] leading-relaxed">
+                  Every drawing here follows one rule. The garment is a plain line. Whatever the
+                  method adds, ink or thread or dye, is pink. Dotted means it is not there yet.
+                </p>
+              </div>
+            </aside>
           </div>
-          <h2 className="display mt-16 text-5xl sm:text-6xl">Six words you will meet in the studio</h2>
+          <h2 className="display mt-16 text-5xl sm:text-6xl">
+            Six words you will meet in the studio
+          </h2>
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {words.map((entry, index) => (
               <EntryCard key={entry.id} entry={entry} index={methods.length + index} />
@@ -217,7 +231,9 @@ export function MadePage() {
           <div className="mt-8 grid gap-5 md:grid-cols-2">
             <div className="mw-card">
               <div className="mw-stage">
-                <PrintedOrSewn kind="printed" />
+                <div className="mx-auto max-w-sm">
+                  <PrintedOrSewn kind="printed" />
+                </div>
               </div>
               <div className="p-4">
                 <h3 className="display text-4xl">Printed panels</h3>
@@ -235,7 +251,9 @@ export function MadePage() {
             </div>
             <div className="mw-card">
               <div className="mw-stage">
-                <PrintedOrSewn kind="sewn" />
+                <div className="mx-auto max-w-sm">
+                  <PrintedOrSewn kind="sewn" />
+                </div>
               </div>
               <div className="p-4">
                 <h3 className="display text-4xl">Sewn panels</h3>
@@ -247,8 +265,8 @@ export function MadePage() {
                     two fingers.
                   </li>
                   <li>
-                    Sewn-in piping in your own colours means a factory makes a batch. It can not
-                    be made one at a time through the studio.
+                    Sewn-in piping in your own colours means a factory makes a batch. It can not be
+                    made one at a time through the studio.
                   </li>
                 </ul>
               </div>
@@ -313,18 +331,24 @@ export function MadePage() {
               </th>
               {MAKERS.map((maker) => (
                 <td key={maker.id} className="px-0.5 text-center text-xs">
-                  {maker.wiredIn ? <span className="font-display uppercase">Today</span> : "Not yet"}
+                  {maker.wiredIn ? (
+                    <span className="font-display uppercase">Today</span>
+                  ) : (
+                    "Not yet"
+                  )}
                 </td>
               ))}
             </tr>
           </tbody>
         </table>
         <p className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-subtle">
-          <span>
-            <span aria-hidden="true" className="mw-yes" /> Their site says yes
+          <span className="inline-flex items-center gap-2">
+            <span aria-hidden="true" className="mw-yes" />
+            Their site says yes
           </span>
-          <span>
-            <span aria-hidden="true" className="mw-unknown" /> Not checked
+          <span className="inline-flex items-center gap-2">
+            <span aria-hidden="true" className="mw-unknown" />
+            Not checked
           </span>
         </p>
 

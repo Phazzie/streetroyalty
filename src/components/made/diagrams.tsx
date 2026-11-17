@@ -28,7 +28,8 @@ export const DIAGRAM_CSS = `
 }
 `;
 
-const TEE = "M52 34 L68 24 Q80 33 92 24 L108 34 L128 48 L118 64 L106 57 V100 H54 V57 L42 64 L32 48 Z";
+const TEE =
+  "M52 34 L68 24 Q80 33 92 24 L108 34 L128 48 L118 64 L106 57 V100 H54 V57 L42 64 L32 48 Z";
 
 function Tee(props: SVGProps<SVGPathElement>) {
   return <path d={TEE} vectorEffect="non-scaling-stroke" {...props} />;
@@ -78,17 +79,25 @@ export function Diagram({ id, label }: { id: EntryId; label: string }) {
     case "dtg":
       return (
         <Plate label={label}>
-          <g transform="translate(0 8)">
+          <g transform="translate(8 20) scale(0.9)">
             <Tee />
-            <rect className="mw-fill" x="64" y="48" width="32" height="13" />
-            <rect x="64" y="48" width="32" height="30" strokeWidth="1.5" strokeDasharray="3 4" />
+            <rect className="mw-fill" x="64" y="46" width="32" height="14" />
+            <rect
+              x="64"
+              y="46"
+              width="32"
+              height="34"
+              strokeWidth="1.5"
+              strokeDasharray="3 4"
+              vectorEffect="non-scaling-stroke"
+            />
           </g>
           <path d="M14 13 H146" />
           <g className="mw-slide">
             <rect className="mw-ground" x="64" y="5" width="32" height="16" rx="2" />
-            <circle className="mw-fill" cx="72" cy="29" r="2" />
-            <circle className="mw-fill" cx="80" cy="35" r="2" />
-            <circle className="mw-fill" cx="88" cy="29" r="2" />
+            <circle className="mw-fill" cx="72" cy="27" r="2" />
+            <circle className="mw-fill" cx="80" cy="33" r="2" />
+            <circle className="mw-fill" cx="88" cy="27" r="2" />
           </g>
         </Plate>
       );
@@ -96,7 +105,10 @@ export function Diagram({ id, label }: { id: EntryId; label: string }) {
       return (
         <Plate label={label}>
           <path d="M10 30 H44 L54 40 V86 H10 Z M44 30 V40 H54" />
-          <path className="mw-fill" d="M32 46 l4 9 h10 l-8 6 l3 10 l-9 -6 l-9 6 l3 -10 l-8 -6 h10 z" />
+          <path
+            className="mw-fill"
+            d="M32 46 l4 9 h10 l-8 6 l3 10 l-9 -6 l-9 6 l3 -10 l-8 -6 h10 z"
+          />
           <Arrow x={60} y={60} />
           <g transform="translate(64 30) scale(0.7)">
             <Tee />
@@ -117,7 +129,12 @@ export function Diagram({ id, label }: { id: EntryId; label: string }) {
         <Plate label={label}>
           <ellipse cx="80" cy="78" rx="64" ry="22" />
           <ellipse cx="80" cy="78" rx="56" ry="16" strokeWidth="1.5" />
-          <path className="mw-pink" d="M34 80 q26 -14 62 -4" strokeWidth="4" strokeDasharray="8 5" />
+          <path
+            className="mw-pink"
+            d="M34 80 q26 -14 62 -4"
+            strokeWidth="4"
+            strokeDasharray="8 5"
+          />
           <g className="mw-bob">
             <path d="M96 6 V64 M93 64 L96 75 L99 64" />
             <ellipse cx="96" cy="56" rx="1.6" ry="3.2" strokeWidth="1.5" />
@@ -194,8 +211,12 @@ export function Diagram({ id, label }: { id: EntryId; label: string }) {
           <g className="mw-pull">
             <rect className="mw-ground" x="40" y="5" width="9" height="60" />
           </g>
-          <path d="M44 76 H116 M38 86 H122 M32 96 H128" />
-          <path d="M44 76 L38 86 L32 96 M116 76 L122 86 L128 96" strokeWidth="1.5" />
+          {[20, 44, 68, 92].map((x) => (
+            <g key={x} transform={`translate(${x} 58) scale(0.36)`}>
+              <Tee className="mw-ground" />
+              <rect className="mw-fill" x="66" y="50" width="28" height="24" />
+            </g>
+          ))}
         </Plate>
       );
     case "blank":
@@ -239,19 +260,18 @@ export function Diagram({ id, label }: { id: EntryId; label: string }) {
       return (
         <Plate label={label}>
           <Tee />
-          <rect
-            className="mw-pink"
-            x="63"
-            y="46"
-            width="34"
-            height="45"
-            strokeDasharray="5 4"
-          />
+          <rect className="mw-pink" x="63" y="46" width="34" height="45" strokeDasharray="5 4" />
           <path d="M140 46 V91 M136 46 H144 M136 91 H144" strokeWidth="1.5" />
           <text className="mw-text" x="80" y="42" textAnchor="middle">
             12 in
           </text>
-          <text className="mw-text" x="152" y="69" textAnchor="middle" transform="rotate(-90 152 69)">
+          <text
+            className="mw-text"
+            x="152"
+            y="69"
+            textAnchor="middle"
+            transform="rotate(-90 152 69)"
+          >
             16 in
           </text>
         </Plate>
@@ -306,6 +326,26 @@ export function Diagram({ id, label }: { id: EntryId; label: string }) {
         </Plate>
       );
   }
+}
+
+/** The key to the set: what a plain line, a pink mark and a dotted line each mean. */
+export function DiagramKey() {
+  return (
+    <Plate label="The key: a plain line is the garment, pink is what the method adds, and a dotted line is something not there yet.">
+      <path d="M12 26 H44" />
+      <text className="mw-text" x="54" y="29">
+        The garment
+      </text>
+      <path className="mw-pink" d="M12 56 H44" strokeWidth="6" />
+      <text className="mw-text" x="54" y="59">
+        What is added
+      </text>
+      <path d="M12 86 H44" strokeDasharray="5 5" />
+      <text className="mw-text" x="54" y="89">
+        Not there yet
+      </text>
+    </Plate>
+  );
 }
 
 /** Two cuts through a hoodie side, to show what "panel" means in each case. */
