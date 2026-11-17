@@ -25,6 +25,8 @@ const STUDIO_LIMIT = 1_300_000;
 const SWATCH_MAX = 720;
 const GARMENT_MAX = 520;
 const THUMB = 120;
+/** The small swatch that follows you down the page once the big one is out of sight. */
+const PEEK_MAX = 208;
 /** How many tiles the big swatch shows across at scale 1. */
 const TILES_ACROSS = 2.2;
 
@@ -38,6 +40,9 @@ const PRESETS: { name: string; colors: string[] }[] = [
 ];
 
 const SLOT_NAMES = ["Ground", "Second", "Third", "Fourth"];
+
+const START = defaultSpec("bandana", 77);
+const START_TEXT = encodeSpec(START);
 
 const CSS = `
 .plab-strip { scrollbar-width: thin; scroll-snap-type: x proximity; }
@@ -55,6 +60,11 @@ const CSS = `
 .plab-ink::-webkit-color-swatch { border: 0; border-radius: 0.35rem; }
 .plab-ink::-moz-color-swatch { border: 0; border-radius: 0.35rem; }
 .plab-ink:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
+.plab-preset { transition: transform 160ms ease; }
+.plab-preset:hover { transform: translateY(-2px); }
+.plab-peek { position: fixed; top: 5rem; right: 0.75rem; z-index: 30; width: 6.5rem; padding: 0.25rem; border: 2px solid var(--color-ink); background: var(--color-surface); box-shadow: 4px 4px 0 var(--color-pipe); pointer-events: none; opacity: 0; visibility: hidden; transform: translateY(-0.75rem) rotate(7deg) scale(0.86); transition: opacity 160ms ease, transform 240ms cubic-bezier(0.16, 1, 0.3, 1), visibility 0s linear 240ms; }
+.plab-peek[data-on="true"] { opacity: 1; visibility: visible; transform: rotate(2.5deg); transition-delay: 0s; }
+@media (min-width: 64rem) { .plab-peek { display: none; } }
 .plab-stage { background-image: radial-gradient(color-mix(in srgb, var(--color-ink) 16%, transparent) 1px, transparent 1.4px); background-size: 12px 12px; }
 @keyframes plab-stamp { 0% { transform: scale(0.955) rotate(-1.2deg); } 60% { transform: scale(1.012) rotate(0.3deg); } 100% { transform: none; } }
 @keyframes plab-tumble { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -62,7 +72,8 @@ const CSS = `
 .plab-tumble { animation: plab-tumble 420ms cubic-bezier(0.16, 1, 0.3, 1); }
 @media (prefers-reduced-motion: reduce) {
   .plab-stamp, .plab-tumble { animation: none; }
-  .plab-thumb, .plab-thumb:hover { transition: none; transform: none; }
+  .plab-thumb, .plab-thumb:hover, .plab-preset, .plab-preset:hover { transition: none; transform: none; }
+  .plab-peek, .plab-peek[data-on="true"] { transition: none; transform: none; }
 }
 `;
 
@@ -121,19 +132,20 @@ export function PatternLab({
   onEncoded: (text: string) => void;
 }) {
   const navigate = useNavigate();
-  const [spec, setSpec] = useState<PatternSpec>(
-    () => decodeSpec(encoded) ?? defaultSpec("bandana", 77),
-  );
+  const [spec, setSpec] = useState<PatternSpec>(() => decodeSpec(encoded) ?? START);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [size, setSize] = useState(0);
   const [wear, setWear] = useState<GarmentId>("tee");
+  const [away, setAway] = useState(false);
   const swatch = useRef<HTMLCanvasElement>(null);
   const garment = useRef<HTMLCanvasElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const dice = useRef<HTMLSpanElement>(null);
+  const peek = useRef<HTMLCanvasElement>(null);
   const thumbs = useRef(new Map<PatternId, HTMLCanvasElement>());
-  const lastSent = useRef(encoded ?? "");
+  // A first visit keeps a clean address: nothing is written until something changes.
+  const lastSent = useRef(encoded ?? START_TEXT);
   const text = encodeSpec(spec);
   const info = patternInfo(spec.id);
   const rotation = spec.rotation ?? 0;
@@ -165,6 +177,21 @@ export function PatternLab({
     return () => watcher.disconnect();
   }, []);
 
+  // Once the big swatch has scrolled off, a small one rides along in the corner.
+  useEffect(() => {
+    const target = stage.current;
+    if (!target || typeof IntersectionObserver === "undefined") return;
+    const watcher = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[entries.length - 1];
+        if (entry) setAway(entry.intersectionRatio < 0.3);
+      },
+      { threshold: [0, 0.3, 0.6] },
+    );
+    watcher.observe(target);
+    return () => watcher.disconnect();
+  }, []);
+
   // The swatch and the tee, once per frame at most: a fast draft while things move, then a sharp one.
   useEffect(() => {
     const paint = (draft: boolean) => {
@@ -180,6 +207,12 @@ export function PatternLab({
         const width = backing(tee, GARMENT_MAX, GARMENT_BOX.height / GARMENT_BOX.width);
         drawGarment(teeCtx, spec, width, "#f6f1ff", draft, wear);
       }
+      const small = peek.current;
+      const smallCtx = away ? small?.getContext("2d") : null;
+      if (small && smallCtx) {
+        const width = backing(small, PEEK_MAX);
+        drawPattern(smallCtx, spec, width, width, { unit: width / TILES_ACROSS, draft });
+      }
     };
     const frame = requestAnimationFrame(() => paint(true));
     const settle = setTimeout(() => paint(false), 160);
@@ -187,7 +220,7 @@ export function PatternLab({
       cancelAnimationFrame(frame);
       clearTimeout(settle);
     };
-  }, [spec, size, wear]);
+  }, [spec, size, wear, away]);
 
   // The strip only changes with the seed, or the colours of the pattern in use.
   const activeColors = spec.colors.join("");
@@ -255,7 +288,7 @@ export function PatternLab({
         sessionStorage.setItem("sr-print-art", picture.dataUrl);
       } catch {
         setBusy(false);
-        setNote("This phone could not hold that pattern. Make the pattern bigger and try again.");
+        setNote("That one would not go through. Turn Size up a little and send it again.");
         return;
       }
       void navigate({ to: "/studio" });
@@ -277,7 +310,7 @@ export function PatternLab({
   };
 
   const copy = async () => {
-    const url = `${location.origin}/patterns?p=${text}`;
+    const url = `${location.origin}${location.pathname}?p=${text}`;
     try {
       await navigator.clipboard.writeText(url);
       setNote("Link copied. It opens this exact pattern.");
@@ -287,7 +320,7 @@ export function PatternLab({
   };
 
   return (
-    <StudioShell current="/studio">
+    <StudioShell current="/patterns">
       <style>{CSS}</style>
       <p className="tag">Pattern lab</p>
       <h1 className="mt-3 font-display text-4xl leading-none tracking-tight sm:text-5xl">
@@ -309,7 +342,7 @@ export function PatternLab({
             type="button"
             aria-pressed={pattern.id === spec.id}
             onClick={() => pick(pattern.id)}
-            className="plab-thumb w-[5.25rem] shrink-0 border-2 border-ink bg-surface p-1 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg"
+            className="plab-thumb flex w-[5.25rem] shrink-0 flex-col border-2 border-ink bg-surface p-1 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg"
           >
             <canvas
               ref={(node) => {
@@ -321,7 +354,7 @@ export function PatternLab({
               className="block aspect-square w-full bg-bg"
               aria-hidden="true"
             />
-            <span className="mt-1 block truncate font-display text-[0.62rem] tracking-wide uppercase">
+            <span className="mt-1 block min-h-[1.7rem] font-display text-[0.62rem] leading-[0.85rem] tracking-wide uppercase">
               {pattern.name}
             </span>
           </button>
@@ -329,7 +362,10 @@ export function PatternLab({
       </div>
 
       <div className="mt-3 grid gap-4 sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)_22rem]">
-        <div ref={stage} className="order-1 min-w-0 self-start border-2 border-ink bg-surface p-2">
+        <div
+          ref={stage}
+          className="order-1 min-w-0 self-start border-2 border-ink bg-surface p-2 lg:sticky lg:top-20"
+        >
           <canvas
             ref={swatch}
             className="block aspect-square w-full bg-bg"
@@ -344,7 +380,7 @@ export function PatternLab({
           </div>
         </div>
 
-        <div className="plab-stage order-3 flex min-w-0 flex-col self-start border-2 border-ink bg-surface p-2 sm:order-2">
+        <div className="plab-stage order-3 flex min-w-0 flex-col self-start border-2 border-ink bg-surface p-2 sm:order-2 lg:sticky lg:top-20">
           <canvas
             ref={garment}
             className="m-auto block w-full max-w-[20rem]"
@@ -420,9 +456,18 @@ export function PatternLab({
           </section>
 
           <section className="border-2 border-ink bg-surface p-4" aria-labelledby="plab-colours">
-            <h2 id="plab-colours" className="font-display text-sm tracking-wide uppercase">
-              Colours
-            </h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 id="plab-colours" className="font-display text-sm tracking-wide uppercase">
+                Colours
+              </h2>
+              <button
+                type="button"
+                className="-my-2 min-h-11 px-2 font-display text-xs tracking-wide text-muted uppercase underline decoration-2 underline-offset-4 hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg"
+                onClick={() => change({ colors: [...info.defaultColors] })}
+              >
+                Reset
+              </button>
+            </div>
             <div className="mt-3 flex flex-wrap gap-3">
               {spec.colors.map((color, slot) => (
                 <label key={slot} className="flex flex-col items-center gap-1 text-xs text-muted">
@@ -437,33 +482,24 @@ export function PatternLab({
                 </label>
               ))}
             </div>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-4 grid grid-cols-3 gap-2" role="group" aria-label="Colour sets">
               {PRESETS.map((preset) => (
                 <button
                   key={preset.name}
                   type="button"
-                  className="chip gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg"
+                  className="plab-preset min-w-0 overflow-hidden border-2 border-ink bg-bg text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg"
                   onClick={() => change({ colors: preset.colors.slice(0, info.colorSlots) })}
                 >
-                  <span className="flex" aria-hidden="true">
-                    {preset.colors.slice(0, 3).map((color, index) => (
-                      <span
-                        key={index}
-                        className="-ml-1 h-4 w-4 rounded-full border border-ink first:ml-0"
-                        style={{ background: color }}
-                      />
+                  <span className="flex h-5 border-b-2 border-ink" aria-hidden="true">
+                    {preset.colors.slice(0, info.colorSlots).map((color, index) => (
+                      <span key={index} className="flex-1" style={{ background: color }} />
                     ))}
                   </span>
-                  {preset.name}
+                  <span className="block px-1 py-2 font-display text-[0.64rem] leading-tight tracking-wide uppercase">
+                    {preset.name}
+                  </span>
                 </button>
               ))}
-              <button
-                type="button"
-                className="chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg"
-                onClick={() => change({ colors: [...info.defaultColors] })}
-              >
-                Reset
-              </button>
             </div>
           </section>
 
@@ -484,6 +520,9 @@ export function PatternLab({
             </p>
           </div>
         </div>
+      </div>
+      <div className="plab-peek" data-on={away} aria-hidden="true">
+        <canvas ref={peek} className="block aspect-square w-full bg-bg" />
       </div>
     </StudioShell>
   );

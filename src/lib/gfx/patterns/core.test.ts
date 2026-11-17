@@ -275,6 +275,29 @@ describe("encodeSpec and decodeSpec", () => {
     for (const text of bad) expect(decodeSpec(text)).toBeNull();
   });
 
+  it("is not fooled by names every object carries, or by markup and paths", () => {
+    for (const text of [
+      "__proto__.1.000000.100.0",
+      "constructor.1",
+      "toString.1",
+      "flames.1.000000.100.0#<img src=x onerror=alert(1)>",
+      "flames.1.javascript:alert(1).100.0",
+      'flames.1.000000-ffffff"onload=x.100.0',
+      "../../etc/passwd.1",
+      "flames.1.000000.1e3.0",
+      "flames.1.000000.100.1e2",
+      " .1",
+    ]) {
+      expect(decodeSpec(text)).toBeNull();
+    }
+  });
+
+  it("only ever hands back colours that are plain hex", () => {
+    const spec = decodeSpec("razor.zz.FFFFFF-00ff00.100.0");
+    expect(spec?.colors).toEqual(["#ffffff", "#00ff00", "#3d7eff", "#ff6a00"]);
+    for (const color of spec?.colors ?? []) expect(color).toMatch(/^#[0-9a-f]{6}$/);
+  });
+
   it("clamps a scale or turn that is out of range instead of drawing it", () => {
     expect(decodeSpec("flames.1.000000.9999.0")?.scale).toBe(MAX_SCALE);
     expect(decodeSpec("flames.1.000000.1.0")?.scale).toBe(MIN_SCALE);

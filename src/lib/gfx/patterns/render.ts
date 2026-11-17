@@ -98,6 +98,8 @@ export function drawPattern(
   heightPx: number,
   options: DrawOptions = {},
 ): void {
+  // a size that is not a number draws nothing instead of poisoning the canvas
+  if (!Number.isFinite(widthPx) || !Number.isFinite(heightPx)) return;
   const clean = normalizeSpec(spec) ?? defaultSpec();
   const width = Math.max(1, widthPx);
   const height = Math.max(1, heightPx);

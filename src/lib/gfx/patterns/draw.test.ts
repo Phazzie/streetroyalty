@@ -192,6 +192,20 @@ describe("drawPattern", () => {
     expect(tape.calls).toContain(`scale(${300 / 512},${300 / 512})`);
   });
 
+  it("draws nothing at all when a size is not a number", () => {
+    vi.stubGlobal("OffscreenCanvas", FakeCanvas);
+    for (const [width, height] of [
+      [Number.NaN, 100],
+      [100, Number.POSITIVE_INFINITY],
+      [undefined as unknown as number, 100],
+    ] as const) {
+      const tape = recorder();
+      drawPattern(tape.ctx, defaultSpec("drip", 905), width, height);
+      expect(tape.calls).toEqual([]);
+    }
+    expect(made).toEqual([]);
+  });
+
   it("works out the tile size from scale and unit, inside its limits", () => {
     expect(tileSize(defaultSpec("checker"))).toBe(256);
     expect(tileSize({ ...defaultSpec("checker"), scale: 2 }, 100)).toBe(200);
@@ -199,6 +213,66 @@ describe("drawPattern", () => {
     expect(tileSize({ ...defaultSpec("checker"), scale: 4 }, 5000)).toBe(4096);
     expect(tileSize({ id: "plaid" } as unknown as PatternSpec, 90)).toBe(90);
     expect([1, 64, 65, 300, 4000].map(draftEdge)).toEqual([64, 64, 128, 512, 512]);
+  });
+});
+
+describe("patternDataUrlUnder", () => {
+  const tiles: number[] = [];
+  class FakeTile {
+    constructor(width: number) {
+      tiles.push(width);
+    }
+    getContext() {
+      return recorder().ctx;
+    }
+  }
+
+  /** A page whose pictures weigh a set number of characters per pixel, WebP lighter than PNG. */
+  function fakePage(hasWebp: boolean, perPixel: number) {
+    return {
+      createElement: () => ({
+        width: 0,
+        height: 0,
+        getContext: () => recorder().ctx,
+        toDataURL(this: { width: number; height: number }, mime: string, quality = 1) {
+          const kind = mime === "image/webp" && !hasWebp ? "image/png" : mime;
+          const weight = kind === "image/webp" ? quality : 2;
+          const body = Math.round(this.width * this.height * perPixel * weight);
+          return `data:${kind};base64,${"A".repeat(body)}`;
+        },
+      }),
+    };
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    tiles.length = 0;
+  });
+
+  it("shrinks the picture and the cloth together until it fits", () => {
+    vi.stubGlobal("OffscreenCanvas", FakeTile);
+    vi.stubGlobal("document", fakePage(true, 0.01));
+    const picture = patternDataUrlUnder(defaultSpec("halftone", 906), 200, 200, 300, { unit: 100 });
+    expect(picture.mime).toBe("image/webp");
+    expect([picture.width, picture.height]).toEqual([164, 164]);
+    expect(picture.dataUrl.length).toBeLessThanOrEqual(300);
+    // the tile shrank by the same step, so the same amount of cloth is in the picture
+    expect(tiles).toEqual([100, 82]);
+  });
+
+  it("falls back to PNG in a browser with no WebP", () => {
+    vi.stubGlobal("OffscreenCanvas", FakeTile);
+    vi.stubGlobal("document", fakePage(false, 0.01));
+    const picture = patternDataUrlUnder(defaultSpec("halftone", 907), 200, 200, 1000);
+    expect(picture.mime).toBe("image/png");
+    expect(picture.dataUrl.startsWith("data:image/png;base64,")).toBe(true);
+    expect([picture.width, picture.height]).toEqual([200, 200]);
+  });
+
+  it("gives up with a plain message when nothing can fit", () => {
+    vi.stubGlobal("OffscreenCanvas", FakeTile);
+    vi.stubGlobal("document", fakePage(true, 1));
+    expect(() => patternDataUrlUnder(defaultSpec("camo", 908), 400, 400, 10)).toThrow(/too heavy/);
   });
 });
 
