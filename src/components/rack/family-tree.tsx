@@ -72,6 +72,7 @@ const CSS = `
   display: inline-flex; min-height: 2.75rem; align-items: center; font-family: var(--font-display);
   font-size: 0.85rem; color: var(--color-fg);
 }
+.sr-ft-maker[data-plain="true"] { font-family: var(--font-sans); font-size: 0.875rem; color: var(--color-muted); }
 .sr-ft-fork { position: relative; }
 .sr-ft-name {
   position: relative; padding: 0.25rem 0 0.9rem var(--rail); min-height: calc(var(--stop) + 0.5rem);
@@ -104,6 +105,18 @@ const CSS = `
   width: 1.75rem; height: var(--pipe); background: var(--color-blue);
 }
 .sr-ft-end p { padding-top: calc(var(--stop) - 0.7rem); }
+
+.sr-ft-key {
+  list-style: none; margin: 1rem 0 0; padding: 0.75rem 0 0; border-top: 2px solid var(--color-line);
+  display: flex; flex-wrap: wrap; gap: 0.35rem 1rem; font-size: 0.78rem; color: var(--color-muted);
+}
+.sr-ft-key li { display: inline-flex; align-items: center; gap: 0.4rem; }
+.sr-ft-key i { display: inline-block; width: 1.25rem; height: var(--pipe); background: var(--color-pipe); }
+.sr-ft-key i[data-line="remix"] { background: var(--color-blue); }
+.sr-ft-key i[data-line="ghost"] {
+  width: 0.8rem; height: 0.8rem; border-radius: 9999px; background: transparent;
+  border: 2px dashed var(--color-subtle);
+}
 
 .sr-ft[data-go="false"] :is(.sr-ft-seg, .sr-ft-dot, .sr-ft-card, .sr-ft-elbow, .sr-ft-name, .sr-ft-end) { opacity: 0; }
 .sr-ft[data-go="false"] :is(.sr-ft-name, .sr-ft-branch)::before { opacity: 0; }
@@ -160,7 +173,11 @@ function Thumb({ stop }: { stop: Stop }) {
 function Maker({ stop }: { stop: Stop }) {
   if (!stop.maker) return null;
   if (!stop.maker.handle) {
-    return <span className="sr-ft-maker text-muted">by {stop.maker.name}</span>;
+    return (
+      <span className="sr-ft-maker" data-plain="true">
+        by {stop.maker.name}
+      </span>
+    );
   }
   return (
     <Link
@@ -201,7 +218,20 @@ function Card({
   );
   return (
     <div className="sr-ft-card flex min-w-0 items-start gap-3" style={step(index)}>
-      <Thumb stop={stop} />
+      {stop.onRack && stop.slug && !here ? (
+        // The picture goes to the same place as the title, which is the link people tab to.
+        <Link
+          to="/rack/$slug"
+          params={{ slug: stop.slug }}
+          className="flex-none"
+          tabIndex={-1}
+          aria-hidden="true"
+        >
+          <Thumb stop={stop} />
+        </Link>
+      ) : (
+        <Thumb stop={stop} />
+      )}
       <div className="min-w-0 flex-1">
         {stop.onRack && stop.slug && !here ? (
           <Link to="/rack/$slug" params={{ slug: stop.slug }} className="sr-ft-link">
@@ -218,19 +248,15 @@ function Card({
   );
 }
 
+/** Loads a published piece's family and draws it. Shows nothing if the piece is not on the rack. */
 export function FamilyTree({ slug }: { slug: string }) {
   const [family, setFamily] = useState<Family | null>(null);
   const [failed, setFailed] = useState(false);
-  const [go, setGo] = useState(false);
-  const root = useRef<HTMLElement | null>(null);
-  const line = useRef<HTMLOListElement | null>(null);
-  const headingId = useId();
 
   useEffect(() => {
     let live = true;
     setFamily(null);
     setFailed(false);
-    setGo(false);
     void pieceFamily({ data: { slug } })
       .then((next) => {
         if (live) setFamily(next);
@@ -243,10 +269,24 @@ export function FamilyTree({ slug }: { slug: string }) {
     };
   }, [slug]);
 
+  if (failed) return null;
+  if (!family) {
+    return <p className="pending-pulse text-sm text-muted">Tracing the family tree.</p>;
+  }
+  return <FamilyTreeView key={slug} family={family} />;
+}
+
+/** The drawing on its own, for a page that already has the family in hand. */
+export function FamilyTreeView({ family }: { family: Family }) {
+  const [go, setGo] = useState(false);
+  const root = useRef<HTMLElement | null>(null);
+  const line = useRef<HTMLOListElement | null>(null);
+  const headingId = useId();
+
   // Draw the line when it scrolls into view, not before anyone can see it.
   useEffect(() => {
     const element = root.current;
-    if (!family || !element) return;
+    if (!element) return;
     if (typeof IntersectionObserver === "undefined") {
       setGo(true);
       return;
@@ -258,7 +298,8 @@ export function FamilyTree({ slug }: { slug: string }) {
           observer.disconnect();
         }
       },
-      { threshold: 0.15 },
+      // No threshold: a long tree on a short screen must still count as seen.
+      { rootMargin: "0px 0px -60px 0px" },
     );
     observer.observe(element);
     return () => observer.disconnect();
@@ -267,7 +308,7 @@ export function FamilyTree({ slug }: { slug: string }) {
   // The train runs from the original to this piece, so it needs the distance between them.
   useEffect(() => {
     const list = line.current;
-    if (!family || !list) return;
+    if (!list) return;
     const measure = () => {
       const last = list.querySelector<HTMLElement>(":scope > li:last-of-type");
       list.style.setProperty("--run", `${last?.offsetTop ?? 0}px`);
@@ -278,11 +319,6 @@ export function FamilyTree({ slug }: { slug: string }) {
     observer.observe(list);
     return () => observer.disconnect();
   }, [family]);
-
-  if (failed) return null;
-  if (!family) {
-    return <p className="pending-pulse text-sm text-muted">Tracing the family tree.</p>;
-  }
 
   const { chain, remixes, broken } = family;
   const generation = chain.length;
@@ -299,11 +335,14 @@ export function FamilyTree({ slug }: { slug: string }) {
 
   const lastIndex = generation - 1;
   const forkStart = generation + 1;
+  // A long list of remixes should not keep the page waiting for its turn to appear.
+  const branchStep = (index: number) => forkStart + Math.min(index, 6);
+  const ghosts = chain.some((stop) => !stop.onRack);
 
   return (
     <section
       ref={root}
-      className="sr-ft border-2 border-ink bg-surface p-4 sm:p-5"
+      className="sr-ft w-full max-w-xl border-2 border-ink bg-surface p-4 sm:p-5"
       data-go={go}
       aria-labelledby={headingId}
     >
@@ -318,15 +357,9 @@ export function FamilyTree({ slug }: { slug: string }) {
           const here = index === lastIndex;
           const lost = stop.title === null;
           const kicker = here
-            ? index === 0
-              ? "The original. You are here"
-              : broken
-                ? "You are here"
-                : `${generationLabel(index)}. You are here`
-            : lost
-              ? broken
-                ? "Missing link"
-                : generationLabel(index)
+            ? "You are here"
+            : lost && broken
+              ? "Missing link"
               : broken && index > 0
                 ? "Later generation"
                 : generationLabel(index);
@@ -380,13 +413,13 @@ export function FamilyTree({ slug }: { slug: string }) {
           <ul className="sr-ft-list" style={{ "--n": forkStart } as CSSProperties}>
             {remixes.map((remix, index) => (
               <li key={remix.slug ?? index} className="sr-ft-branch">
-                <span className="sr-ft-elbow" style={step(forkStart + index)} aria-hidden="true" />
-                <span className="sr-ft-dot" style={step(forkStart + index)} aria-hidden="true" />
+                <span className="sr-ft-elbow" style={step(branchStep(index))} aria-hidden="true" />
+                <span className="sr-ft-dot" style={step(branchStep(index))} aria-hidden="true" />
                 <Card
                   stop={remix}
                   kicker="Remix"
                   small
-                  index={forkStart + index}
+                  index={branchStep(index)}
                   extra={
                     remix.below > 0 ? (
                       <p className="text-sm text-muted">
@@ -409,6 +442,29 @@ export function FamilyTree({ slug }: { slug: string }) {
           </p>
         </div>
       )}
+
+      <ul className="sr-ft-key" aria-label="How to read this map">
+        {generation > 1 ? (
+          <li>
+            <i data-line="blood" />
+            Bloodline
+          </li>
+        ) : null}
+        <li>
+          <i data-line="remix" />
+          Remix line
+        </li>
+        <li>
+          <Crown className="h-2.5 w-auto text-fg" />
+          This piece
+        </li>
+        {ghosts ? (
+          <li>
+            <i data-line="ghost" />
+            Off the rack, still credited
+          </li>
+        ) : null}
+      </ul>
     </section>
   );
 }
