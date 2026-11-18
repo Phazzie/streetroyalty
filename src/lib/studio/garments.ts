@@ -6,12 +6,14 @@
 import {
   AOP_DPI,
   AOP_MATERIAL,
+  AOP_ORDER_CLOSED,
   PRINTFUL_AOP,
+  aopOrderable,
   panelPrintTarget,
   type PanelPrintTarget,
 } from "../pod/aop-printful.ts";
 
-export { AOP_MATERIAL, AOP_DPI };
+export { AOP_MATERIAL, AOP_DPI, AOP_ORDER_CLOSED };
 
 export const COLOR_ROLES = ["body", "contrast", "trim", "mark"] as const;
 export type ColorRole = (typeof COLOR_ROLES)[number];
@@ -403,6 +405,19 @@ export function getTemplate(templateId: string): AopTemplate | null {
 
 export function isAopProduct(productId: string): boolean {
   return Boolean(AOP_TEMPLATES[productId]);
+}
+
+/**
+ * Whether a piece on this product can be bought. A placement print always can.
+ * An all-over piece can only once `aopOrderable` says its panel files exist.
+ */
+export function canOrderProduct(productId: string): boolean {
+  const template = getTemplate(productId);
+  if (!template) return true;
+  return aopOrderable(
+    template.printful.catalogProductId,
+    template.panels.map((item) => item.id),
+  );
 }
 
 export function variantIdFor(templateId: string, size = "m"): string {

@@ -1,11 +1,16 @@
 import { getSql } from "../db.ts";
 import { getPodProvider } from "../pod/index.ts";
 import type { CatalogProduct } from "../pod/types.ts";
-import { parseStoredGarment } from "./garments.ts";
+import { AOP_ORDER_CLOSED, canOrderProduct, parseStoredGarment } from "./garments.ts";
 import { canBuyDesign, parseRecipient } from "./validate.ts";
 import { cartDelta, normalizeCartQuantity } from "./cart-qty.ts";
 import type { CartLine } from "./models.ts";
 import { fileUrl, sumCents, type DesignRow } from "./shared.server.ts";
+
+/** Refuses a piece the printer cannot make yet. Today that is every all-over piece. */
+function assertOrderable(productId: string): void {
+  if (!canOrderProduct(productId)) throw new Error(AOP_ORDER_CLOSED);
+}
 
 export async function addToCart(
   userId: string,
@@ -19,6 +24,7 @@ export async function addToCart(
   if (!design || !canBuyDesign({ ownerId: design.user_id, status: design.status }, userId)) {
     throw new Error("That piece is not for sale.");
   }
+  assertOrderable(design.product_id);
   const product = await getPodProvider().getProduct(design.product_id);
   const variant = product.variants.find(
     (item) => item.id === variantId && item.color === design.color_name,
@@ -71,7 +77,7 @@ type CartJoin = DesignRow & {
   quantity: number;
 };
 
-export async function cartRows(userId: string): Promise<CartJoin[]> {
+async function readCartRows(userId: string): Promise<CartJoin[]> {
   const sql = await getSql();
   return sql<CartJoin>`
     select d.*, c.id as cart_id, c.variant_id as cart_variant_id, c.variant_label as cart_variant_label, c.colorway_id as cart_colorway_id, c.quantity
@@ -82,8 +88,20 @@ export async function cartRows(userId: string): Promise<CartJoin[]> {
   `;
 }
 
+/**
+ * The cart on its way to the printer, for pricing, shipping quotes and
+ * checkout. A line the printer cannot make yet, such as an all-over piece
+ * added before ordering closed, stops it here. The cart view reads
+ * `readCartRows` so that line can still be seen and removed.
+ */
+export async function cartRows(userId: string): Promise<CartJoin[]> {
+  const rows = await readCartRows(userId);
+  for (const row of rows) assertOrderable(row.product_id);
+  return rows;
+}
+
 export async function listCart(userId: string): Promise<CartLine[]> {
-  const rows = await cartRows(userId);
+  const rows = await readCartRows(userId);
   const prices = new Map<string, number>();
   const provider = getPodProvider();
   const products = new Map<string, CatalogProduct>();

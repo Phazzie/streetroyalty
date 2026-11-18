@@ -517,7 +517,7 @@ export function Editor({ designId }: { designId: string }) {
               <span className="block font-display text-xs uppercase">{item.type}</span>
               <span className="block text-sm">{item.name}</span>
               {item.construction === "aop" ? (
-                <span className="block text-xs text-muted">All-over sublimation</span>
+                <span className="block text-xs text-muted">All-over print</span>
               ) : null}
             </button>
           ))}

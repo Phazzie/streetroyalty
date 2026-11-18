@@ -1,9 +1,19 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { generateMockup, getDesign, saveDesign } from "./designs.server.ts";
-import { defaultGarment, setPanelFill, type GarmentDesign } from "./garments.ts";
+import { getSql } from "../db.ts";
+import { AOP_ORDER_CLOSED, aopOrderable, PRINTFUL_AOP } from "../pod/aop-printful.ts";
+import { addToCart, listCart, quoteShipping } from "./cart.server.ts";
+import { generateMockup, getDesign, publishDesign, saveDesign } from "./designs.server.ts";
+import {
+  AOP_TEMPLATES,
+  canOrderProduct,
+  defaultGarment,
+  setPanelFill,
+  type GarmentDesign,
+} from "./garments.ts";
+import { startCheckout } from "./orders.server.ts";
 import { truncateAll } from "../../test/db.ts";
 import { pngDataUrl } from "../../test/png.ts";
-import { seedUser } from "../../test/seed.ts";
+import { RECIPIENT, TEE, seedDesign, seedUser } from "../../test/seed.ts";
 
 const PRINT = pngDataUrl(600, 450);
 const LAYERS = [{ id: "t", type: "text", text: "SR", x: 0.5, y: 0.4, scale: 1, rotation: 0 }];
@@ -132,5 +142,83 @@ describe("all-over mockups", () => {
       garment: { templateId: "nope" },
     });
     expect(tee.mockupUrl).toMatch(/^data:image\/svg\+xml/);
+  });
+});
+
+describe("ordering an all-over piece", () => {
+  async function publishedHoodie(owner = "ada") {
+    const mockup = await generateMockup(hoodie(blackGoldChecker()));
+    const saved = await saveDesign(owner, {
+      ...hoodie(blackGoldChecker()),
+      title: "Gold rush hoodie",
+      mockupUrl: mockup.mockupUrl,
+    });
+    return publishDesign(owner, saved.id);
+  }
+
+  it("keeps the rule in one place, closed while no panel template is confirmed", () => {
+    for (const template of Object.values(AOP_TEMPLATES)) {
+      expect(canOrderProduct(template.id)).toBe(false);
+      expect(
+        aopOrderable(
+          template.printful.catalogProductId,
+          template.panels.map((item) => item.id),
+        ),
+      ).toBe(false);
+    }
+    expect(aopOrderable(PRINTFUL_AOP.hoodie.catalogProductId, [])).toBe(false);
+    expect(canOrderProduct(TEE.productId)).toBe(true);
+    expect(AOP_ORDER_CLOSED).toMatch(/^All-over pieces can be designed, saved and shared now\./);
+  });
+
+  it("can still be published, but not added to the cart, while a tee can", async () => {
+    await seedUser("bo");
+    const piece = await publishedHoodie();
+    expect(piece.status).toBe("published");
+    await expect(addToCart("bo", piece.id, "aop-hoodie-printed-m")).rejects.toThrow(
+      AOP_ORDER_CLOSED,
+    );
+    await expect(addToCart("ada", piece.id, "aop-hoodie-printed-m", "black-gold")).rejects.toThrow(
+      AOP_ORDER_CLOSED,
+    );
+    const tee = await seedDesign("ada", { published: true });
+    await addToCart("bo", tee.id, TEE.variantId);
+    const sql = await getSql();
+    const lines = await sql<{
+      design_id: string;
+    }>`select design_id from cart_items where user_id = 'bo'`;
+    expect(lines.map((line) => line.design_id)).toEqual([tee.id]);
+  });
+
+  it("refuses in live mode too, before asking the printer", async () => {
+    await seedUser("bo");
+    const piece = await publishedHoodie();
+    process.env.POD_MODE = "live";
+    process.env.PRINTFUL_API_KEY = "pf_test_key";
+    await expect(addToCart("bo", piece.id, "aop-hoodie-printed-m")).rejects.toThrow(
+      AOP_ORDER_CLOSED,
+    );
+  });
+
+  it("stops checkout and the shipping quote when an all-over line is already in the cart", async () => {
+    await seedUser("bo");
+    const piece = await publishedHoodie();
+    const tee = await seedDesign("ada", { published: true });
+    await addToCart("bo", tee.id, TEE.variantId);
+    const sql = await getSql();
+    await sql`
+      insert into cart_items (id, user_id, design_id, variant_id, variant_label, quantity, colorway_id)
+      values (${crypto.randomUUID()}, 'bo', ${piece.id}, 'aop-hoodie-printed-m', 'M', 1, '')
+    `;
+    await expect(
+      startCheckout("bo", { recipient: RECIPIENT, shippingMethod: "STANDARD" }),
+    ).rejects.toThrow(AOP_ORDER_CLOSED);
+    await expect(quoteShipping("bo", RECIPIENT)).rejects.toThrow(AOP_ORDER_CLOSED);
+    const orders = await sql<{ id: string }>`select id from orders where user_id = 'bo'`;
+    expect(orders).toHaveLength(0);
+    // The line still shows in the bag, so it can be taken out.
+    expect((await listCart("bo")).map((line) => line.designId).sort()).toEqual(
+      [piece.id, tee.id].sort(),
+    );
   });
 });

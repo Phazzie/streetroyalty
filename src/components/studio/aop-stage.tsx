@@ -5,7 +5,9 @@ import { GarmentFlat } from "@/components/studio/garment-flat";
 import { renderPanelProof } from "@/components/studio/panel-proof";
 import {
   AOP_MATERIAL,
+  AOP_ORDER_CLOSED,
   COLOR_ROLES,
+  canOrderProduct,
   activeColorway,
   addColorway,
   getTemplate,
@@ -49,7 +51,9 @@ export function AopStage({
   if (!template) return null;
   const colorway = activeColorway(garment);
   const panelDef = template.panels.find((item) => item.id === selected) ?? template.panels[0];
-  const fill = garment.panels.find((item) => item.id === panelDef?.id)?.fill ?? { kind: "role" as const };
+  const fill = garment.panels.find((item) => item.id === panelDef?.id)?.fill ?? {
+    kind: "role" as const,
+  };
   const plan = panelExportPlan(template.id);
 
   function paintFill(next: PanelFill) {
@@ -61,9 +65,10 @@ export function AopStage({
     <div>
       <p className="mb-3 text-sm text-muted">{AOP_MATERIAL}</p>
       <p className="mb-3 text-sm text-muted">
-        Printful product {template.printful.catalogProductId}. {template.printful.name}. The flat is the garment.
+        Matched to Printful product {template.printful.catalogProductId}, {template.printful.name}.
         Each panel can take the colorway, its own color, a pattern, or art.
       </p>
+      {canOrderProduct(template.id) ? null : <p className="mb-3 text-sm">{AOP_ORDER_CLOSED}</p>}
       <div className="mb-3 flex flex-wrap gap-2">
         {(["front", "back"] as const).map((item) => (
           <button
@@ -77,7 +82,13 @@ export function AopStage({
           </button>
         ))}
       </div>
-      <GarmentFlat garment={garment} face={face} selected={selected} onSelect={setSelected} label={label} />
+      <GarmentFlat
+        garment={garment}
+        face={face}
+        selected={selected}
+        onSelect={setSelected}
+        label={label}
+      />
       <div className="mt-3 flex flex-wrap gap-2">
         {visiblePanels(template, face).map((item) => (
           <button
@@ -95,14 +106,23 @@ export function AopStage({
         <div className="mt-4 border-2 border-line p-3">
           <p className="font-display text-xs tracking-wide uppercase">{panelDef.title}</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <button type="button" className={`chip ${fill.kind === "role" ? "chip-on" : ""}`} onClick={() => paintFill({ kind: "role" })}>
+            <button
+              type="button"
+              className={`chip ${fill.kind === "role" ? "chip-on" : ""}`}
+              onClick={() => paintFill({ kind: "role" })}
+            >
               Follow colorway
             </button>
             <button
               type="button"
               className={`chip ${fill.kind === "pattern" && fill.pattern === "stripe" ? "chip-on" : ""}`}
               onClick={() =>
-                paintFill({ kind: "pattern", pattern: "stripe", hex: colorway.colors.body, accent: colorway.colors.contrast })
+                paintFill({
+                  kind: "pattern",
+                  pattern: "stripe",
+                  hex: colorway.colors.body,
+                  accent: colorway.colors.contrast,
+                })
               }
             >
               Stripes
@@ -111,7 +131,12 @@ export function AopStage({
               type="button"
               className={`chip ${fill.kind === "pattern" && fill.pattern === "checker" ? "chip-on" : ""}`}
               onClick={() =>
-                paintFill({ kind: "pattern", pattern: "checker", hex: colorway.colors.body, accent: colorway.colors.trim })
+                paintFill({
+                  kind: "pattern",
+                  pattern: "checker",
+                  hex: colorway.colors.body,
+                  accent: colorway.colors.trim,
+                })
               }
             >
               Checker
@@ -153,7 +178,11 @@ export function AopStage({
                 aria-label={ROLE_LABEL[role]}
                 type="color"
                 value={colorway.colors[role]}
-                onChange={(event) => onChange(updateColorway(garment, setRoleColor(colorway, role, event.target.value)))}
+                onChange={(event) =>
+                  onChange(
+                    updateColorway(garment, setRoleColor(colorway, role, event.target.value)),
+                  )
+                }
                 className="mt-1 h-12 w-full border-2 border-ink bg-cream"
               />
             </label>
@@ -206,8 +235,17 @@ export function AopStage({
               for (const item of plan) {
                 const def = template.panels.find((panel) => panel.id === item.panelId);
                 if (!def) continue;
-                const paint = resolvePaint(def, garment.panels.find((panel) => panel.id === def.id)?.fill, colorway);
-                const href = await renderPanelProof(item.proof.widthPx, item.proof.heightPx, paint, item.title);
+                const paint = resolvePaint(
+                  def,
+                  garment.panels.find((panel) => panel.id === def.id)?.fill,
+                  colorway,
+                );
+                const href = await renderPanelProof(
+                  item.proof.widthPx,
+                  item.proof.heightPx,
+                  paint,
+                  item.title,
+                );
                 files.push({ title: item.title, href, note: item.printful.todo });
               }
               setProofs(files);
@@ -223,7 +261,11 @@ export function AopStage({
         <ul className="mt-2 flex flex-col gap-1">
           {proofs.map((file) => (
             <li key={file.title}>
-              <a className="text-sm underline" href={file.href} download={`${file.title.replace(/\s+/g, "-").toLowerCase()}-proof.png`}>
+              <a
+                className="text-sm underline"
+                href={file.href}
+                download={`${file.title.replace(/\s+/g, "-").toLowerCase()}-proof.png`}
+              >
                 {file.title} proof
               </a>
             </li>

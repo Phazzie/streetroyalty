@@ -51,7 +51,8 @@ export const PRINTFUL_AOP = {
   hoodie: {
     catalogProductId: 388,
     name: "All-Over Print Recycled Unisex Hoodie",
-    sourceUrl: "https://www.printful.com/custom/sweatshirts-hoodies/388/all-over-print-recycled-unisex-hoodie",
+    sourceUrl:
+      "https://www.printful.com/custom/sweatshirts-hoodies/388/all-over-print-recycled-unisex-hoodie",
     startingPriceCents: 4075,
     catalogVariantIds: null,
     fabricNote: "Recycled polyester and spandex blend, from the product page.",
@@ -59,10 +60,12 @@ export const PRINTFUL_AOP = {
   joggers: {
     catalogProductId: 400,
     name: "All-Over Print Recycled Men’s Joggers",
-    sourceUrl: "https://www.printful.com/custom/all-over-print-recycled-mens-joggers/400/all-over-print-recycled-mens-joggers",
+    sourceUrl:
+      "https://www.printful.com/custom/all-over-print-recycled-mens-joggers/400/all-over-print-recycled-mens-joggers",
     startingPriceCents: 3948,
     catalogVariantIds: null,
-    fabricNote: "Recycled all-over joggers. The public catalog's recycled jogger is the men's cut (400), not a unisex.",
+    fabricNote:
+      "Recycled all-over joggers. The public catalog's recycled jogger is the men's cut (400), not a unisex.",
   },
   jacket: {
     catalogProductId: 801,
@@ -98,5 +101,25 @@ export function panelPrintTarget(catalogProductId: number, panelId: string): Pan
 }
 
 export function printfulAopById(catalogProductId: number): AopPrintfulProduct | null {
-  return Object.values(PRINTFUL_AOP).find((item) => item.catalogProductId === catalogProductId) ?? null;
+  return (
+    Object.values(PRINTFUL_AOP).find((item) => item.catalogProductId === catalogProductId) ?? null
+  );
+}
+
+/** What a buyer is told while an all-over piece cannot be ordered. */
+export const AOP_ORDER_CLOSED =
+  "All-over pieces can be designed, saved and shared now. Ordering opens once the printer's panel templates are set up.";
+
+/**
+ * The one rule for whether an all-over product can be ordered. True only when
+ * its catalog variant ids are known and every panel has a confirmed Printful
+ * template (pixel size and placement key), so a real print file can be made
+ * for each panel. Until then only the chest logo would reach the printer.
+ * The wiring job flips this by filling in those facts above, not by editing
+ * the callers.
+ */
+export function aopOrderable(catalogProductId: number, panelIds: readonly string[]): boolean {
+  const product = printfulAopById(catalogProductId);
+  if (!product?.catalogVariantIds || panelIds.length === 0) return false;
+  return panelIds.every((panelId) => panelPrintTarget(catalogProductId, panelId).confirmed);
 }
