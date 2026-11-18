@@ -8,6 +8,7 @@ import {
   lineSpanEm,
   OUTLINE_EM,
   TEXT_EM,
+  textWidthEm,
 } from "../../studio/textfx.ts";
 import {
   drawGarment,
@@ -195,23 +196,11 @@ const BODY_STACK = "Outfit,'Avenir Next','Segoe UI','Helvetica Neue',Helvetica,A
 
 /**
  * How wide a line sets, in ems. The picture cannot measure type, and the face it gets is
- * whatever the device has, so the width is worked out here and the text is told to fill
- * exactly that. The print then takes the same room on every screen.
+ * whatever the device has, so the width is worked out (in the shared text module, which
+ * the print check uses too) and the text is told to fill exactly that.
  */
 function textEms(text: string, body: boolean): number {
-  let ems = 0;
-  for (const char of text) {
-    const code = char.codePointAt(0) ?? 0;
-    if (char === " ") ems += 0.3;
-    else if ("iIl1.,:;'!|".includes(char)) ems += 0.36;
-    else if ("MWmw@".includes(char)) ems += 0.92;
-    else if (code >= 0x2e80) ems += 1;
-    else if (char >= "A" && char <= "Z") ems += 0.74;
-    else if (char >= "a" && char <= "z") ems += 0.63;
-    else if (char >= "0" && char <= "9") ems += 0.66;
-    else ems += 0.6;
-  }
-  return ems * (body ? 0.8 : 1);
+  return textWidthEm(text, body ? "Outfit" : "Archivo Black");
 }
 
 function layerMarkup(layer: DesignLayer, window: PrintWindow, fallbackInk: string): string {

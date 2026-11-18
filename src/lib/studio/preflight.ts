@@ -6,6 +6,17 @@
  */
 import { contrastRatio } from "../contrast.ts";
 import type { DesignLayer, PrintArea } from "../pod/types.ts";
+import {
+  arcLayout,
+  clampFx,
+  fitFontSize,
+  isFlatText,
+  LINE_FIT,
+  lineRiseEm,
+  lineSpanEm,
+  TEXT_EM,
+  textWidthEm,
+} from "./textfx.ts";
 
 export type CheckLevel = "pass" | "warn" | "fail";
 
@@ -39,6 +50,58 @@ export function layerWidthFraction(layer: DesignLayer, area?: PrintArea): number
   return Math.min(0.98, layer.scale * layer.text.length * 0.62 * 0.14 * aspect);
 }
 
+/** Picture width as a share of the print area's width, at scale 1. The print file uses the same share. */
+const IMAGE_SHARE = 0.52;
+/** How tall a line's ink stands, in ems: capitals and the odd descender, not the whole em box. */
+const INK_EM = 0.8;
+/** A sliver past the edge is the rounding of a drag, not a clip. */
+const EDGE_GRACE = 0.005;
+
+/**
+ * How far a layer reaches from its centre, as shares of the print area's width (x) and
+ * height (y). It follows the print file: text set at its size and shrunk to fit the
+ * width, curves with the room their ends take, pictures at their own proportions, all
+ * turned by the layer's rotation.
+ */
+export function layerReach(
+  layer: DesignLayer,
+  area: PrintArea,
+  image?: ImageFacts,
+): { x: number; y: number } {
+  const width = Math.max(0.01, area.widthIn);
+  const height = Math.max(0.01, area.heightIn);
+  let w: number;
+  let h: number;
+  if (layer.type === "image") {
+    w = width * IMAGE_SHARE * layer.scale;
+    h = image && image.widthPx > 0 && image.heightPx > 0 ? (w * image.heightPx) / image.widthPx : w;
+  } else {
+    const size = height * TEXT_EM * layer.scale;
+    const room = width * LINE_FIT;
+    const fx = clampFx({ arc: layer.arc, outline: layer.outline, tracking: layer.tracking });
+    if (isFlatText(fx)) {
+      // A plain line keeps its height and is squeezed sideways to fit.
+      w = Math.min(room, textWidthEm(layer.text, layer.font) * size);
+      h = size * INK_EM;
+    } else if (Math.abs(fx.arc) < 0.001) {
+      const span =
+        textWidthEm(layer.text, layer.font) + fx.tracking * Math.max(0, [...layer.text].length - 1);
+      const fitted = fitFontSize(size, Math.max(0.01, span), room);
+      w = span * fitted;
+      h = fitted * INK_EM;
+    } else {
+      const cells = arcLayout(layer.text, fx);
+      const fitted = fitFontSize(size, lineSpanEm(cells), room);
+      w = lineSpanEm(cells) * fitted;
+      h = (lineRiseEm(cells) - 1.2 + INK_EM) * fitted;
+    }
+  }
+  const turn = (layer.rotation * Math.PI) / 180;
+  const cos = Math.abs(Math.cos(turn));
+  const sin = Math.abs(Math.sin(turn));
+  return { x: (w * cos + h * sin) / 2 / width, y: (w * sin + h * cos) / 2 / height };
+}
+
 export function effectiveDpi(facts: ImageFacts, layer: DesignLayer, area: PrintArea): number {
   const placedIn = Math.max(0.5, layerWidthFraction(layer) * area.widthIn);
   return Math.round(facts.widthPx / placedIn);
@@ -49,9 +112,15 @@ export function runPrintChecks(input: PreflightInput): PrintCheck[] {
   const { area, garmentHex } = input;
   const dpi = area.dpi && area.dpi > 0 ? area.dpi : 150;
 
+  const facts = new Map((input.images ?? []).map((item) => [item.layerId, item]));
   const spilling = input.layers.filter((layer) => {
-    const half = layerWidthFraction(layer, area) / 2;
-    return layer.x - half < 0 || layer.x + half > 1 || layer.y - half < 0 || layer.y + half > 1;
+    const reach = layerReach(layer, area, facts.get(layer.id));
+    return (
+      layer.x - reach.x < -EDGE_GRACE ||
+      layer.x + reach.x > 1 + EDGE_GRACE ||
+      layer.y - reach.y < -EDGE_GRACE ||
+      layer.y + reach.y > 1 + EDGE_GRACE
+    );
   });
   checks.push({
     key: "bounds",
@@ -63,7 +132,7 @@ export function runPrintChecks(input: PreflightInput): PrintCheck[] {
         : "Every layer sits inside the dashed box.",
   });
 
-  const factsById = new Map((input.images ?? []).map((facts) => [facts.layerId, facts]));
+  const factsById = facts;
   let worst: { dpiNow: number } | null = null;
   for (const layer of input.layers) {
     if (layer.type !== "image") continue;
@@ -73,7 +142,8 @@ export function runPrintChecks(input: PreflightInput): PrintCheck[] {
     if (!worst || now < worst.dpiNow) worst = { dpiNow: now };
   }
   if (worst) {
-    const level: CheckLevel = worst.dpiNow >= dpi ? "pass" : worst.dpiNow >= dpi * 0.6 ? "warn" : "fail";
+    const level: CheckLevel =
+      worst.dpiNow >= dpi ? "pass" : worst.dpiNow >= dpi * 0.6 ? "warn" : "fail";
     checks.push({
       key: "dpi",
       label: "Sharp enough to print",
@@ -100,7 +170,8 @@ export function runPrintChecks(input: PreflightInput): PrintCheck[] {
   }
   if (weakest) {
     const ratio = Math.round(weakest.ratio * 10) / 10;
-    const level: CheckLevel = ratio >= WARN_CONTRAST ? "pass" : ratio >= FAIL_CONTRAST ? "warn" : "fail";
+    const level: CheckLevel =
+      ratio >= WARN_CONTRAST ? "pass" : ratio >= FAIL_CONTRAST ? "warn" : "fail";
     checks.push({
       key: "contrast",
       label: "Ink reads on the garment",

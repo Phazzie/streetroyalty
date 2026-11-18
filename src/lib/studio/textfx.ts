@@ -115,6 +115,26 @@ export function arcLayout(text: string, fx: TextFx): CharCell[] {
   });
 }
 
+/**
+ * How wide a line sets, in ems, without a font to measure. Used where nothing can
+ * measure type (the mockup picture, the print check), so they agree with each other.
+ */
+export function textWidthEm(text: string, font: string): number {
+  let ems = 0;
+  for (const char of text) {
+    const code = char.codePointAt(0) ?? 0;
+    if (char === " ") ems += 0.3;
+    else if ("iIl1.,:;'!|".includes(char)) ems += 0.36;
+    else if ("MWmw@".includes(char)) ems += 0.92;
+    else if (code >= 0x2e80) ems += 1;
+    else if (char >= "A" && char <= "Z") ems += 0.74;
+    else if (char >= "a" && char <= "z") ems += 0.63;
+    else if (char >= "0" && char <= "9") ems += 0.66;
+    else ems += 0.6;
+  }
+  return ems * (font === "Outfit" ? 0.8 : 1);
+}
+
 /** How far a laid-out line reaches, in ems: from the left edge of its first letter to the right edge of its last. */
 export function lineSpanEm(cells: CharCell[]): number {
   if (cells.length === 0) return 0;
