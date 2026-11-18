@@ -528,7 +528,7 @@ export function createSandboxProvider(
         id: nextId(),
         status: "completed",
         mockupUrl: blank.aopTemplateId
-          ? renderGarmentSvg({ templateId: blank.aopTemplateId, label })
+          ? renderGarmentSvg({ templateId: blank.aopTemplateId, garment: input.garment, label })
           : garmentMockupSvg({
               shape: mockupShape(blank),
               colorHex: input.colorHex,

@@ -1,4 +1,5 @@
 /** Shared print-on-demand types. Safe to import from client code. */
+import type { GarmentDesign } from "../studio/garments.ts";
 
 export type PodMode = "live" | "sandbox";
 
@@ -101,6 +102,8 @@ export type MockupRequest = {
   productType: string;
   layers: DesignLayer[];
   printArea?: PrintArea;
+  /** The maker's panels and colorways on an all-over piece, already parsed. */
+  garment?: GarmentDesign;
 };
 
 export type MockupResult = {
@@ -207,7 +210,11 @@ export interface PodProvider {
   uploadFile(file: FileUpload): Promise<UploadedFile>;
   createMockup(input: MockupRequest): Promise<MockupResult>;
   getMockup(taskId: string): Promise<MockupResult>;
-  shippingRates(input: { recipient: Recipient; items: ShippingItem[]; currency: string }): Promise<ShippingRate[]>;
+  shippingRates(input: {
+    recipient: Recipient;
+    items: ShippingItem[];
+    currency: string;
+  }): Promise<ShippingRate[]>;
   createDraftOrder(input: DraftOrderRequest): Promise<ProviderOrder>;
   confirmOrder(orderId: string): Promise<ProviderOrder>;
   cancelOrder(orderId: string): Promise<void>;

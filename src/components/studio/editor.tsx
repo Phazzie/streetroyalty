@@ -157,6 +157,7 @@ export function Editor({ designId }: { designId: string }) {
             variantId: design.variantId,
             placement: design.placement,
             layers: design.layers,
+            garment: design.garment,
           });
           mockupStamp.current = design.mockupUrl ? key : "";
           setMockupUrl(design.mockupUrl ?? "");
@@ -212,12 +213,22 @@ export function Editor({ designId }: { designId: string }) {
       variantId,
       placement,
       layers,
+      garment: product?.construction === "aop" && product.aopTemplateId ? garment : null,
     });
     if (mockupStamp.current !== key) {
       mockupStamp.current = "";
       setMockupUrl("");
     }
-  }, [layers, mockupUrl, placement, product?.id, variantId]);
+  }, [
+    garment,
+    layers,
+    mockupUrl,
+    placement,
+    product?.aopTemplateId,
+    product?.construction,
+    product?.id,
+    variantId,
+  ]);
 
   function patchLayer(id: string, patch: Partial<DesignLayer>) {
     setLayers((current) =>
@@ -286,13 +297,21 @@ export function Editor({ designId }: { designId: string }) {
     try {
       const printFile = await exportPrint();
       const result = await makeMockup({
-        data: { productId: product.id, variantId: variant.id, placement, layers, printFile },
+        data: {
+          productId: product.id,
+          variantId: variant.id,
+          placement,
+          layers,
+          printFile,
+          garment: aop ? garment : undefined,
+        },
       });
       const key = designVisualKey({
         productId: product.id,
         variantId: variant.id,
         placement,
         layers,
+        garment: aop ? garment : null,
       });
       mockupStamp.current = key;
       setMockupUrl(result.mockupUrl);
@@ -352,11 +371,19 @@ export function Editor({ designId }: { designId: string }) {
         variantId: variant.id,
         placement,
         layers,
+        garment: aop ? garment : null,
       });
       let url = mockupStamp.current === key ? mockupUrl : "";
       if (!url) {
         const result = await makeMockup({
-          data: { productId: product.id, variantId: variant.id, placement, layers, printFile },
+          data: {
+            productId: product.id,
+            variantId: variant.id,
+            placement,
+            layers,
+            printFile,
+            garment: aop ? garment : undefined,
+          },
         });
         url = result.mockupUrl;
         mockupStamp.current = key;

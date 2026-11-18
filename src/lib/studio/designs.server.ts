@@ -1,6 +1,7 @@
 import { getSql } from "../db.ts";
 import { getPodProvider } from "../pod/index.ts";
 import { centsToDecimal } from "../pod/money.ts";
+import type { CatalogProduct } from "../pod/types.ts";
 import {
   imageDimensions,
   isPublicHttpUrl,
@@ -11,7 +12,13 @@ import {
   slugify,
 } from "./validate.ts";
 import type { CollectionRecord, DesignRecord, DesignSummary, ShopPiece } from "./models.ts";
-import { isAopProduct, parseColorwayBlob, parseGarment, parseStoredGarment } from "./garments.ts";
+import {
+  isAopProduct,
+  parseColorwayBlob,
+  parseGarment,
+  parseStoredGarment,
+  type GarmentDesign,
+} from "./garments.ts";
 import {
   fileUrl,
   ownedDesign,
@@ -20,6 +27,15 @@ import {
   summary,
   type DesignRow,
 } from "./shared.server.ts";
+
+/** Parse a maker's garment and check it belongs to this all-over product. */
+function garmentFor(product: CatalogProduct, input: unknown): GarmentDesign {
+  const garment = parseGarment(input);
+  if (garment.templateId !== (product.aopTemplateId ?? product.id)) {
+    throw new Error("Those panels belong to a different garment.");
+  }
+  return garment;
+}
 
 export async function listCollections(userId: string): Promise<CollectionRecord[]> {
   const sql = await getSql();
@@ -122,7 +138,7 @@ export async function saveDesign(
   if (isAopProduct(product.id)) {
     garmentJson =
       input.garment != null
-        ? JSON.stringify(parseGarment(input.garment))
+        ? JSON.stringify(garmentFor(product, input.garment))
         : (existing?.garment_json ?? null);
   }
   if (existing) {
@@ -175,11 +191,17 @@ export async function generateMockup(input: {
   placement: string;
   layers: unknown;
   printFile?: unknown;
+  garment?: unknown;
   userId?: string;
 }): Promise<{ mockupUrl: string; status: string }> {
   const layers = parseLayers(input.layers);
   const provider = getPodProvider();
   const product = await provider.getProduct(input.productId);
+  // An all-over mockup is drawn from the maker's own panels. Anything else ignores them.
+  const garment =
+    isAopProduct(product.id) && input.garment != null
+      ? garmentFor(product, input.garment)
+      : undefined;
   const variant = product.variants.find((item) => item.id === input.variantId);
   if (!variant) throw new Error("Pick a color and size first.");
   const placement = product.placements.find((item) => item.placement === input.placement);
@@ -213,6 +235,7 @@ export async function generateMockup(input: {
     productType: product.type,
     layers,
     printArea: area,
+    garment,
   });
   if (mockup.status === "failed") throw new Error(mockup.error || "Mockup failed.");
   if (!mockup.mockupUrl) throw new Error("The mockup is still rendering. Try again in a moment.");

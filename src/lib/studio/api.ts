@@ -48,12 +48,14 @@ export const makeMockup = createServerFn({ method: "POST" })
       placement?: string;
       layers?: unknown;
       printFile?: unknown;
+      garment?: unknown;
     }) => ({
       productId: String(input?.productId ?? ""),
       variantId: String(input?.variantId ?? ""),
       placement: String(input?.placement ?? "front"),
       layers: input?.layers,
       printFile: input?.printFile,
+      garment: input?.garment,
     }),
   )
   .handler(async ({ data, context }) => {
