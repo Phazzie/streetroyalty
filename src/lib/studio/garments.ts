@@ -69,6 +69,16 @@ export type Paint =
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
+/** Longest picture one art panel takes. The same cap as a layer image in `validate.ts`. */
+export const MAX_ART_SRC = 1_400_000;
+/**
+ * Longest saved garment, as JSON. Keeps the drawn mockup, which carries the
+ * art panels on its face, under the 2 MB mockup cap in `validate.ts`.
+ */
+export const MAX_GARMENT_JSON = 1_800_000;
+/** Most characters of the label drawn on the flat. */
+export const LABEL_MAX = 24;
+
 export const HOUSE_COLORWAYS: Colorway[] = [
   {
     id: "lilac-cream",
@@ -106,12 +116,19 @@ function panel(
 }
 
 const HOODIE_PANELS: AopPanel[] = [
-  panel("hood", "Hood", "body", "both", "M155 42 C155 14 245 14 245 42 L262 102 L200 120 L138 102 Z", {
-    x: 138,
-    y: 14,
-    w: 124,
-    h: 106,
-  }),
+  panel(
+    "hood",
+    "Hood",
+    "body",
+    "both",
+    "M155 42 C155 14 245 14 245 42 L262 102 L200 120 L138 102 Z",
+    {
+      x: 138,
+      y: 14,
+      w: 124,
+      h: 106,
+    },
+  ),
   panel("sleeve_left", "Left sleeve", "body", "both", "M150 118 L36 196 L58 228 L164 160 Z", {
     x: 36,
     y: 118,
@@ -199,12 +216,19 @@ const JOGGER_PANELS: AopPanel[] = [
     w: 168,
     h: 42,
   }),
-  panel("stripe_left", "Left side stripe", "contrast", "both", "M104 78 L128 78 L142 448 L116 448 Z", {
-    x: 104,
-    y: 78,
-    w: 38,
-    h: 370,
-  }),
+  panel(
+    "stripe_left",
+    "Left side stripe",
+    "contrast",
+    "both",
+    "M104 78 L128 78 L142 448 L116 448 Z",
+    {
+      x: 104,
+      y: 78,
+      w: 38,
+      h: 370,
+    },
+  ),
   panel("leg_left", "Left leg", "body", "front", "M128 78 L196 78 L188 448 L142 448 Z", {
     x: 128,
     y: 78,
@@ -217,12 +241,19 @@ const JOGGER_PANELS: AopPanel[] = [
     w: 68,
     h: 370,
   }),
-  panel("stripe_right", "Right side stripe", "contrast", "both", "M272 78 L296 78 L284 448 L258 448 Z", {
-    x: 258,
-    y: 78,
-    w: 38,
-    h: 370,
-  }),
+  panel(
+    "stripe_right",
+    "Right side stripe",
+    "contrast",
+    "both",
+    "M272 78 L296 78 L284 448 L258 448 Z",
+    {
+      x: 258,
+      y: 78,
+      w: 38,
+      h: 370,
+    },
+  ),
   panel("body_back", "Seat and back", "body", "back", "M128 78 H272 V448 H142 Z", {
     x: 128,
     y: 78,
@@ -415,7 +446,11 @@ function safeArt(src: string): boolean {
   return /^https:\/\/[^\s"]+$/.test(src);
 }
 
-export function resolvePaint(panelDef: AopPanel, fill: PanelFill | undefined, colorway: Colorway): Paint {
+export function resolvePaint(
+  panelDef: AopPanel,
+  fill: PanelFill | undefined,
+  colorway: Colorway,
+): Paint {
   const roleHex = colorway.colors[panelDef.role];
   if (!fill || fill.kind === "role") return { type: "solid", hex: roleHex };
   if (fill.kind === "color" && HEX.test(fill.hex)) return { type: "solid", hex: fill.hex };
@@ -441,8 +476,19 @@ export function resolveGarment(garment: GarmentDesign, face: "front" | "back" = 
   };
 }
 
+/** Drops the characters XML 1.0 does not allow anywhere in a document. */
+function xmlChars(value: string): string {
+  return Array.from(value)
+    .filter((char) => {
+      const code = char.codePointAt(0) ?? 0;
+      if (code === 0x9 || code === 0xa || code === 0xd) return true;
+      return code >= 0x20 && code !== 0xfffe && code !== 0xffff;
+    })
+    .join("");
+}
+
 function escapeXml(value: string): string {
-  return value
+  return xmlChars(value)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -481,7 +527,9 @@ export function renderGarmentSvg(input: {
     .filter(({ paint }) => paint.type === "art")
     .map(({ panel: item, paint }) => {
       if (paint.type !== "art") return "";
-      const href = paint.src.startsWith("data:") ? paint.src.replaceAll('"', "") : escapeXml(paint.src);
+      const href = paint.src.startsWith("data:")
+        ? paint.src.replaceAll('"', "")
+        : escapeXml(paint.src);
       return `<clipPath id="clip-${item.id}"><path d="${item.d}"/></clipPath><image href="${href}" x="${item.box.x}" y="${item.box.y}" width="${item.box.w}" height="${item.box.h}" clip-path="url(#clip-${item.id})" preserveAspectRatio="xMidYMid slice"/>`;
     })
     .join("");
@@ -491,8 +539,10 @@ export function renderGarmentSvg(input: {
       return `<path data-panel="${item.id}" d="${item.d}" fill="${attrs.fill}" stroke="#141018" stroke-width="1.5"/>`;
     })
     .join("");
-  const label = input.label
-    ? `<text x="200" y="172" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="14" fill="${escapeXml(resolved.colorway.colors.mark)}">${escapeXml(input.label).slice(0, 24)}</text>`
+  // Cut the raw text, by whole characters, before escaping. Cutting after would split an entity.
+  const labelText = input.label ? Array.from(input.label).slice(0, LABEL_MAX).join("") : "";
+  const label = labelText
+    ? `<text x="200" y="172" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="14" fill="${escapeXml(resolved.colorway.colors.mark)}">${escapeXml(labelText)}</text>`
     : "";
   const { template } = resolved;
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
@@ -509,7 +559,10 @@ export function renderGarmentSvg(input: {
 /** Longest side of a studio proof. This is not a Printful template size. */
 export const STUDIO_PROOF_LONG_EDGE = 900;
 
-export function studioProofPixels(layoutW: number, layoutH: number): { widthPx: number; heightPx: number } {
+export function studioProofPixels(
+  layoutW: number,
+  layoutH: number,
+): { widthPx: number; heightPx: number } {
   const long = Math.max(layoutW, layoutH, 1);
   const scale = STUDIO_PROOF_LONG_EDGE / long;
   return {
@@ -559,7 +612,8 @@ export function addColorway(garment: GarmentDesign, name: string): GarmentDesign
   if (garment.colorways.length >= 8) throw new Error("Eight colorways is the limit.");
   const source = activeColorway(garment);
   let id = colorwayId(trimmed);
-  if (garment.colorways.some((item) => item.id === id)) id = `${id}-${garment.colorways.length + 1}`;
+  if (garment.colorways.some((item) => item.id === id))
+    id = `${id}-${garment.colorways.length + 1}`;
   const next = copyColorway({ ...source, id, name: trimmed });
   return { ...garment, colorways: [...garment.colorways, next], activeColorwayId: next.id };
 }
@@ -575,13 +629,19 @@ export function updateColorway(garment: GarmentDesign, next: Colorway): GarmentD
 export function removeColorway(garment: GarmentDesign, id: string): GarmentDesign {
   if (garment.colorways.length <= 1) throw new Error("Keep at least one colorway.");
   const colorways = garment.colorways.filter((item) => item.id !== id);
-  const activeColorwayId = garment.activeColorwayId === id ? (colorways[0]?.id ?? id) : garment.activeColorwayId;
+  const activeColorwayId =
+    garment.activeColorwayId === id ? (colorways[0]?.id ?? id) : garment.activeColorwayId;
   return { ...garment, colorways, activeColorwayId };
 }
 
-export function setPanelFill(garment: GarmentDesign, panelId: string, fill: PanelFill): GarmentDesign {
+export function setPanelFill(
+  garment: GarmentDesign,
+  panelId: string,
+  fill: PanelFill,
+): GarmentDesign {
   const template = getTemplate(garment.templateId);
-  if (!template?.panels.some((item) => item.id === panelId)) throw new Error("That panel is not on this garment.");
+  if (!template?.panels.some((item) => item.id === panelId))
+    throw new Error("That panel is not on this garment.");
   const panels = garment.panels.some((item) => item.id === panelId)
     ? garment.panels.map((item) => (item.id === panelId ? { id: panelId, fill } : item))
     : [...garment.panels, { id: panelId, fill }];
@@ -590,23 +650,32 @@ export function setPanelFill(garment: GarmentDesign, panelId: string, fill: Pane
 
 function parseFill(input: unknown): PanelFill {
   const raw = (input ?? {}) as Record<string, unknown>;
-  if (raw.kind === "color" && HEX.test(String(raw.hex ?? ""))) return { kind: "color", hex: String(raw.hex) };
+  if (raw.kind === "color" && HEX.test(String(raw.hex ?? "")))
+    return { kind: "color", hex: String(raw.hex) };
   if (
     (raw.kind === "pattern" && raw.pattern === "stripe") ||
     (raw.kind === "pattern" && raw.pattern === "checker")
   ) {
     const hex = String(raw.hex ?? "");
     const accent = String(raw.accent ?? "");
-    if (HEX.test(hex) && HEX.test(accent)) return { kind: "pattern", pattern: raw.pattern, hex, accent };
+    if (HEX.test(hex) && HEX.test(accent))
+      return { kind: "pattern", pattern: raw.pattern, hex, accent };
   }
-  if (raw.kind === "art" && safeArt(String(raw.src ?? ""))) return { kind: "art", src: String(raw.src) };
+  if (raw.kind === "art") {
+    const src = String(raw.src ?? "");
+    if (src.length > MAX_ART_SRC)
+      throw new Error("That panel picture is too large. Use a smaller one.");
+    if (safeArt(src)) return { kind: "art", src };
+  }
   return { kind: "role" };
 }
 
 function parseColorway(input: unknown, index: number): Colorway {
   const raw = (input ?? {}) as Record<string, unknown>;
   const colors = (raw.colors ?? {}) as Record<string, unknown>;
-  const name = String(raw.name ?? "").trim().slice(0, 40);
+  const name = String(raw.name ?? "")
+    .trim()
+    .slice(0, 40);
   if (name.length < 2) throw new Error("Name the colorway.");
   const parsed = {} as Record<ColorRole, string>;
   for (const role of COLOR_ROLES) {
@@ -641,15 +710,22 @@ export function parseGarment(input: unknown): GarmentDesign {
     id: panelDef.id,
     fill: byId.get(panelDef.id) ?? { kind: "role" as const },
   }));
-  return {
+  const garment: GarmentDesign = {
     templateId: template.id,
     panels,
     colorways,
     activeColorwayId: ids.has(active) ? active : (colorways[0]?.id ?? ""),
   };
+  if (JSON.stringify(garment).length > MAX_GARMENT_JSON) {
+    throw new Error("The panel pictures are too large together. Use smaller ones, or fewer.");
+  }
+  return garment;
 }
 
-export function parseColorwayBlob(json: string): { colorways: Colorway[]; activeColorwayId: string } {
+export function parseColorwayBlob(json: string): {
+  colorways: Colorway[];
+  activeColorwayId: string;
+} {
   const parsed = JSON.parse(json) as { colorways?: unknown; activeColorwayId?: string };
   const probe = parseGarment({
     templateId: "aop-hoodie",
@@ -709,8 +785,14 @@ export function assessSet(
   return { ok: true, provider, colorways: first };
 }
 
-export function withSharedColorways(garment: GarmentDesign, colorways: Colorway[], activeColorwayId: string): GarmentDesign {
+export function withSharedColorways(
+  garment: GarmentDesign,
+  colorways: Colorway[],
+  activeColorwayId: string,
+): GarmentDesign {
   const next = colorways.map(copyColorway);
-  const active = next.some((item) => item.id === activeColorwayId) ? activeColorwayId : (next[0]?.id ?? "");
+  const active = next.some((item) => item.id === activeColorwayId)
+    ? activeColorwayId
+    : (next[0]?.id ?? "");
   return { ...garment, colorways: next, activeColorwayId: active };
 }
