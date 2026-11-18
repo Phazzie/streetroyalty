@@ -256,3 +256,36 @@ scan timing, fixed since. My list of bugs in the all-over work is in the 19:59 e
 above. If you pick it up, start from #17's branch, or merge it into yours first.
 
 **For the owner:** nothing blocking. Read #17's description for what to try first.
+
+### Plan from the owner, 2026-11-18
+
+Rule: one agent per PR at a time. #17 (which includes #16) is the single PR to land.
+
+**CLAUDE'S TASKS (now, on #17):**
+
+1. Fix every all-over/curved-text bug Claude logged earlier in AGENT-TALK.md (curved text falling off the print file, the all-over mockup ignoring the design, and the rest of that list, with file and line). Add tests for each fix. The list is the 19:59 entry above:
+   1. Confirmed. `src/components/studio/print-file.ts:78` — curved, tracked, or outlined text is not fitted to the print width, so letters fall off the file.
+   2. Unconfirmed, high. `src/lib/studio/textfx.ts:78` — a negative arc lays the letters right to left.
+   3. Confirmed. `src/lib/pod/sandbox.ts:524` — the all-over mockup is the default lilac flat and ignores the design.
+   4. Unconfirmed, high. An all-over piece can be published and checked out, but only the chest-logo layers reach the print file.
+   5. Unconfirmed. `editor.tsx:432` — visiting an all-over blank recolours lime text, and going back to a tee does not restore it.
+   6. Unconfirmed. `preflight.ts:54` — "Inside the print area" is wrong both ways.
+   7. Unconfirmed. `editor.tsx:577` — "On a person" asks for a t-shirt for joggers, a tote, the long-sleeve, and the all-over pieces.
+   8. Confirmed, low. `garments.server.ts:166` — a one-letter set name throws only after the partner joggers are saved.
+   9. Confirmed, low. `cart.server.ts:134` — dropping a colorway that is already in a cart lets checkout through with the colorway gone.
+   10. Low. `garments.ts:495` — the label is cut after escaping. `garments.ts:602` — an art fill has no size cap. `aop-printful.ts:36` — the fabric line claims fleece and spandex for the joggers and track jacket, which only the hoodie's source confirms.
+2. Fix the low-severity battle vote issue (a script can vote on any pair, not just the pair it was shown). The vote write is `src/lib/social/battles.server.ts` (the insert into `battle_votes`).
+3. Keep lint, typecheck, tests, build and Playwright green, and update the PR body when you're done.
+4. When finished, write a short done note in AGENT-TALK.md and hand #17 back for the owner to review and merge.
+
+**GROK'S AGENT (waiting, will not touch #17 while Claude works):**
+
+- After #14 and #17 merge: wire up real Printful AOP variant IDs and print-file sizes in `src/lib/pod/aop-printful.ts` once `PRINTFUL_API_KEY` exists, test try-on once `XAI_API_KEY` exists, then Stripe checkout, then Stripe Connect payouts for makers.
+
+**OWNER (Taurean):**
+
+- Review and merge #14, then #17. Close #12, #15 and the moon/next-level branch once they're superseded.
+- Add `PRINTFUL_API_KEY`, `DATABASE_URL`, `XAI_API_KEY`, then `STRIPE_SECRET_KEY` and `APP_PUBLIC_URL` in Vercel.
+- Order one real lilac AOP hoodie and jogger set as a sample before selling.
+
+**Status at a glance:** done = colorways, matched sets, social feed and maker stores; built but buggy or untested = all-over panel designer, curved text, try-on, episodes wardrobe; not done = real selling (keys), maker payouts.
