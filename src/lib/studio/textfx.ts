@@ -15,13 +15,44 @@ export type TextFx = {
 
 export const FLAT_TEXT: TextFx = { arc: 0, outline: false, tracking: 0 };
 
+/**
+ * One set of rules for how a text layer sits in the print area, shared by the print
+ * file, the mockup and the print check so the three agree.
+ */
+/** Font size as a share of the print area's height, at scale 1. */
+export const TEXT_EM = 0.14;
+/** The widest a line may print, as a share of the print area's width. Wider lines shrink to fit. */
+export const LINE_FIT = 0.92;
+/** Outline thickness as a share of the font size. The studio preview uses the same share. */
+export const OUTLINE_EM = 0.08;
+
 export const TEXT_PRESETS: { name: string; fx: TextFx; note: string }[] = [
-  { name: "Block party", fx: { arc: 0, outline: false, tracking: 0.02 }, note: "Flat, loud, centered." },
-  { name: "Archbishop", fx: { arc: -38, outline: false, tracking: 0.06 }, note: "Classic arch over the chest." },
-  { name: "Undertow", fx: { arc: 34, outline: false, tracking: 0.04 }, note: "Smiles up from the hem." },
+  {
+    name: "Block party",
+    fx: { arc: 0, outline: false, tracking: 0.02 },
+    note: "Flat, loud, centered.",
+  },
+  {
+    name: "Archbishop",
+    fx: { arc: -38, outline: false, tracking: 0.06 },
+    note: "Classic arch over the chest.",
+  },
+  {
+    name: "Undertow",
+    fx: { arc: 34, outline: false, tracking: 0.04 },
+    note: "Smiles up from the hem.",
+  },
   { name: "Hollow crown", fx: { arc: -18, outline: true, tracking: 0.1 }, note: "Outline only." },
-  { name: "Marquee", fx: { arc: 0, outline: true, tracking: 0.22 }, note: "Spaced out like a theater sign." },
-  { name: "Tight corner", fx: { arc: 0, outline: false, tracking: -0.02 }, note: "Packed shoulder to shoulder." },
+  {
+    name: "Marquee",
+    fx: { arc: 0, outline: true, tracking: 0.22 },
+    note: "Spaced out like a theater sign.",
+  },
+  {
+    name: "Tight corner",
+    fx: { arc: 0, outline: false, tracking: -0.02 },
+    note: "Packed shoulder to shoulder.",
+  },
 ];
 
 export function clampFx(input: Partial<TextFx> | undefined): TextFx {
@@ -75,14 +106,36 @@ export function arcLayout(text: string, fx: TextFx): CharCell[] {
     const angle = offset * perChar;
     return {
       char,
-      along: Math.sin(angle) * radius,
+      // Left to right whichever way the line bends. Taking the sign from the bend put
+      // an arch's first letter on the right, so arched words read backwards.
+      along: Math.sin(offset * Math.abs(perChar)) * radius,
       rotate: -(angle * 180) / Math.PI,
       lift: -(1 - Math.cos(angle)) * radius * Math.sign(bend),
     };
   });
 }
 
+/** How far a laid-out line reaches, in ems: from the left edge of its first letter to the right edge of its last. */
+export function lineSpanEm(cells: CharCell[]): number {
+  if (cells.length === 0) return 0;
+  const alongs = cells.map((cell) => cell.along);
+  return Math.max(...alongs) - Math.min(...alongs) + 1;
+}
+
+/** How tall a laid-out line stands, in ems, counting how far a curve lifts its ends. */
+export function lineRiseEm(cells: CharCell[]): number {
+  if (cells.length === 0) return 0;
+  const lifts = cells.map((cell) => cell.lift);
+  return Math.max(0, ...lifts) - Math.min(0, ...lifts) + 1.2;
+}
+
+/** The font size that keeps a line of the given width (in ems) inside maxWidth. Never larger than asked. */
+export function fitFontSize(size: number, spanEm: number, maxWidth: number): number {
+  if (!(spanEm > 0) || !(size > 0)) return size;
+  return Math.min(size, maxWidth / spanEm);
+}
+
 /** CSS for an outlined text layer (fill knocked out, stroke carries it). */
 export function outlineStyle(color: string): { WebkitTextStroke: string; color: string } {
-  return { WebkitTextStroke: `2px ${color}`, color: "transparent" };
+  return { WebkitTextStroke: `${OUTLINE_EM}em ${color}`, color: "transparent" };
 }

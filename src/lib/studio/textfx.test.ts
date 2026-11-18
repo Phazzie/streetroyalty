@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
-import { arcLayout, clampFx, isFlatText, TEXT_PRESETS } from "./textfx.ts";
+import {
+  arcLayout,
+  clampFx,
+  fitFontSize,
+  isFlatText,
+  lineRiseEm,
+  lineSpanEm,
+  TEXT_PRESETS,
+} from "./textfx.ts";
 
 describe("curved text", () => {
   it("lays a flat line with tracking and no rotation", () => {
@@ -19,6 +27,36 @@ describe("curved text", () => {
     assert.ok((smile[0]?.lift ?? 0) < 0);
     assert.notEqual(arch[0]?.rotate, 0);
     assert.equal(arch[2]?.rotate, 0);
+  });
+
+  it("reads left to right on an arch and on a smile, each letter leaning with the curve", () => {
+    for (const arc of [-38, -18, -120, 34, 120]) {
+      const cells = arcLayout("STREET", clampFx({ arc }));
+      const alongs = cells.map((cell) => cell.along);
+      // Each letter sits to the right of the one before it.
+      for (let index = 1; index < alongs.length; index += 1) {
+        assert.ok((alongs[index] ?? 0) > (alongs[index - 1] ?? 0), `arc ${arc}, letter ${index}`);
+      }
+      assert.ok(Math.abs((alongs[0] ?? 0) + (alongs[alongs.length - 1] ?? 0)) < 1e-9);
+      // On an arch the first letter tips left (anticlockwise); on a smile it tips right.
+      const first = cells[0]?.rotate ?? 0;
+      assert.ok(arc < 0 ? first < 0 : first > 0, `arc ${arc} leans ${first}`);
+    }
+  });
+
+  it("measures how wide and how tall a laid-out line is", () => {
+    assert.equal(lineSpanEm([]), 0);
+    const flat = arcLayout("CROWN", clampFx({ tracking: 0.1 }));
+    assert.ok(Math.abs(lineSpanEm(flat) - (4 * 0.72 + 1)) < 1e-9);
+    assert.equal(lineRiseEm(flat), 1.2);
+    const arch = arcLayout("STREET ROYALTY", clampFx({ arc: -38 }));
+    assert.ok(lineRiseEm(arch) > 1.2);
+  });
+
+  it("shrinks a line that is too wide and leaves one that fits alone", () => {
+    assert.equal(fitFontSize(336, 4, 1656), 336);
+    assert.equal(fitFontSize(336, 10, 1656), 165.6);
+    assert.equal(fitFontSize(336, 0, 1656), 336);
   });
 
   it("clamps wild bends and treats one letter as flat", () => {

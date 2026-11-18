@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { renderPrintFile } from "@/components/studio/print-file";
 import { createSandboxProvider } from "@/lib/pod/sandbox.ts";
 import type { DesignLayer, PrintArea } from "@/lib/pod/types.ts";
+import { TEXT_PRESETS, isFlatText } from "@/lib/studio/textfx.ts";
 import {
   MAX_PRINT,
   imageDimensions,
@@ -273,6 +274,47 @@ describe("the print file the studio exports", () => {
     }
     expect(pink).toBeGreaterThan(1000);
     expect(other).toBe(0);
+  });
+
+  it.each(TEXT_PRESETS.filter((preset) => !isFlatText(preset.fx)))(
+    "keeps a long line with the $name curve inside the file",
+    async ({ fx }) => {
+      const line: DesignLayer = { ...WORD, text: "STREET ROYALTY", ...fx };
+      const data = await pixels(await renderPrintFile(TEE_FRONT, [line]));
+      const box = inkBox(data);
+      if (!box) throw new Error("nothing printed");
+      const left = box.cx - box.width / data.width / 2;
+      const right = box.cx + box.width / data.width / 2;
+      expect(left).toBeGreaterThan(0.02);
+      expect(right).toBeLessThan(0.98);
+      // Fitted, not shrunk to a speck.
+      expect(box.width / data.width).toBeGreaterThan(0.5);
+    },
+  );
+
+  it("centres a curved line where the designer put it", async () => {
+    for (const arc of [-38, 34]) {
+      const line: DesignLayer = { ...WORD, text: "STREET ROYALTY", y: 0.5, arc, tracking: 0.06 };
+      const box = inkBox(await pixels(await renderPrintFile(TEE_FRONT, [line])));
+      expect(box?.cx).toBeCloseTo(0.5, 1);
+      expect(box?.cy).toBeCloseTo(0.5, 1);
+    }
+  });
+
+  it("prints an arched word left to right", async () => {
+    // A thin letter then a wide one: the wide one's ink has to land on the right.
+    const line: DesignLayer = { ...WORD, text: "IW", arc: -60, tracking: 0.4 };
+    const data = await pixels(await renderPrintFile(TEE_FRONT, [line]));
+    let leftInk = 0;
+    let rightInk = 0;
+    for (let y = 0; y < data.height; y += 2) {
+      for (let x = 0; x < data.width; x += 2) {
+        if ((data.data[(y * data.width + x) * 4 + 3] ?? 0) < 32) continue;
+        if (x < data.width / 2) leftInk += 1;
+        else rightInk += 1;
+      }
+    }
+    expect(rightInk).toBeGreaterThan(leftInk * 1.3);
   });
 
   it("asks for both studio fonts before it draws any text", async () => {
