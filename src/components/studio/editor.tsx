@@ -616,7 +616,9 @@ export function Editor({ designId }: { designId: string }) {
             colorHex={variant?.colorHex ?? "#141414"}
             colorName={variant?.color ?? "black"}
             productType={product?.type ?? "T-Shirt"}
+            productName={product?.name}
             placement={placement}
+            garment={aop && garment?.templateId === product?.aopTemplateId ? garment : null}
             onNote={setNote}
           />
         </Panel>
