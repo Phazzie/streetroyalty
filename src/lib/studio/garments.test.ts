@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
-import { AOP_MATERIAL } from "../pod/aop-printful.ts";
 import {
   AOP_TEMPLATES,
   HOUSE_COLORWAYS,
   MAX_ART_SRC,
   MAX_GARMENT_JSON,
+  materialLine,
   addColorway,
   assessSet,
   defaultGarment,
@@ -157,7 +157,8 @@ describe("all-over garments", () => {
     ]);
     assert.equal(clash.ok, false);
     if (!clash.ok) assert.match(clash.reason, /same colorways/);
-    assert.match(AOP_MATERIAL, /sublimation/);
+    assert.match(materialLine("aop-hoodie"), /sublimation/);
+    assert.equal(materialLine("tee-heavy"), "");
   });
 });
 

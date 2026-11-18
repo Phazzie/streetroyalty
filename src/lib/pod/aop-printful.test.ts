@@ -1,12 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
-import {
-  AOP_DPI,
-  AOP_MATERIAL,
-  PRINTFUL_AOP,
-  panelPrintTarget,
-  printfulAopById,
-} from "./aop-printful.ts";
+import { AOP_DPI, PRINTFUL_AOP, panelPrintTarget, printfulAopById } from "./aop-printful.ts";
 
 describe("Printful all-over print facts", () => {
   it("keeps the product ids that the public pages publish", () => {
@@ -14,8 +8,8 @@ describe("Printful all-over print facts", () => {
     assert.equal(PRINTFUL_AOP.joggers.catalogProductId, 400);
     assert.equal(PRINTFUL_AOP.jacket.catalogProductId, 801);
     assert.equal(AOP_DPI, 150);
-    assert.match(AOP_MATERIAL, /sublimation/);
-    assert.match(AOP_MATERIAL, /not sewn cotton/);
+    assert.match(PRINTFUL_AOP.hoodie.material.line, /sublimation/);
+    assert.match(PRINTFUL_AOP.hoodie.material.line, /not sewn cotton/);
     assert.equal(printfulAopById(388)?.name.includes("Hoodie"), true);
     assert.equal(printfulAopById(1), null);
   });
@@ -32,5 +26,32 @@ describe("Printful all-over print facts", () => {
       assert.match(target.todo, /TODO/);
       assert.match(target.todo, new RegExp(String(product.catalogProductId)));
     }
+  });
+
+  it("gives each product its own material line and names no fabric that is not confirmed", () => {
+    // Fabric words, and sublimation, which only works on synthetics.
+    const fabricClaim =
+      /polyester|spandex|elastane|cotton|fleece|nylon|rayon|viscose|recycled|brushed|jersey|sublimat/i;
+    const lines = new Set<string>();
+    for (const product of Object.values(PRINTFUL_AOP)) {
+      const { line, fabric, fabricConfirmed } = product.material;
+      assert.ok(line.length > 20, `${product.name} needs a material line`);
+      assert.doesNotMatch(line, /!/);
+      lines.add(line);
+      if (fabricConfirmed) {
+        assert.ok(fabric && line.toLowerCase().includes(fabric.toLowerCase()), product.name);
+      } else {
+        assert.equal(fabric, null, product.name);
+        assert.doesNotMatch(
+          line,
+          fabricClaim,
+          `${product.name} claims a fabric that is not confirmed`,
+        );
+      }
+    }
+    assert.equal(PRINTFUL_AOP.hoodie.material.fabricConfirmed, true);
+    assert.equal(PRINTFUL_AOP.joggers.material.fabricConfirmed, false);
+    assert.equal(PRINTFUL_AOP.jacket.material.fabricConfirmed, false);
+    assert.ok(lines.size >= 2, "the lines are per product, not one line for all");
   });
 });

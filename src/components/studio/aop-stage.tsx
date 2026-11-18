@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input";
 import { GarmentFlat } from "@/components/studio/garment-flat";
 import { renderPanelProof } from "@/components/studio/panel-proof";
 import {
-  AOP_MATERIAL,
   AOP_ORDER_CLOSED,
   COLOR_ROLES,
   canOrderProduct,
@@ -63,7 +62,7 @@ export function AopStage({
 
   return (
     <div>
-      <p className="mb-3 text-sm text-muted">{AOP_MATERIAL}</p>
+      <p className="mb-3 text-sm text-muted">{template.printful.material.line}</p>
       <p className="mb-3 text-sm text-muted">
         Matched to Printful product {template.printful.catalogProductId}, {template.printful.name}.
         Each panel can take the colorway, its own color, a pattern, or art.

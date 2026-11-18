@@ -5,7 +5,6 @@
  */
 import {
   AOP_DPI,
-  AOP_MATERIAL,
   AOP_ORDER_CLOSED,
   PRINTFUL_AOP,
   aopOrderable,
@@ -13,7 +12,7 @@ import {
   type PanelPrintTarget,
 } from "../pod/aop-printful.ts";
 
-export { AOP_MATERIAL, AOP_DPI, AOP_ORDER_CLOSED };
+export { AOP_DPI, AOP_ORDER_CLOSED };
 
 export const COLOR_ROLES = ["body", "contrast", "trim", "mark"] as const;
 export type ColorRole = (typeof COLOR_ROLES)[number];
@@ -401,6 +400,11 @@ export const AOP_TEMPLATES: Record<string, AopTemplate> = {
 
 export function getTemplate(templateId: string): AopTemplate | null {
   return AOP_TEMPLATES[templateId] ?? null;
+}
+
+/** The fabric and print line for one all-over garment. Empty for anything else. */
+export function materialLine(templateId: string): string {
+  return getTemplate(templateId)?.printful.material.line ?? "";
 }
 
 export function isAopProduct(productId: string): boolean {

@@ -2,7 +2,7 @@ import { garmentMockupSvg } from "../gfx/garments/index.ts";
 import { luminance } from "../color.ts";
 import { renderGarmentSvg } from "../studio/garments.ts";
 import { arcLayout, clampFx, isFlatText } from "../studio/textfx.ts";
-import { AOP_MATERIAL, PRINTFUL_AOP } from "./aop-printful.ts";
+import { PRINTFUL_AOP } from "./aop-printful.ts";
 import { applyMarkup } from "./money.ts";
 import type {
   CatalogPage,
@@ -249,7 +249,7 @@ function aopBlank(
     id,
     name,
     type,
-    description: `${AOP_MATERIAL} Matched to Printful ${printful.catalogProductId}, ${printful.name}. Panel colors are the print, not a dyed blank. Printful's template pixel sizes are not confirmed yet.`,
+    description: `${printful.material.line} Matched to Printful ${printful.catalogProductId}, ${printful.name}. Panel colors are the print, not a dyed blank. Printful's template pixel sizes are not confirmed yet.`,
     technique: "sublimation",
     techniqueTitle: "Sublimation",
     placements: [{ placement: "front", title: "Chest logo" }],
@@ -259,7 +259,7 @@ function aopBlank(
     wholesaleCents: printful.startingPriceCents,
     shape: "aop",
     construction: "aop",
-    materialNote: AOP_MATERIAL,
+    materialNote: printful.material.line,
     aopTemplateId: id,
   };
 }
