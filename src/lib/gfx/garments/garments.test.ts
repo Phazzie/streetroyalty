@@ -362,6 +362,81 @@ describe("what somebody typed never becomes markup", () => {
   });
 });
 
+describe("curved, spaced and outlined words", () => {
+  const xs = (svg: string) =>
+    [
+      ...svg.matchAll(/<text x="([\d.]+)" y="[\d.]+" text-anchor="middle"[^>]*>([^<]*)<\/text>/g),
+    ].map((match) => ({ x: Number(match[1]), char: match[2] }));
+
+  it("lays an arched word out left to right, one letter at a time", () => {
+    for (const arc of [-38, 34]) {
+      const svg = decode(
+        garmentMockupSvg({
+          shape: "tee",
+          colorHex: "#141414",
+          placement: "front",
+          layers: [{ ...WORD, arc }],
+        }),
+      );
+      parseXml(svg);
+      const letters = xs(svg);
+      expect(letters.map((letter) => letter.char).join("")).toBe("CROWN");
+      for (let index = 1; index < letters.length; index += 1) {
+        expect(letters[index]?.x ?? 0).toBeGreaterThan(letters[index - 1]?.x ?? 0);
+      }
+    }
+  });
+
+  it("draws an outline as a stroke with no fill, and spacing as letter spacing", () => {
+    const svg = decode(
+      garmentMockupSvg({
+        shape: "tee",
+        colorHex: "#141414",
+        placement: "front",
+        layers: [{ ...WORD, outline: true, tracking: 0.2 }],
+      }),
+    );
+    parseXml(svg);
+    expect(svg).toMatch(/fill="none" stroke="#d6ff3c"/);
+    expect(svg).toMatch(/letter-spacing="[\d.]+"/);
+  });
+
+  it("fits a long curved line to the print area instead of running it off the side", () => {
+    const width = (text: string) => {
+      const letters = xs(
+        decode(
+          garmentMockupSvg({
+            shape: "tee",
+            colorHex: "#141414",
+            placement: "front",
+            layers: [{ ...WORD, text, arc: -38, tracking: 0.06 }],
+          }),
+        ),
+      );
+      return (letters[letters.length - 1]?.x ?? 0) - (letters[0]?.x ?? 0);
+    };
+    const long = width("STREET ROYALTY CROWN");
+    const twice = width("STREET ROYALTY CROWN STREET ROYALTY CROWN");
+    // Both are too wide for the area, so both shrink to the same width.
+    expect(long).toBeGreaterThan(0);
+    expect(Math.abs(twice - long) / long).toBeLessThan(0.08);
+  });
+
+  it("escapes a curved letter that would otherwise be markup", () => {
+    const svg = decode(
+      garmentMockupSvg({
+        shape: "tee",
+        colorHex: "#141414",
+        placement: "front",
+        layers: [{ ...WORD, text: "<&>", arc: -30 }],
+      }),
+    );
+    parseXml(svg);
+    expect(svg).toContain("&lt;");
+    expect(svg).toContain("&amp;");
+  });
+});
+
 describe("the art sits where it prints", () => {
   const window = (shape: string, placement: string) => {
     const svg = garmentMockupMarkup({ shape, colorHex: "#141414", placement, layers: [] });

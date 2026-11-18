@@ -1,5 +1,15 @@
 import type { DesignLayer } from "../../pod/types.ts";
 import {
+  arcLayout,
+  clampFx,
+  fitFontSize,
+  isFlatText,
+  LINE_FIT,
+  lineSpanEm,
+  OUTLINE_EM,
+  TEXT_EM,
+} from "../../studio/textfx.ts";
+import {
   drawGarment,
   resolveShape,
   resolveView,
@@ -215,9 +225,38 @@ function layerMarkup(layer: DesignLayer, window: PrintWindow, fallbackInk: strin
     const text = cleanText(layer.text);
     if (!text.trim()) return "";
     const body = layer.font === "Outfit";
-    const size = Math.max(1.5, window.h * 0.14 * scale);
-    const length = Math.min(window.w * 0.92, textEms(text, body) * size);
-    return `<text x="${f(cx)}" y="${f(cy)}" fill="${escapeXml(inkColor(layer.color, fallbackInk))}" font-family="${body ? BODY_STACK : DISPLAY_STACK}" font-weight="${body ? 400 : 900}" font-size="${f(size)}" text-anchor="middle" dominant-baseline="central" textLength="${f(Math.max(1, length))}" lengthAdjust="spacingAndGlyphs" transform="${turn}">${escapeXml(text)}</text>`;
+    const size = Math.max(1.5, window.h * TEXT_EM * scale);
+    const maxWidth = window.w * LINE_FIT;
+    const ink = escapeXml(inkColor(layer.color, fallbackInk));
+    const face = `font-family="${body ? BODY_STACK : DISPLAY_STACK}" font-weight="${body ? 400 : 900}"`;
+    const fx = clampFx({ arc: layer.arc, outline: layer.outline, tracking: layer.tracking });
+    const paint = (fontSize: number) =>
+      fx.outline
+        ? `fill="none" stroke="${ink}" stroke-width="${f(Math.max(0.3, fontSize * OUTLINE_EM))}" stroke-linejoin="round"`
+        : `fill="${ink}"`;
+    if (isFlatText(fx)) {
+      const length = Math.min(maxWidth, textEms(text, body) * size);
+      return `<text x="${f(cx)}" y="${f(cy)}" fill="${ink}" ${face} font-size="${f(size)}" text-anchor="middle" dominant-baseline="central" textLength="${f(Math.max(1, length))}" lengthAdjust="spacingAndGlyphs" transform="${turn}">${escapeXml(text)}</text>`;
+    }
+    if (Math.abs(fx.arc) < 0.001) {
+      // A straight line with spacing or an outline: the same widths and fit as the print file.
+      const gaps = fx.tracking * Math.max(0, [...text].length - 1);
+      const fitted = fitFontSize(size, Math.max(0.01, textEms(text, body) + gaps), maxWidth);
+      return `<text x="${f(cx)}" y="${f(cy)}" ${paint(fitted)} ${face} font-size="${f(fitted)}" letter-spacing="${f(fx.tracking * fitted)}" text-anchor="middle" dominant-baseline="central" transform="${turn}">${escapeXml(text)}</text>`;
+    }
+    // A curved line: one letter at a time on the same arc the print file and the preview use.
+    const cells = arcLayout(text, fx);
+    const fitted = fitFontSize(size, lineSpanEm(cells), maxWidth);
+    const lifts = cells.map((cell) => cell.lift);
+    const middle = (Math.max(0, ...lifts) + Math.min(0, ...lifts)) / 2;
+    const letters = cells
+      .map((cell) => {
+        const x = cx + cell.along * fitted;
+        const y = cy + (cell.lift - middle) * fitted;
+        return `<text x="${f(x)}" y="${f(y)}" text-anchor="middle" dominant-baseline="central" transform="rotate(${f(cell.rotate)} ${f(x)} ${f(y)})">${escapeXml(cell.char)}</text>`;
+      })
+      .join("");
+    return `<g ${paint(fitted)} ${face} font-size="${f(fitted)}" transform="${turn}">${letters}</g>`;
   }
   if (layer.type !== "image") return "";
   const href = pictureHref(layer.src);
