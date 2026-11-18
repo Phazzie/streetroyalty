@@ -4,11 +4,14 @@ export function designVisualKey(input: {
   variantId: string;
   placement: string;
   layers: unknown;
+  /** Panels and colorways on an all-over piece. Absent or null on a placement print. */
+  garment?: unknown;
 }): string {
   return JSON.stringify({
     productId: input.productId,
     variantId: input.variantId,
     placement: input.placement,
     layers: input.layers,
+    garment: input.garment ?? null,
   });
 }

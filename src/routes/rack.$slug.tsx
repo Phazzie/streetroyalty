@@ -21,6 +21,7 @@ import { localPrintNote } from "@/lib/ai/local";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { makerPage, rackPiece } from "@/lib/social/api";
 import { cartAdd } from "@/lib/studio/api";
+import { AOP_ORDER_CLOSED, canOrderProduct } from "@/lib/studio/garments";
 import { createSingleFlight } from "@/lib/ui/single-flight";
 
 export const Route = createFileRoute("/rack/$slug")({ component: ProductPage });
@@ -173,32 +174,36 @@ function ProductPage() {
                 Will this print?
               </Button>
               {advice ? <p className="mt-3 text-sm text-muted">{advice}</p> : null}
-              <Button
-                className="mt-6 w-full"
-                size="lg"
-                disabled={adding || !variantId}
-                onClick={() => {
-                  void flight.current(async () => {
-                    setAdding(true);
-                    try {
-                      await cartAdd({
-                        data: {
-                          designId: piece.id,
-                          variantId,
-                          colorwayId: colorwayId || undefined,
-                        },
-                      });
-                      void navigate({ to: "/cart" });
-                    } catch (reason: unknown) {
-                      setError(reason instanceof Error ? reason.message : "Sign in to add it.");
-                    } finally {
-                      setAdding(false);
-                    }
-                  });
-                }}
-              >
-                Add to cart
-              </Button>
+              {canOrderProduct(piece.productId) ? (
+                <Button
+                  className="mt-6 w-full"
+                  size="lg"
+                  disabled={adding || !variantId}
+                  onClick={() => {
+                    void flight.current(async () => {
+                      setAdding(true);
+                      try {
+                        await cartAdd({
+                          data: {
+                            designId: piece.id,
+                            variantId,
+                            colorwayId: colorwayId || undefined,
+                          },
+                        });
+                        void navigate({ to: "/cart" });
+                      } catch (reason: unknown) {
+                        setError(reason instanceof Error ? reason.message : "Sign in to add it.");
+                      } finally {
+                        setAdding(false);
+                      }
+                    });
+                  }}
+                >
+                  Add to cart
+                </Button>
+              ) : (
+                <p className="mt-6 border-2 border-ink p-3 text-sm">{AOP_ORDER_CLOSED}</p>
+              )}
               <div className="mt-4 grid gap-4 empty:hidden">
                 <RemixButton designId={piece.id} slug={piece.slug} />
                 <MoneySplit

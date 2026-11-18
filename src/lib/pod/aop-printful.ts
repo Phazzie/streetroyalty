@@ -32,9 +32,25 @@
 
 export const AOP_DPI = 150;
 
-/** Honest construction line. Sublimation on recycled polyester, not sewn cotton. */
-export const AOP_MATERIAL =
-  "Printed polyester fleece (sublimation). Recycled polyester and spandex, not sewn cotton panels.";
+/**
+ * What makers and buyers are told about the cloth. Each line says only what a
+ * Printful page confirms. Where the fabric is not confirmed, the line does not
+ * name one, and a test holds it to that.
+ */
+export type AopMaterial = {
+  line: string;
+  /** The fabric the line names, or null when Printful's page does not say. */
+  fabric: string | null;
+  fabricConfirmed: boolean;
+};
+
+/**
+ * Printful's all-over print page, checked 18 Nov 2026: "Sublimation or
+ * direct-to-fabric inks apply your design depending on the fabric, then the
+ * garment is cut and sewn to shape", and dye sublimation is "for synthetics".
+ * https://www.printful.com/all-over-print
+ */
+const CUT_AND_SEWN = "Printed all over, then cut and sewn.";
 
 export type AopPrintfulProduct = {
   catalogProductId: number;
@@ -44,25 +60,41 @@ export type AopPrintfulProduct = {
   startingPriceCents: number;
   /** TODO: null until the catalog variants endpoint is read with a Printful key. */
   catalogVariantIds: null;
-  fabricNote: string;
+  material: AopMaterial;
 };
 
 export const PRINTFUL_AOP = {
   hoodie: {
     catalogProductId: 388,
     name: "All-Over Print Recycled Unisex Hoodie",
-    sourceUrl: "https://www.printful.com/custom/sweatshirts-hoodies/388/all-over-print-recycled-unisex-hoodie",
+    sourceUrl:
+      "https://www.printful.com/custom/sweatshirts-hoodies/388/all-over-print-recycled-unisex-hoodie",
     startingPriceCents: 4075,
     catalogVariantIds: null,
-    fabricNote: "Recycled polyester and spandex blend, from the product page.",
+    // Checked 18 Nov 2026 on the sourceUrl above. The product description says it "is made
+    // from a recycled polyester and spandex blend". A synthetic, so sublimation, per the
+    // all-over print page quoted at CUT_AND_SEWN.
+    material: {
+      line: "Recycled polyester and spandex blend, printed all over by sublimation, then cut and sewn. The colors are the print, not sewn cotton panels.",
+      fabric: "recycled polyester and spandex blend",
+      fabricConfirmed: true,
+    },
   },
   joggers: {
     catalogProductId: 400,
     name: "All-Over Print Recycled Men’s Joggers",
-    sourceUrl: "https://www.printful.com/custom/all-over-print-recycled-mens-joggers/400/all-over-print-recycled-mens-joggers",
+    sourceUrl:
+      "https://www.printful.com/custom/all-over-print-recycled-mens-joggers/400/all-over-print-recycled-mens-joggers",
     startingPriceCents: 3948,
     catalogVariantIds: null,
-    fabricNote: "Recycled all-over joggers. The public catalog's recycled jogger is the men's cut (400), not a unisex.",
+    // Checked 18 Nov 2026 on the sourceUrl above. The page names no fabric or print method
+    // ("soft, comfy, have pockets"), and buyer reviews mention a cotton lining. Say less.
+    // The public catalog's recycled jogger is the men's cut (400), not a unisex.
+    material: {
+      line: `${CUT_AND_SEWN} The fabric is not confirmed yet.`,
+      fabric: null,
+      fabricConfirmed: false,
+    },
   },
   jacket: {
     catalogProductId: 801,
@@ -71,7 +103,13 @@ export const PRINTFUL_AOP = {
       "https://www.printful.com/custom/all-over-print-recycled-unisex-track-jacket/801/all-over-print-recycled-unisex-track-jacket",
     startingPriceCents: 6241,
     catalogVariantIds: null,
-    fabricNote: "Recycled all-over track jacket.",
+    // Checked 18 Nov 2026 on the sourceUrl above. The page names no fabric or print method
+    // ("Order a custom track jacket"). Say less.
+    material: {
+      line: `${CUT_AND_SEWN} The fabric is not confirmed yet.`,
+      fabric: null,
+      fabricConfirmed: false,
+    },
   },
 } as const satisfies Record<string, AopPrintfulProduct>;
 
@@ -98,5 +136,25 @@ export function panelPrintTarget(catalogProductId: number, panelId: string): Pan
 }
 
 export function printfulAopById(catalogProductId: number): AopPrintfulProduct | null {
-  return Object.values(PRINTFUL_AOP).find((item) => item.catalogProductId === catalogProductId) ?? null;
+  return (
+    Object.values(PRINTFUL_AOP).find((item) => item.catalogProductId === catalogProductId) ?? null
+  );
+}
+
+/** What a buyer is told while an all-over piece cannot be ordered. */
+export const AOP_ORDER_CLOSED =
+  "All-over pieces can be designed, saved and shared now. Ordering opens once the printer's panel templates are set up.";
+
+/**
+ * The one rule for whether an all-over product can be ordered. True only when
+ * its catalog variant ids are known and every panel has a confirmed Printful
+ * template (pixel size and placement key), so a real print file can be made
+ * for each panel. Until then only the chest logo would reach the printer.
+ * The wiring job flips this by filling in those facts above, not by editing
+ * the callers.
+ */
+export function aopOrderable(catalogProductId: number, panelIds: readonly string[]): boolean {
+  const product = printfulAopById(catalogProductId);
+  if (!product?.catalogVariantIds || panelIds.length === 0) return false;
+  return panelIds.every((panelId) => panelPrintTarget(catalogProductId, panelId).confirmed);
 }

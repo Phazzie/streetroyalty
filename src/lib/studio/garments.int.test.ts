@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getSql } from "../db.ts";
 import { addToCart } from "./cart.server.ts";
 import { getDesign, getShopDesign, saveDesign } from "./designs.server.ts";
@@ -14,6 +14,21 @@ import { startCheckout } from "./orders.server.ts";
 import { truncateAll } from "../../test/db.ts";
 import { pngDataUrl } from "../../test/png.ts";
 import { RECIPIENT, seedUser } from "../../test/seed.ts";
+
+/**
+ * All-over ordering stays closed until the panel templates are confirmed. The
+ * colorway lines below are what an order carries once it opens, so these tests
+ * open it the one way the wiring job will: through `aopOrderable`.
+ */
+const ordering = vi.hoisted(() => ({ open: false }));
+vi.mock("../pod/aop-printful.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../pod/aop-printful.ts")>();
+  return {
+    ...actual,
+    aopOrderable: (id: number, panels: readonly string[]) =>
+      ordering.open || actual.aopOrderable(id, panels),
+  };
+});
 
 const PRINT = pngDataUrl(600, 450);
 const MOCK = "data:image/svg+xml;utf8,%3Csvg%2F%3E";
@@ -32,6 +47,7 @@ function piece(title: string, garment = defaultGarment("aop-hoodie")) {
 }
 
 beforeEach(async () => {
+  ordering.open = false;
   await truncateAll();
   await seedUser("ada");
   await seedUser("bo");
@@ -147,6 +163,10 @@ describe("all-over pieces and sets", () => {
     expect((await getDesign("ada", hoodie.id)).garment?.activeColorwayId).toBe("black-gold");
     expect(await getSetBySlug(published.slug)).toMatchObject({ id: set.id });
 
+    await expect(addToCart("ada", hoodie.id, "aop-hoodie-printed-m", "black-gold")).rejects.toThrow(
+      /Ordering opens once/,
+    );
+    ordering.open = true;
     await expect(addToCart("ada", hoodie.id, "aop-hoodie-printed-m", "nope")).rejects.toThrow(
       /colorway/,
     );
@@ -170,6 +190,7 @@ describe("all-over pieces and sets", () => {
     const hoodie = await saveDesign("ada", piece("Two Ways Hoodie"));
     const [first, second] = hoodie.garment?.colorways ?? [];
     if (!first || !second) throw new Error("the house colorways are missing");
+    ordering.open = true;
     await addToCart("ada", hoodie.id, "aop-hoodie-printed-m", first.id);
     await addToCart("ada", hoodie.id, "aop-hoodie-printed-m", second.id);
     await addToCart("ada", hoodie.id, "aop-hoodie-printed-m", second.id);

@@ -20,7 +20,7 @@ export function PieceOptions({
       <p className="mt-2 text-muted">
         {piece.productName}
         {piece.construction === "aop"
-          ? " · all-over sublimation"
+          ? " · all-over print"
           : ` · ${piece.colorName} · ${piece.placement} print`}
       </p>
       {piece.colorways.length > 0 ? (
@@ -37,9 +37,18 @@ export function PieceOptions({
                 className={`chip ${colorway.id === colorwayId ? "chip-on" : ""}`}
               >
                 <span className="mr-2 inline-flex gap-1 align-middle">
-                  <span className="inline-block size-3 border border-ink" style={{ background: colorway.colors.body }} />
-                  <span className="inline-block size-3 border border-ink" style={{ background: colorway.colors.contrast }} />
-                  <span className="inline-block size-3 border border-ink" style={{ background: colorway.colors.trim }} />
+                  <span
+                    className="inline-block size-3 border border-ink"
+                    style={{ background: colorway.colors.body }}
+                  />
+                  <span
+                    className="inline-block size-3 border border-ink"
+                    style={{ background: colorway.colors.contrast }}
+                  />
+                  <span
+                    className="inline-block size-3 border border-ink"
+                    style={{ background: colorway.colors.trim }}
+                  />
                 </span>
                 {colorway.name}
               </button>
@@ -49,7 +58,9 @@ export function PieceOptions({
       ) : null}
       {piece.set ? (
         <div className="mt-4 border-2 border-ink p-3">
-          <p className="font-display text-xs tracking-wide uppercase">Matched set · {piece.set.provider}</p>
+          <p className="font-display text-xs tracking-wide uppercase">
+            Matched set · {piece.set.provider}
+          </p>
           <p className="mt-1 text-sm">{piece.set.title}</p>
           <ul className="mt-2 text-sm text-muted">
             {piece.set.pieces.map((item) => (
