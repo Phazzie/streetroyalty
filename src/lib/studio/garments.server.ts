@@ -99,7 +99,8 @@ async function hydrate(row: SetRow): Promise<GarmentSetRecord> {
 
 export async function getOwnedSet(userId: string, setId: string): Promise<GarmentSetRecord> {
   const sql = await getSql();
-  const rows = await sql<SetRow>`select * from garment_sets where id = ${setId} and user_id = ${userId}`;
+  const rows =
+    await sql<SetRow>`select * from garment_sets where id = ${setId} and user_id = ${userId}`;
   const row = rows[0];
   if (!row) throw new Error("That set is not yours.");
   return hydrate(row);
@@ -107,21 +108,33 @@ export async function getOwnedSet(userId: string, setId: string): Promise<Garmen
 
 export async function getSetBySlug(slug: string): Promise<GarmentSetRecord | null> {
   const sql = await getSql();
-  const rows = await sql<SetRow>`select * from garment_sets where slug = ${slug} and status = 'published'`;
+  const rows =
+    await sql<SetRow>`select * from garment_sets where slug = ${slug} and status = 'published'`;
   const row = rows[0];
   if (!row) return null;
   return hydrate(row);
 }
 
 /** Pair the saved piece with its partner, sharing colorways, from one maker. */
-export async function createMatchedSet(userId: string, designId: string, title?: string): Promise<GarmentSetRecord> {
+export async function createMatchedSet(
+  userId: string,
+  designId: string,
+  title?: string,
+): Promise<GarmentSetRecord> {
   const source = await getDesign(userId, designId);
   if (!isAopProduct(source.productId)) throw new Error("Sets pair all-over garments.");
   if (source.setId) return getOwnedSet(userId, source.setId);
   const partnerId = SET_PARTNER[source.productId];
   if (!partnerId) throw new Error("This piece has no match.");
+  // Every check that can fail goes before the first write, so a refusal leaves nothing behind.
+  const name = (title?.trim() || `${source.title} set`).slice(0, 80);
+  if (name.length < 2) throw new Error("Name the set.");
   const garment = source.garment ?? defaultGarment(source.productId);
-  const partnerGarment = withSharedColorways(defaultGarment(partnerId), garment.colorways, garment.activeColorwayId);
+  const partnerGarment = withSharedColorways(
+    defaultGarment(partnerId),
+    garment.colorways,
+    garment.activeColorwayId,
+  );
   const verdict = assessSet([
     { provider: maker(), templateId: source.productId, colorways: garment.colorways },
     { provider: maker(), templateId: partnerId, colorways: partnerGarment.colorways },
@@ -150,7 +163,9 @@ export async function createMatchedSet(userId: string, designId: string, title?:
         type: "text",
         text: "SR",
         font: "Archivo Black",
-        color: garment.colorways.find((item) => item.id === garment.activeColorwayId)?.colors.mark ?? "#1a1024",
+        color:
+          garment.colorways.find((item) => item.id === garment.activeColorwayId)?.colors.mark ??
+          "#1a1024",
         x: 0.5,
         y: 0.4,
         scale: 1,
@@ -162,16 +177,31 @@ export async function createMatchedSet(userId: string, designId: string, title?:
   });
   const sql = await getSql();
   const id = crypto.randomUUID();
-  const name = (title?.trim() || `${source.title} set`).slice(0, 80);
-  if (name.length < 2) throw new Error("Name the set.");
   const slug = slugify(name, id);
-  const blob = JSON.stringify({ colorways: garment.colorways, activeColorwayId: garment.activeColorwayId });
-  await sql`
-    insert into garment_sets (id, user_id, title, slug, status, provider, colorways_json, piece_ids_json)
-    values (${id}, ${userId}, ${name}, ${slug}, 'draft', ${verdict.provider}, ${blob}, ${JSON.stringify([source.id, partner.id])})
-  `;
-  await sql`update designs set set_id = ${id} where user_id = ${userId} and id = ${source.id}`;
-  await sql`update designs set set_id = ${id} where user_id = ${userId} and id = ${partner.id}`;
+  const blob = JSON.stringify({
+    colorways: garment.colorways,
+    activeColorwayId: garment.activeColorwayId,
+  });
+  try {
+    await sql`
+      insert into garment_sets (id, user_id, title, slug, status, provider, colorways_json, piece_ids_json)
+      values (${id}, ${userId}, ${name}, ${slug}, 'draft', ${verdict.provider}, ${blob}, ${JSON.stringify([source.id, partner.id])})
+    `;
+    await sql`update designs set set_id = ${id} where user_id = ${userId} and id = ${source.id}`;
+    await sql`update designs set set_id = ${id} where user_id = ${userId} and id = ${partner.id}`;
+  } catch (error) {
+    // The driver has no transactions here. Undo by hand so a failed set leaves no stray partner.
+    await sql`update designs set set_id = null where user_id = ${userId} and set_id = ${id}`.catch(
+      () => undefined,
+    );
+    await sql`delete from garment_sets where id = ${id} and user_id = ${userId}`.catch(
+      () => undefined,
+    );
+    await sql`delete from designs where id = ${partner.id} and user_id = ${userId}`.catch(
+      () => undefined,
+    );
+    throw error;
+  }
   return getOwnedSet(userId, id);
 }
 
@@ -188,7 +218,10 @@ export async function saveSetColorways(
     activeColorwayId,
     panels: [],
   });
-  const blob = JSON.stringify({ colorways: parsed.colorways, activeColorwayId: parsed.activeColorwayId });
+  const blob = JSON.stringify({
+    colorways: parsed.colorways,
+    activeColorwayId: parsed.activeColorwayId,
+  });
   const sql = await getSql();
   await sql`
     update garment_sets set colorways_json = ${blob}, updated_at = now()
@@ -205,8 +238,10 @@ export async function publishSet(userId: string, setId: string): Promise<Garment
   const set = await getOwnedSet(userId, setId);
   for (const piece of set.pieces) {
     const design = await getDesign(userId, piece.id);
-    if (!design.printFileId) throw new Error(`Save a print file for ${piece.title} before the set goes on the rack.`);
-    if (!design.mockupUrl) throw new Error(`Pull a mockup for ${piece.title} before the set goes on the rack.`);
+    if (!design.printFileId)
+      throw new Error(`Save a print file for ${piece.title} before the set goes on the rack.`);
+    if (!design.mockupUrl)
+      throw new Error(`Pull a mockup for ${piece.title} before the set goes on the rack.`);
   }
   for (const piece of set.pieces) {
     if (piece.status !== "published") await publishDesign(userId, piece.id);
