@@ -35,15 +35,29 @@ export function GarmentFlat({
 }) {
   const resolved = resolveGarment(garment, face);
   return (
-    <svg viewBox={resolved.template.viewBox} role="img" aria-label={`${resolved.template.name}, ${face}`} className="h-auto w-full">
-      <rect width={resolved.template.viewWidth} height={resolved.template.viewHeight} fill="#120a1c" />
+    <svg
+      viewBox={resolved.template.viewBox}
+      role="img"
+      aria-label={`${resolved.template.name}, ${face}`}
+      className="h-auto w-full"
+    >
+      <rect
+        width={resolved.template.viewWidth}
+        height={resolved.template.viewHeight}
+        fill="#120a1c"
+      />
       <defs>
         {resolved.panels.map(({ panel, paint }) => (
           <g key={panel.id}>{patternNode(panel.id, paint)}</g>
         ))}
       </defs>
       {resolved.panels.map(({ panel, paint }) => {
-        const fill = paint.type === "solid" ? paint.hex : paint.type === "pattern" ? `url(#pat-${panel.id})` : "#f4f0e6";
+        const fill =
+          paint.type === "solid"
+            ? paint.hex
+            : paint.type === "pattern"
+              ? `url(#pat-${panel.id})`
+              : "#f4f0e6";
         const pressed = selected === panel.id;
         return (
           <path
@@ -96,6 +110,12 @@ export function GarmentFlat({
           y="172"
           textAnchor="middle"
           fill={resolved.colorway.colors.mark}
+          // Outlined in the body colour, so the letters still read where they cross the
+          // chest-logo box, which is painted in the same colour as the ink.
+          stroke={resolved.colorway.colors.body}
+          strokeWidth={3}
+          strokeLinejoin="round"
+          paintOrder="stroke"
           fontFamily="Arial Black, sans-serif"
           fontSize="16"
         >

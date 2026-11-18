@@ -200,6 +200,14 @@ describe("the all-over flat as a file", () => {
     assert.equal(wellFormed("<svg><text>open</svg>"), false);
   });
 
+  it("outlines the label in the body colour, so it reads across the chest-logo box", () => {
+    const svg = decode(renderGarmentSvg({ templateId: "aop-hoodie", label: "STREET ROYALTY" }));
+    const label = /<text [^>]*>STREET ROYALTY<\/text>/.exec(svg)?.[0] ?? "";
+    assert.match(label, /fill="#1a1024"/);
+    assert.match(label, /stroke="#c4a6e0"/);
+    assert.match(label, /paint-order="stroke"/);
+  });
+
   it("stays well-formed with & ' \" < > at every position of the label up to 30", () => {
     for (const mark of ["&", "'", '"', "<", ">"]) {
       for (let position = 0; position <= 30; position += 1) {

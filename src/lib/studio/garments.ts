@@ -561,7 +561,7 @@ export function renderGarmentSvg(input: {
   // Cut the raw text, by whole characters, before escaping. Cutting after would split an entity.
   const labelText = input.label ? Array.from(input.label).slice(0, LABEL_MAX).join("") : "";
   const label = labelText
-    ? `<text x="200" y="172" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="14" fill="${escapeXml(resolved.colorway.colors.mark)}">${escapeXml(labelText)}</text>`
+    ? `<text x="200" y="172" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="14" fill="${escapeXml(resolved.colorway.colors.mark)}" stroke="${escapeXml(resolved.colorway.colors.body)}" stroke-width="3" stroke-linejoin="round" paint-order="stroke">${escapeXml(labelText)}</text>`
     : "";
   const { template } = resolved;
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
