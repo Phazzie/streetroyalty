@@ -299,3 +299,45 @@ before I change #17. Nothing on #17 is moving until they answer.
 If they say go, I will take the list in the order written: the ten all-over items
 (each with a test), then the battle vote, then a full green run and a done note here.
 If you hear from the owner first, write it here.
+
+### 2026-11-18 23:03 UTC · Claude Code · `claude/admiring-bohr-7ukyjg`
+
+**Done. #17 is handed back to the owner to review and merge.** The owner confirmed the
+plan above in my session. Every item was reproduced first, then fixed with a test that
+fails on the old code.
+
+| # | What was wrong | Fixed in |
+| --- | --- | --- |
+| 1 | Curved, spaced and outlined lines were never fitted, so letters fell off the print file | `print-file.ts`, shared rules in `textfx.ts` (`TEXT_EM`, `LINE_FIT`, `OUTLINE_EM`) |
+| 2 | Any arch laid its letters right to left, so the word printed backwards | `textfx.ts` `arcLayout` |
+| 3 | Every all-over mockup was the default lilac flat | garment threaded from `makeMockup` to `renderGarmentSvg` |
+| 4 | An all-over order sent the printer only the chest file | all-over pieces can't be bagged or checked out until `aopOrderable()` says the panel templates exist; the rack and studio say so |
+| 5 | Visiting an all-over blank recoloured lime ink for good, and the print check read the wrong garment | `src/lib/studio/ink.ts` |
+| 6 | "Inside the print area" measured height with width, so the starting line was flagged | `preflight.ts` `layerReach` |
+| 7 | "On a person" asked for a t-shirt for joggers, the tote, the long-sleeve, the crewneck and all-over pieces | `src/lib/tryon/garment.ts`, `flat.ts` |
+| 8 | A one-letter set name left a stray partner piece each try | `garments.server.ts` |
+| 9 | A dropped colorway still in a bag went through checkout unnamed | `cart.server.ts` `priceCart` |
+| 10 | Label cut mid-entity; no cap on art fills; fleece and spandex claimed for joggers and the jacket | `garments.ts`; per-product material lines in `aop-printful.ts` |
+| Battle | A script could vote on any pair | a signed ticket for the shown pair, plus 500 votes a day |
+
+Found on the way and fixed:
+- The mockups had stopped drawing curves, outlines and spacing after my swap yesterday.
+- The catalog drew the all-over blanks as tees.
+- The print check promised a print on all-over pieces.
+- The all-over chest label disappeared behind the logo box.
+
+**For Grok's agent, when you wire real Printful all-over printing:** flip
+`aopOrderable()` in `src/lib/pod/aop-printful.ts` by filling in the variant ids and
+panel templates there. Nothing else gates ordering. `garments.int.test.ts` shows how the
+tests open it. The joggers' and track jacket's fabric is marked unconfirmed until
+Printful's pages name it.
+
+**Still open:**
+- The studio preview shows text and pictures at a different size and shape than they
+  print (14px text in a fixed-shape box). This is not on the plan; I described it as a
+  separate task for the owner.
+- The shopper try-on on the rack can't name an all-over piece's panel colours.
+
+Checks on the final head: lint and types clean, 1,944 unit, integration and component
+tests with the coverage floors, 131 in-browser canvas tests, the build, and all 182
+Playwright journeys at phone and laptop sizes.
