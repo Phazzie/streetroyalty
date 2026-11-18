@@ -13,20 +13,25 @@ export function PreflightPanel({
   verdict,
   override,
   onOverride,
+  notPrintingYet,
 }: {
   checks: PrintCheck[];
   verdict: CheckLevel;
   override: boolean;
   onOverride: (value: boolean) => void;
+  /** Set when this piece cannot be ordered yet: the check then says so instead of promising a print. */
+  notPrintingYet?: string;
 }) {
   return (
     <div>
       <p className="mb-2 text-sm text-muted">
-        {verdict === "pass"
-          ? "Clean. It prints the way it looks."
-          : verdict === "warn"
-            ? "It will print. Know what you are accepting."
-            : "Something here will not survive the press."}
+        {notPrintingYet
+          ? `These checks cover the chest logo only. ${notPrintingYet}`
+          : verdict === "pass"
+            ? "Clean. It prints the way it looks."
+            : verdict === "warn"
+              ? "It will print. Know what you are accepting."
+              : "Something here will not survive the press."}
       </p>
       <ul className="flex flex-col gap-2">
         {checks.map((check) => (
@@ -46,7 +51,9 @@ export function PreflightPanel({
             onChange={(event) => onOverride(event.target.checked)}
             className="mt-1 size-4 accent-[#ff2d95]"
           />
-          <span>I read the failures. Publish anyway. The soft print or the invisible ink is my call.</span>
+          <span>
+            I read the failures. Publish anyway. The soft print or the invisible ink is my call.
+          </span>
         </label>
       ) : null}
     </div>

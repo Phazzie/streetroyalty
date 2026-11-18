@@ -30,7 +30,9 @@ import { suggestLines } from "@/lib/ai/api";
 import { createSingleFlight } from "@/lib/ui/single-flight";
 import { designVisualKey } from "@/lib/studio/design-key";
 import {
+  AOP_ORDER_CLOSED,
   SET_PARTNER,
+  canOrderProduct,
   defaultGarment,
   withSharedColorways,
   type GarmentDesign,
@@ -930,6 +932,9 @@ export function Editor({ designId }: { designId: string }) {
             verdict={verdict}
             override={printOverride}
             onOverride={setPrintOverride}
+            notPrintingYet={
+              aop && product && !canOrderProduct(product.id) ? AOP_ORDER_CLOSED : undefined
+            }
           />
         </Panel>
 

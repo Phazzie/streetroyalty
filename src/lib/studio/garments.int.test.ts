@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getSql } from "../db.ts";
 import { addToCart } from "./cart.server.ts";
-import { getDesign, getShopDesign, saveDesign } from "./designs.server.ts";
+import { getDesign, getShopDesign, publishDesign, saveDesign } from "./designs.server.ts";
 import {
   createMatchedSet,
   getOwnedSet,
@@ -204,5 +204,28 @@ describe("all-over pieces and sets", () => {
         { colorway_id: second.id, quantity: 2 },
       ].sort((a, b) => a.colorway_id.localeCompare(b.colorway_id)),
     );
+  });
+  it("stops checkout when the maker drops a colorway that is already in a bag", async () => {
+    ordering.open = true;
+    const hoodie = await saveDesign("ada", piece("Dropped Way Hoodie"));
+    const [first, second] = hoodie.garment?.colorways ?? [];
+    if (!first || !second || !hoodie.garment) throw new Error("the house colorways are missing");
+    await publishDesign("ada", hoodie.id);
+    await addToCart("bo", hoodie.id, "aop-hoodie-printed-m", second.id);
+    // The maker keeps only the first colorway.
+    await saveDesign("ada", {
+      ...piece("Dropped Way Hoodie", {
+        ...hoodie.garment,
+        colorways: [first],
+        activeColorwayId: first.id,
+      }),
+      id: hoodie.id,
+    });
+    await expect(
+      startCheckout("bo", { recipient: RECIPIENT, shippingMethod: "STANDARD" }),
+    ).rejects.toThrow(/no longer comes in that colorway/);
+    const sql = await getSql();
+    const orders = await sql`select id from orders where user_id = 'bo'`;
+    expect(orders).toEqual([]);
   });
 });

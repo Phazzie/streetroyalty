@@ -433,6 +433,8 @@ function mockupShape(blank: Blank): string {
 }
 
 function blankImage(blank: Blank): string {
+  // An all-over blank is its panels; the house colorway shows what the garment is.
+  if (blank.aopTemplateId) return renderGarmentSvg({ templateId: blank.aopTemplateId });
   return garmentMockupSvg({
     shape: mockupShape(blank),
     colorHex: blank.colors[0]?.hex ?? "#141414",
