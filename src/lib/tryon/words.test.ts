@@ -43,17 +43,76 @@ describe("tryOnWords", () => {
   it("names the garment from the product type", () => {
     expect(tryOnWords({ ...TEE, productType: "Hoodie" }, true)).toContain("pullover hoodie");
     expect(tryOnWords({ ...TEE, productType: "Crewneck" }, true)).toContain("crewneck sweatshirt");
-    expect(tryOnWords({ ...TEE, productType: "something new" }, true)).toContain("t-shirt");
+    expect(tryOnWords({ ...TEE, productType: "Sweatshirt" }, true)).toContain(
+      "crewneck sweatshirt",
+    );
+  });
+
+  it("calls an unknown piece a piece, never a t-shirt", () => {
+    const words = tryOnWords({ ...TEE, productType: "something new" }, true);
+    expect(words).toContain("the exact royal piece shown in the clothing reference");
+    expect(words).not.toContain("t-shirt");
+    expect(tryOnWords({ ...TEE, productType: "something new" }, false)).toBe(
+      "a plain royal piece of clothing with no print, the rest of the outfit plain black, white sneakers",
+    );
   });
 
   it("dresses the rest of a person who is only wearing a cap", () => {
     const words = tryOnWords({ productType: "Hat", colorName: "Black", placement: "front" }, true);
-    expect(words).toContain("the exact black cap shown in the clothing reference");
-    expect(words).toContain("a plain black t-shirt");
+    expect(words).toBe(
+      "the exact black cap shown in the clothing reference, with the same graphic on the front panel, a plain black top, plain black trousers and white sneakers",
+    );
+  });
+
+  it("puts joggers on the legs with the print on the thigh or across the back", () => {
+    const front = tryOnWords(
+      { productType: "Joggers", colorName: "Royal", placement: "front" },
+      true,
+    );
+    expect(front).toBe(
+      "the exact royal joggers shown in the clothing reference worn on the legs, with the same print in the same place on the front of the upper thigh, same colours and same size, a plain black top and white sneakers",
+    );
+    const back = tryOnWords(
+      { productType: "Joggers", colorName: "Black", placement: "back" },
+      true,
+    );
+    expect(back).toContain("across the back, just under the waistband");
+    expect(
+      tryOnWords({ productType: "Joggers", colorName: "Bone", placement: "front" }, false),
+    ).toBe("plain bone joggers with no print, a plain black top and white sneakers");
+  });
+
+  it("has a tote carried, and a long-sleeve called a long-sleeve", () => {
+    const tote = tryOnWords({ productType: "Tote", colorName: "Bone", placement: "back" }, true);
+    expect(tote).toContain(
+      "the exact bone canvas tote bag shown in the clothing reference carried on the shoulder",
+    );
+    expect(tote).toContain("on the back of the bag");
+    const long = tryOnWords(
+      { productType: "Long-Sleeve", colorName: "Violet", placement: "sleeve_right" },
+      true,
+    );
+    expect(long).toContain("the exact violet long-sleeve top");
+    expect(long).toContain("down the right sleeve");
+    for (const words of [tote, long]) expect(words).not.toContain("t-shirt");
+  });
+
+  it("knows an all-over piece is its print, not a colour", () => {
+    const words = tryOnWords(
+      { productType: "Hoodie", colorName: "Printed", placement: "front" },
+      true,
+    );
+    expect(words).toContain(
+      "the exact all-over printed pullover hoodie shown in the clothing reference",
+    );
+    expect(words).toContain("every panel in the same colours");
+    expect(
+      tryOnWords({ productType: "Joggers", colorName: "Printed", placement: "front" }, false),
+    ).toBe("plain joggers with no print, a plain black top and white sneakers");
   });
 
   it("reads a placement written with underscores", () => {
-    expect(tryOnWords({ ...TEE, placement: "sleeve_left" }, true)).toContain("on the sleeve left,");
+    expect(tryOnWords({ ...TEE, placement: "sleeve_left" }, true)).toContain("on the left sleeve,");
   });
 
   it("promises no print when there is no reference to copy one from", () => {
@@ -76,7 +135,7 @@ describe("tryOnWords", () => {
 
   it("falls back to plain words when a field is empty", () => {
     expect(tryOnWords({ productType: "", colorName: "", placement: "" }, true)).toContain(
-      "the exact black t-shirt",
+      "the exact black piece",
     );
     expect(tryOnWords({ productType: "", colorName: "", placement: "" }, true)).toContain(
       "on the front,",

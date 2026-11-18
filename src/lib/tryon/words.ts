@@ -4,6 +4,8 @@
  * no server in here, so every line of it can be tested.
  */
 
+import { howWorn, named, outfitRest, pieceKind, plain, printSpot } from "./garment.ts";
+
 /** generateLook drops any picture longer than this, so nothing longer is ever sent. */
 export const MAX_IMAGE_CHARS = 1_400_000;
 
@@ -32,44 +34,33 @@ export function usableImage(value: unknown): value is string {
   );
 }
 
-function plain(value: string, fallback: string): string {
-  const clean = value
-    .toLowerCase()
-    .replace(/[^a-z0-9 /&-]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 40);
-  return clean || fallback;
-}
-
-function garment(
-  productType: string,
-): "cap" | "pullover hoodie" | "crewneck sweatshirt" | "t-shirt" {
-  const type = productType.toLowerCase();
-  if (type.includes("hat") || type.includes("cap") || type.includes("beanie")) return "cap";
-  if (type.includes("hood")) return "pullover hoodie";
-  if (type.includes("crew") || type.includes("sweat")) return "crewneck sweatshirt";
-  return "t-shirt";
-}
-
 /**
  * What the person is dressed in. With a reference the mockup carries the print,
  * so the words only pin the garment to it. Without one the print cannot be
- * described honestly, so the words stop at cut and colour.
+ * described honestly, so the words stop at cut and colour. Joggers go on the
+ * legs, a tote is carried, and nothing that is not a tee is called one.
  */
 export function tryOnWords(piece: TryOnPiece, hasReference: boolean): string {
-  const kind = garment(piece.productType);
+  const kind = pieceKind(piece.productType);
   const tone = plain(piece.colorName, "black");
-  const where = plain(piece.placement.replaceAll("_", " "), "front");
-  const rest =
-    kind === "cap"
-      ? "a plain black t-shirt, plain black trousers and white sneakers"
-      : "plain black trousers and white sneakers";
-  if (!hasReference) return `a plain ${tone} ${kind} with no print, ${rest}`;
-  if (kind === "cap") {
-    return `the exact ${tone} cap shown in the clothing reference, with the same graphic on the front panel, ${rest}`;
+  // An all-over piece comes in one colour, "Printed": its colours are the print itself.
+  const allOver = tone === "printed";
+  const spot = printSpot(kind, piece.placement);
+  const rest = outfitRest(kind);
+  if (kind.wear === "unknown") {
+    return hasReference
+      ? `the exact ${allOver ? "all-over printed" : tone} piece shown in the clothing reference, worn or carried the way it is made to be, with the same print in the same place ${spot}, same colours and same size, ${rest}`
+      : `a plain ${allOver ? "" : `${tone} `}piece of clothing with no print, ${rest}`;
   }
-  return `the exact ${tone} ${kind} shown in the clothing reference, with the same print in the same place on the ${where}, same colours and same size, ${rest}`;
+  if (!hasReference)
+    return `${named(kind, allOver ? "plain" : `plain ${tone}`)} with no print, ${rest}`;
+  if (allOver) {
+    return `the exact all-over printed ${kind.noun} shown in the clothing reference${howWorn(kind)}, every panel in the same colours, the same print in the same place, ${rest}`;
+  }
+  if (kind.wear === "head") {
+    return `the exact ${tone} ${kind.noun} shown in the clothing reference, with the same graphic ${spot}, ${rest}`;
+  }
+  return `the exact ${tone} ${kind.noun} shown in the clothing reference${howWorn(kind)}, with the same print in the same place ${spot}, same colours and same size, ${rest}`;
 }
 
 /** The lab's face slots, best first. Two is as many as the picture maker uses. */

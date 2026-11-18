@@ -14,6 +14,10 @@ import {
 } from "@/lib/gfx/effects";
 import { generateLook } from "@/lib/lab-api";
 import { hydrate, useLab } from "@/lib/store";
+import type { GarmentDesign } from "@/lib/studio/garments";
+import { allOverSheet } from "@/lib/tryon/flat";
+import { allOverWords, placementWords } from "@/lib/tryon/garment";
+import { mockupReference } from "@/lib/tryon/reference";
 import { createSingleFlight } from "@/lib/ui/single-flight";
 
 function failText(kind: string): string {
@@ -223,19 +227,29 @@ async function faces(): Promise<{ images: string[]; yours: boolean }> {
   return { images: await Promise.all(HOUSE_MODEL.map((url) => urlToDataUrl(url))), yours: false };
 }
 
-function garmentWords(productType: string, color: string, placement: string): string {
-  const type = productType.toLowerCase();
-  const where = placement.replaceAll("_", " ");
-  const tone = color.toLowerCase();
-  if (type.includes("hat") || type.includes("cap")) {
-    return `a ${tone} cap with the exact graphic from the clothing reference on the front panel, a plain black t-shirt, plain black trousers and white sneakers`;
+/**
+ * The picture and the words the picture maker gets for a piece. A placement piece is its print
+ * on the blank's colour; an all-over piece is the whole garment, front and back, in its colourway.
+ * Null when the all-over picture could not be drawn, so nothing is spent on a wrong one.
+ */
+async function clothing(input: {
+  print: string;
+  colorHex: string;
+  colorName: string;
+  productType: string;
+  productName?: string;
+  placement: string;
+  garment?: GarmentDesign | null;
+}): Promise<{ reference: string; spoken: string } | null> {
+  if (input.garment) {
+    const reference = await mockupReference(allOverSheet(input.garment, input.print));
+    if (!reference) return null;
+    return { reference, spoken: allOverWords({ ...input, garment: input.garment }) };
   }
-  const garment = type.includes("hood")
-    ? "pullover hoodie"
-    : type.includes("crew")
-      ? "crewneck sweatshirt"
-      : "t-shirt";
-  return `a ${tone} ${garment} printed with the exact graphic from the clothing reference on the ${where}, same colours and same placement, plain black trousers and white sneakers`;
+  return {
+    reference: await garmentPreview(input.print, input.colorHex),
+    spoken: placementWords(input),
+  };
 }
 
 /** Shows the design worn: on the visitor's own locked face if the lab has one, otherwise on the house model. */
@@ -245,7 +259,9 @@ export function WornPreview({
   colorHex,
   colorName,
   productType,
+  productName,
   placement,
+  garment,
   onNote,
 }: {
   ready: boolean;
@@ -253,7 +269,10 @@ export function WornPreview({
   colorHex: string;
   colorName: string;
   productType: string;
+  productName?: string;
   placement: string;
+  /** The all-over garment, when the piece is one. The picture maker then sees all of it. */
+  garment?: GarmentDesign | null;
   onNote: (text: string) => void;
 }) {
   const [image, setImage] = useState("");
@@ -267,13 +286,25 @@ export function WornPreview({
       onNote("Putting it on the model. Give it a moment.");
       try {
         const [print, who] = await Promise.all([exportPrint(), faces()]);
-        const reference = await garmentPreview(print, colorHex);
+        const piece = await clothing({
+          print,
+          colorHex,
+          colorName,
+          productType,
+          productName,
+          placement,
+          garment,
+        });
+        if (!piece) {
+          onNote("The whole garment could not be drawn for the model. Nothing was spent.");
+          return;
+        }
         const result = await generateLook({
           data: {
             mode: "look",
-            spoken: garmentWords(productType, colorName, placement),
+            spoken: piece.spoken,
             characterImages: who.images,
-            clothingImages: [reference],
+            clothingImages: [piece.reference],
           },
         });
         if (!result.ok) {

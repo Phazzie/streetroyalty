@@ -30,6 +30,15 @@ import { suggestLines } from "@/lib/ai/api";
 import { createSingleFlight } from "@/lib/ui/single-flight";
 import { designVisualKey } from "@/lib/studio/design-key";
 import {
+  garmentInk,
+  printGround,
+  restoreInk,
+  restoreNote,
+  swapForAllOver,
+  swapNote,
+  type InkSwap,
+} from "@/lib/studio/ink";
+import {
   AOP_ORDER_CLOSED,
   SET_PARTNER,
   canOrderProduct,
@@ -453,30 +462,61 @@ export function Editor({ designId }: { designId: string }) {
   }
 
   const aop = product?.construction === "aop" && Boolean(product.aopTemplateId);
+  // The print check measures ink against the garment actually selected, never one left over from an all-over visit.
+  const groundHex = printGround({
+    aopTemplateId: aop ? product?.aopTemplateId : null,
+    garment,
+    variantHex: variant?.colorHex,
+  });
   const checks = useMemo(
-    () =>
-      runPrintChecks({
-        layers,
-        area,
-        garmentHex: garment ? (garment.colorways.find((item) => item.id === garment.activeColorwayId)?.colors.body ?? variant?.colorHex ?? "#141414") : (variant?.colorHex ?? "#141414"),
-        images: imageFacts,
-      }),
-    [area, garment, imageFacts, layers, variant?.colorHex],
+    () => runPrintChecks({ layers, area, garmentHex: groundHex, images: imageFacts }),
+    [area, groundHex, imageFacts, layers],
   );
   const verdict = preflightVerdict(checks);
   const ink = variant && luminance(variant.colorHex) > 0.62 ? "#141018" : "#f6f1ff";
 
+  // Lime the studio swapped so it reads on an all-over body, kept so the maker's own ink comes back.
+  // Null while the piece is on any other blank.
+  const inkSwap = useRef<InkSwap | null>(null);
+  // A saved piece opens on its own blank in the ink it was saved in.
+  const opening = useRef(Boolean(designId));
+  const latest = useRef({ layers, garment });
+  latest.current = { layers, garment };
+  const productId = product?.id;
+  const aopTemplateId = product?.aopTemplateId;
+
   useEffect(() => {
-    if (!product?.aopTemplateId) return;
-    const templateId = product.aopTemplateId;
-    setGarment((current) => (current?.templateId === templateId ? current : defaultGarment(templateId)));
-    // The house lime ink disappears on a light lilac body. Start from the mark color.
-    setLayers((current) =>
-      current.map((layer) =>
-        layer.type === "text" && layer.color.toLowerCase() === "#d6ff3c" ? { ...layer, color: "#1a1024" } : layer,
-      ),
-    );
-  }, [product?.aopTemplateId]);
+    if (!productId) return;
+    const opened = opening.current;
+    opening.current = false;
+    if (!aopTemplateId) {
+      const swap = inkSwap.current;
+      inkSwap.current = null;
+      if (!swap) return;
+      const back = restoreInk(latest.current.layers, swap);
+      if (back.restored > 0) {
+        setLayers(back.layers);
+        setNote(restoreNote(back.restored));
+      }
+      return;
+    }
+    const current = latest.current.garment;
+    const next = current?.templateId === aopTemplateId ? current : defaultGarment(aopTemplateId);
+    setGarment((now) => (now?.templateId === aopTemplateId ? now : next));
+    // Already on an all-over blank: the swap, if any, was made and told when the piece arrived.
+    if (inkSwap.current) return;
+    if (opened) {
+      inkSwap.current = {};
+      return;
+    }
+    const moved = swapForAllOver(latest.current.layers, garmentInk(next));
+    inkSwap.current = moved.swap;
+    const count = Object.keys(moved.swap).length;
+    if (count > 0) {
+      setLayers(moved.layers);
+      setNote(swapNote(count));
+    }
+  }, [productId, aopTemplateId]);
 
   useEffect(() => {
     let cancel = false;
@@ -609,7 +649,9 @@ export function Editor({ designId }: { designId: string }) {
             colorHex={variant?.colorHex ?? "#141414"}
             colorName={variant?.color ?? "black"}
             productType={product?.type ?? "T-Shirt"}
+            productName={product?.name}
             placement={placement}
+            garment={aop && garment?.templateId === product?.aopTemplateId ? garment : null}
             onNote={setNote}
           />
         </Panel>
