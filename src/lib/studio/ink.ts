@@ -60,6 +60,13 @@ export function swapNote(count: number): string {
   return `Lime does not show on this body, so ${what} in the logo colour. Pick another blank and your lime comes back.`;
 }
 
+/** Said when the maker's own ink comes back, so the note about the swap does not linger. */
+export function restoreNote(count: number): string {
+  return count === 1
+    ? "Your lime is back."
+    : "Your lime is back on every layer the studio changed.";
+}
+
 /**
  * What the print check measures ink against: the garment that is actually selected. A garment
  * left over from an all-over blank the maker has since left never counts.

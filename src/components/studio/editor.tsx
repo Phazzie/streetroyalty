@@ -33,6 +33,7 @@ import {
   garmentInk,
   printGround,
   restoreInk,
+  restoreNote,
   swapForAllOver,
   swapNote,
   type InkSwap,
@@ -464,7 +465,10 @@ export function Editor({ designId }: { designId: string }) {
       inkSwap.current = null;
       if (!swap) return;
       const back = restoreInk(latest.current.layers, swap);
-      if (back.restored > 0) setLayers(back.layers);
+      if (back.restored > 0) {
+        setLayers(back.layers);
+        setNote(restoreNote(back.restored));
+      }
       return;
     }
     const current = latest.current.garment;

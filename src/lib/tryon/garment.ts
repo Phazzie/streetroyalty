@@ -145,13 +145,15 @@ function paintWords(paint: Paint): string {
 }
 
 /** "Left sleeve" and "Right sleeve" are the sleeves; "Body front" and "Body back" are the body. */
-function panelNoun(title: string): string {
+function panelNouns(title: string): string[] {
   const lower = title.toLowerCase();
-  if (/^body (front|back)$/.test(lower)) return "body";
+  if (/^body (front|back)$/.test(lower)) return ["body"];
+  // "Seat and back" is two places, said apart so the list still reads.
+  if (lower.includes(" and ")) return lower.split(" and ");
   const pair = /^(left|right) (.+)$/.exec(lower);
-  if (!pair) return lower;
+  if (!pair) return [lower];
   const noun = pair[2] ?? lower;
-  return /(s|ing)$/.test(noun) ? noun : `${noun}s`;
+  return [/(s|ing)$/.test(noun) ? noun : `${noun}s`];
 }
 
 function list(items: string[]): string {
@@ -169,8 +171,7 @@ export function panelColorWords(garment: GarmentDesign): string {
     for (const { panel, paint } of resolveGarment(garment, face).panels) {
       const colour = paintWords(paint);
       const nouns = groups.get(colour) ?? [];
-      const noun = panelNoun(panel.title);
-      if (!nouns.includes(noun)) nouns.push(noun);
+      for (const noun of panelNouns(panel.title)) if (!nouns.includes(noun)) nouns.push(noun);
       groups.set(colour, nouns);
     }
   }

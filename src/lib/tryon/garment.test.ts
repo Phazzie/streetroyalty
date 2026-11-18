@@ -196,6 +196,7 @@ describe("an all-over piece", () => {
       garment: defaultGarment("aop-joggers"),
     });
     expect(joggers.startsWith("all-over printed joggers worn on the legs")).toBe(true);
+    expect(joggers).toContain("lavender legs, seat and back");
     expect(joggers).toContain("a plain black top and white sneakers");
     const jacket = allOverWords({
       productType: "Jacket",

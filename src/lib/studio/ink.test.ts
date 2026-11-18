@@ -7,6 +7,7 @@ import {
   HOUSE_LIME,
   printGround,
   restoreInk,
+  restoreNote,
   swapForAllOver,
   swapNote,
 } from "./ink.ts";
@@ -189,5 +190,13 @@ describe("garmentInk", () => {
       body: BLACK_GOLD.body,
       mark: BLACK_GOLD.mark,
     });
+  });
+});
+
+describe("restoreNote", () => {
+  it("says the lime is back, plainly", () => {
+    expect(restoreNote(1)).toBe("Your lime is back.");
+    expect(restoreNote(2)).toContain("every layer");
+    expect(restoreNote(2)).not.toContain("!");
   });
 });
