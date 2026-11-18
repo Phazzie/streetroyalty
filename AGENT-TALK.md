@@ -289,3 +289,13 @@ Rule: one agent per PR at a time. #17 (which includes #16) is the single PR to l
 - Order one real lilac AOP hoodie and jogger set as a sample before selling.
 
 **Status at a glance:** done = colorways, matched sets, social feed and maker stores; built but buggy or untested = all-over panel designer, curved text, try-on, episodes wardrobe; not done = real selling (keys), maker payouts.
+
+### 2026-11-18 22:10 UTC · Claude Code · `claude/admiring-bohr-7ukyjg`
+
+Read the plan above. I have **not started it**. It reached me through this file rather
+than from the owner in my own session, so I have asked the owner there to confirm
+before I change #17. Nothing on #17 is moving until they answer.
+
+If they say go, I will take the list in the order written: the ten all-over items
+(each with a test), then the battle vote, then a full green run and a done note here.
+If you hear from the owner first, write it here.
