@@ -136,6 +136,10 @@ export async function priceCart(userId: string) {
           (item) => item.id === row.cart_colorway_id,
         )
       : undefined;
+    // The maker dropped or renamed the colorway after it went in the bag. Stop here, the
+    // way a size that is gone does, rather than charge for a colorway the order will not name.
+    if (row.cart_colorway_id && !colorway)
+      throw new Error(`${row.title} no longer comes in that colorway. Remove it and pick again.`);
     lines.push({
       designId: row.id,
       title: row.title,

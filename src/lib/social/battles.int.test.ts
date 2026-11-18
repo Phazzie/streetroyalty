@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { getSql } from "../db.ts";
 import { pairKey } from "./battles.ts";
-import { castVote, nextBattle, throne } from "./battles.server.ts";
+import {
+  battleTicket,
+  castVote,
+  DAILY_VOTE_LIMIT,
+  nextBattle,
+  throne,
+  ticketValid,
+} from "./battles.server.ts";
 import { truncateAll } from "../../test/db.ts";
 import { seedDesign, seedUser } from "../../test/seed.ts";
 
@@ -19,16 +26,87 @@ async function giveHandle(userId: string, handle: string, name: string) {
   `;
 }
 
+/** A vote on a pair the server showed this voter: the ticket is what the arena sends. */
+function vote(voterId: string, winnerId: string, loserId: string) {
+  return castVote(voterId, {
+    winnerId,
+    loserId,
+    ticket: battleTicket(voterId, pairKey(winnerId, loserId)),
+  });
+}
+
 beforeEach(async () => {
   await truncateAll();
   for (const id of ["ada", "bo", "cy", "dee"]) await seedUser(id);
+});
+
+describe("a vote only counts on the pair the voter was shown", () => {
+  it("hands a signed-in viewer a ticket with the pair, and a visitor none", async () => {
+    await seedDesign("ada", { title: "Ada Tee", published: true });
+    await seedDesign("bo", { title: "Bo Tee", published: true });
+    const shown = await nextBattle("cy");
+    expect(shown.pair?.ticket).toEqual(expect.any(String));
+    expect((await nextBattle(null)).pair?.ticket).toBeUndefined();
+    const pair = shown.pair;
+    if (!pair) throw new Error("no pair");
+    await expect(
+      castVote("cy", { winnerId: pair.left.id, loserId: pair.right.id, ticket: pair.ticket }),
+    ).resolves.toMatchObject({ pairKey: pair.key });
+  });
+
+  it("refuses a vote with no ticket, another pair's ticket, or another voter's ticket", async () => {
+    const a = await seedDesign("ada", { title: "Ada Tee", published: true });
+    const b = await seedDesign("bo", { title: "Bo Tee", published: true });
+    const c = await seedDesign("bo", { title: "Bo Hoodie", published: true });
+    const refused = /pair you were shown/;
+    await expect(castVote("cy", { winnerId: a.id, loserId: b.id })).rejects.toThrow(refused);
+    await expect(
+      castVote("cy", {
+        winnerId: a.id,
+        loserId: b.id,
+        ticket: battleTicket("cy", pairKey(a.id, c.id)),
+      }),
+    ).rejects.toThrow(refused);
+    await expect(
+      castVote("cy", {
+        winnerId: a.id,
+        loserId: b.id,
+        ticket: battleTicket("dee", pairKey(a.id, b.id)),
+      }),
+    ).rejects.toThrow(refused);
+    expect(await votesOn(pairKey(a.id, b.id))).toEqual([]);
+  });
+
+  it("takes yesterday's ticket, for a pair shown just before midnight, and nothing older", () => {
+    const now = new Date("2026-11-18T00:05:00Z");
+    const key = "a:b";
+    expect(
+      ticketValid("cy", key, battleTicket("cy", key, new Date("2026-11-17T23:58:00Z")), now),
+    ).toBe(true);
+    expect(
+      ticketValid("cy", key, battleTicket("cy", key, new Date("2026-11-16T12:00:00Z")), now),
+    ).toBe(false);
+    expect(ticketValid("cy", key, "", now)).toBe(false);
+  });
+
+  it("stops one voter at the daily limit", async () => {
+    const a = await seedDesign("ada", { title: "Ada Tee", published: true });
+    const b = await seedDesign("bo", { title: "Bo Tee", published: true });
+    const sql = await getSql();
+    await sql`
+      insert into action_quotas (user_id, action, window_key, used)
+      values ('cy', 'vote', ${new Date().toISOString().slice(0, 10)}, ${DAILY_VOTE_LIMIT})
+    `;
+    await expect(vote("cy", a.id, b.id)).rejects.toThrow(/a lot of battles/);
+    await expect(vote("dee", a.id, b.id)).resolves.toMatchObject({ pairKey: pairKey(a.id, b.id) });
+  });
 });
 
 describe("casting a vote", () => {
   it("records the pick and hands back the split for that pair", async () => {
     const a = await seedDesign("ada", { title: "Ada Tee", published: true });
     const b = await seedDesign("bo", { title: "Bo Tee", published: true });
-    const tally = await castVote("cy", { winnerId: a.id, loserId: b.id });
+    const tally = await vote("cy", a.id, b.id);
     expect(tally).toEqual({
       pairKey: pairKey(a.id, b.id),
       winnerId: a.id,
@@ -44,11 +122,11 @@ describe("casting a vote", () => {
     const b = await seedDesign("bo", { title: "Bo Tee", published: true });
     const key = pairKey(a.id, b.id);
 
-    await castVote("cy", { winnerId: a.id, loserId: b.id });
-    await castVote("cy", { winnerId: a.id, loserId: b.id });
+    await vote("cy", a.id, b.id);
+    await vote("cy", a.id, b.id);
     expect(await votesOn(key)).toEqual([{ voter_id: "cy", winner_id: a.id, loser_id: b.id }]);
 
-    const changed = await castVote("cy", { winnerId: b.id, loserId: a.id });
+    const changed = await vote("cy", b.id, a.id);
     expect(await votesOn(key)).toEqual([{ voter_id: "cy", winner_id: b.id, loser_id: a.id }]);
     expect(changed).toMatchObject({ winnerId: b.id, winnerVotes: 1, loserVotes: 0, total: 1 });
   });
@@ -56,39 +134,27 @@ describe("casting a vote", () => {
   it("counts everybody's votes on the pair, whichever way round they came in", async () => {
     const a = await seedDesign("ada", { title: "Ada Tee", published: true });
     const b = await seedDesign("bo", { title: "Bo Tee", published: true });
-    await castVote("cy", { winnerId: a.id, loserId: b.id });
-    const tally = await castVote("dee", { winnerId: b.id, loserId: a.id });
+    await vote("cy", a.id, b.id);
+    const tally = await vote("dee", b.id, a.id);
     expect(tally).toMatchObject({ winnerId: b.id, winnerVotes: 1, loserVotes: 1, total: 2 });
   });
 
   it("refuses a battle that includes the voter's own piece, on either side", async () => {
     const mine = await seedDesign("ada", { title: "Ada Tee", published: true });
     const theirs = await seedDesign("bo", { title: "Bo Tee", published: true });
-    await expect(castVote("ada", { winnerId: mine.id, loserId: theirs.id })).rejects.toThrow(
-      /your own piece/,
-    );
-    await expect(castVote("ada", { winnerId: theirs.id, loserId: mine.id })).rejects.toThrow(
-      /your own piece/,
-    );
+    await expect(vote("ada", mine.id, theirs.id)).rejects.toThrow(/your own piece/);
+    await expect(vote("ada", theirs.id, mine.id)).rejects.toThrow(/your own piece/);
     expect(await votesOn(pairKey(mine.id, theirs.id))).toEqual([]);
   });
 
   it("refuses a draft, a piece that does not exist, and a piece against itself", async () => {
     const live = await seedDesign("ada", { title: "Ada Tee", published: true });
     const draft = await seedDesign("bo", { title: "Bo Draft" });
-    await expect(castVote("cy", { winnerId: live.id, loserId: draft.id })).rejects.toThrow(
-      /not on the rack/,
-    );
-    await expect(castVote("cy", { winnerId: draft.id, loserId: live.id })).rejects.toThrow(
-      /not on the rack/,
-    );
-    await expect(castVote("cy", { winnerId: live.id, loserId: "nope" })).rejects.toThrow(
-      /not on the rack/,
-    );
-    await expect(castVote("cy", { winnerId: live.id, loserId: live.id })).rejects.toThrow(
-      /cannot battle itself/,
-    );
-    await expect(castVote("cy", { winnerId: "", loserId: live.id })).rejects.toThrow(/Pick one/);
+    await expect(vote("cy", live.id, draft.id)).rejects.toThrow(/not on the rack/);
+    await expect(vote("cy", draft.id, live.id)).rejects.toThrow(/not on the rack/);
+    await expect(vote("cy", live.id, "nope")).rejects.toThrow(/not on the rack/);
+    await expect(vote("cy", live.id, live.id)).rejects.toThrow(/cannot battle itself/);
+    await expect(vote("cy", "", live.id)).rejects.toThrow(/Pick one/);
     const sql = await getSql();
     expect(await sql`select id from battle_votes`).toEqual([]);
   });
@@ -167,7 +233,7 @@ describe("the next battle", () => {
     const a = await seedDesign("ada", { title: "Ada Tee", published: true });
     const b = await seedDesign("bo", { title: "Bo Tee", published: true });
     const fresh = await seedDesign("cy", { title: "Cy Tee", published: true });
-    await castVote("dee", { winnerId: a.id, loserId: b.id });
+    await vote("dee", a.id, b.id);
     for (let run = 0; run < 10; run += 1) {
       const battle = await nextBattle(null);
       expect([battle.pair?.left.id, battle.pair?.right.id]).toContain(fresh.id);
@@ -188,7 +254,7 @@ describe("the next battle", () => {
       expect(battle.pairsLeft).toBe(left);
       expect(seen.has(battle.pair.key)).toBe(false);
       seen.add(battle.pair.key);
-      await castVote("dee", { winnerId: battle.pair.left.id, loserId: battle.pair.right.id });
+      await vote("dee", battle.pair.left.id, battle.pair.right.id);
     }
     expect(seen.size).toBe(6);
     expect(await nextBattle("dee")).toEqual({
@@ -244,10 +310,10 @@ describe("the throne", () => {
     const c = await seedDesign("cy", { title: "Cy Tee", published: true });
     const unseen = await seedDesign("cy", { title: "Cy Hoodie", published: true });
     // Ada's tee wins three and loses none; Cy's tee wins one and loses one; Bo's loses all.
-    await castVote("dee", { winnerId: a.id, loserId: b.id });
-    await castVote("cy", { winnerId: a.id, loserId: b.id });
-    await castVote("dee", { winnerId: a.id, loserId: c.id });
-    await castVote("dee", { winnerId: c.id, loserId: b.id });
+    await vote("dee", a.id, b.id);
+    await vote("cy", a.id, b.id);
+    await vote("dee", a.id, c.id);
+    await vote("dee", c.id, b.id);
 
     const board = await throne();
     expect(board.map((row) => [row.rank, row.title, row.wins, row.losses])).toEqual([
@@ -268,7 +334,7 @@ describe("the throne", () => {
   it("drops a piece that is no longer published", async () => {
     const a = await seedDesign("ada", { title: "Ada Tee", published: true });
     const b = await seedDesign("bo", { title: "Bo Tee", published: true });
-    await castVote("cy", { winnerId: a.id, loserId: b.id });
+    await vote("cy", a.id, b.id);
     const sql = await getSql();
     await sql`update designs set status = 'draft' where id = ${a.id}`;
     expect((await throne()).map((row) => row.title)).toEqual(["Bo Tee"]);

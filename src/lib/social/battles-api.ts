@@ -34,9 +34,10 @@ export const nextBattle = createServerFn({ method: "GET" })
 
 export const castVote = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((input: { winnerId?: string; loserId?: string }) => ({
+  .validator((input: { winnerId?: string; loserId?: string; ticket?: string }) => ({
     winnerId: String(input?.winnerId ?? ""),
     loserId: String(input?.loserId ?? ""),
+    ticket: String(input?.ticket ?? "").slice(0, 200),
   }))
   .handler(async ({ data, context }) => {
     const server = await import("./battles.server.ts");

@@ -263,7 +263,11 @@ export function Arena({ onVoted }: { onVoted?: () => void }) {
       setPicked(side);
       setProblem("");
       setPhase("voting");
-      void (castVote({ data: { winnerId: winner.id, loserId: loser.id } }) as Promise<VoteTally>)
+      void (
+        castVote({
+          data: { winnerId: winner.id, loserId: loser.id, ticket: pair.ticket ?? "" },
+        }) as Promise<VoteTally>
+      )
         .then((result) => {
           if (!alive.current) return;
           setTally(result);

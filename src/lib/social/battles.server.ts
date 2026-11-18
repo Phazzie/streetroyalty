@@ -1,4 +1,5 @@
-import { randomUUID } from "node:crypto";
+import { createHmac, randomBytes, randomUUID } from "node:crypto";
+import { safeEqualText } from "../pod/signature.ts";
 import { getSql, type Sql } from "../db.ts";
 import {
   pairKey,
@@ -32,6 +33,39 @@ type PieceRow = {
   wins: number;
   losses: number;
 };
+
+/** Votes one person can cast in a day. A real person judging pairs never gets near it. */
+export const DAILY_VOTE_LIMIT = 500;
+
+const ticketRef = globalThis as typeof globalThis & { __srBattleTicketSecret__?: string };
+
+/** Signs tickets with the app's own secret, or with one that lasts the process, the way sign-in does. */
+function ticketSecret(): string {
+  const configured = process.env.BETTER_AUTH_SECRET?.trim();
+  if (configured) return `battle-ticket:${configured}`;
+  ticketRef.__srBattleTicketSecret__ ??= randomBytes(32).toString("hex");
+  return ticketRef.__srBattleTicketSecret__;
+}
+
+/** The ticket that says this pair was shown to this voter on this UTC day. */
+export function battleTicket(voterId: string, key: string, now: Date = new Date()): string {
+  const day = now.toISOString().slice(0, 10);
+  return createHmac("sha256", ticketSecret())
+    .update(`${voterId}|${key}|${day}`)
+    .digest("base64url");
+}
+
+/** A ticket from today or yesterday, so a pair shown just before midnight can still be judged. */
+export function ticketValid(
+  voterId: string,
+  key: string,
+  ticket: string,
+  now: Date = new Date(),
+): boolean {
+  if (!ticket) return false;
+  const yesterday = new Date(now.getTime() - 86_400_000);
+  return [now, yesterday].some((day) => safeEqualText(battleTicket(voterId, key, day), ticket));
+}
 
 /** One piece's picture, read on its own so ranking never has to carry every picture. */
 async function withPicture(sql: Sql, row: PieceRow): Promise<PieceRow> {
@@ -129,6 +163,7 @@ export async function nextBattle(
       key: pairKey(first.id, second.id),
       left: toSide(await withPicture(sql, first.row)),
       right: toSide(await withPicture(sql, second.row)),
+      ticket: userId === null ? undefined : battleTicket(userId, pairKey(first.id, second.id)),
     },
     reason: "ready",
     signedIn,
@@ -164,7 +199,7 @@ async function tally(pairKeyValue: string, winnerId: string, loserId: string): P
  */
 export async function castVote(
   voterId: string,
-  input: { winnerId: string; loserId: string },
+  input: { winnerId: string; loserId: string; ticket?: string },
 ): Promise<VoteTally> {
   const winnerId = String(input.winnerId ?? "").trim();
   const loserId = String(input.loserId ?? "").trim();
@@ -183,6 +218,19 @@ export async function castVote(
   }
 
   const key = pairKey(winnerId, loserId);
+  // Only a pair the server showed this voter counts. Without this, a script could vote one
+  // piece over every other piece and put it on the throne.
+  if (!ticketValid(voterId, key, String(input.ticket ?? ""))) {
+    throw new Error("Vote on the pair you were shown. Load a new pair and pick again.");
+  }
+  const { takeQuota, windowKey } = await import("./quota.server.ts");
+  const allowed = await takeQuota(sql, {
+    userId: voterId,
+    action: "vote",
+    window: windowKey(new Date(), "day"),
+    limit: DAILY_VOTE_LIMIT,
+  });
+  if (!allowed) throw new Error("That is a lot of battles for one day. Come back tomorrow.");
   await sql`
     insert into battle_votes (id, voter_id, pair_key, winner_id, loser_id)
     values (${randomUUID()}, ${voterId}, ${key}, ${winnerId}, ${loserId})

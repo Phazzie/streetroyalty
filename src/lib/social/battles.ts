@@ -23,6 +23,11 @@ export type BattlePair = {
   key: string;
   left: BattleSide;
   right: BattleSide;
+  /**
+   * Proof that the server showed this pair to this viewer. A vote has to carry it, so a
+   * script cannot vote on pairs it picked itself. Absent for a visitor who is signed out.
+   */
+  ticket?: string;
 };
 
 /**
