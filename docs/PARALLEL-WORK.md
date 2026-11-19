@@ -1,6 +1,6 @@
 # Parallel work plan: Claude alongside the Cursor agents
 
-Last updated: Nov 19, 2026
+Last updated: Nov 19, 2026 (status refreshed 19:55 UTC by Claude)
 
 Goal: get the clothing design studio (lilac two-tone AOP tracksuit first, then whole brands) working on the live site, faster and with fewer bugs, without agents stepping on each other.
 
@@ -8,10 +8,10 @@ Goal: get the clothing design studio (lilac two-tone AOP tracksuit first, then w
 
 | Lane | Owner | Branch / PR | Files it owns |
 | --- | --- | --- | --- |
-| Agent 1: safety fixes | Cursor cloud agent | PR coming | `src/lib/ai/*`, `src/lib/lab-api.ts`, checkout guards in `src/lib/studio/orders.server.ts`, `src/lib/storefront/api.ts` rate limit, `vitest.config.ts` |
-| Agent 2: garment foundation | Cursor cloud agent | PR coming | `src/lib/studio/garments*.ts`, `src/lib/pod/*` (types, sandbox, printful, aop-printful), garment ID fallbacks in `src/components/studio/editor.tsx` |
-| Agent 3: editor session module | Cursor cloud agent | after Agent 2 merges | `src/components/studio/*`, new `src/lib/studio/session*` |
-| Agent 4: live Printful tracksuit | Cursor cloud agent | after Agent 2 merges | `src/lib/pod/aop-printful.ts` data |
+| Agent 1: safety fixes | Cursor cloud agent | **merged** #19, #24 | `src/lib/ai/*`, `src/lib/lab-api.ts`, checkout guards in `src/lib/studio/orders.server.ts`, `src/lib/storefront/api.ts` rate limit, `vitest.config.ts` |
+| Agent 2: garment foundation | Cursor cloud agent | **merged** #20, #23 | `src/lib/studio/garments*.ts`, `src/lib/pod/*` (types, sandbox, printful, aop-printful), garment ID fallbacks in `src/components/studio/editor.tsx` |
+| Agent 3: editor session module | Cursor cloud agent | **hold** until the garment-model thread in `AGENT-TALK.md` is settled; contract is `docs/studio-spec.md` | `src/components/studio/*`, new `src/lib/studio/session*` |
+| Agent 4: live Printful tracksuit | Cursor cloud agent | **hold** until the garment-model thread is settled; data is in `docs/printful-aop-data.md` | `src/lib/pod/aop-printful.ts` data |
 
 The tracking board with each lane's status is in Grok Bot (the Street Royalty build board).
 
