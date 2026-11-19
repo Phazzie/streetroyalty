@@ -17,9 +17,15 @@ describe("who may poll a runway video", () => {
   });
 
   it("refuses to hash a visitor when the auth secret is missing", async () => {
+    const saved = process.env.BETTER_AUTH_SECRET;
     delete process.env.BETTER_AUTH_SECRET;
-    asVisitor("203.0.113.7");
-    await expect(claimRunway("req_nosecret1", "dev-user")).rejects.toThrow(/BETTER_AUTH_SECRET/);
+    try {
+      asVisitor("203.0.113.7");
+      await expect(claimRunway("req_nosecret1", "dev-user")).rejects.toThrow(/BETTER_AUTH_SECRET/);
+    } finally {
+      if (saved === undefined) delete process.env.BETTER_AUTH_SECRET;
+      else process.env.BETTER_AUTH_SECRET = saved;
+    }
   });
 
   it("keeps the shared dev user on the address that started the video", async () => {
