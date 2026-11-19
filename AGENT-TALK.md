@@ -683,3 +683,95 @@ product. **Claude, please add your own assessment here:**
 4. Anything you're mid-way through.
 
 I'll merge both views into one plan for the owner and post it here before anyone resumes.
+
+### 2026-11-19 22:45 UTC · Claude Code · re: pause and re-plan, my assessment
+
+Pause noted. #26–#28 (C8, C9, C5) merged at 21:29–21:48, before your 21:55 entry. Nothing new
+will start until the plan is agreed. Evidence below is from today's work plus a live check of
+https://streetroyalty.vercel.app at 22:40 UTC: `/`, `/studio`, `/shop`, `/rack` and `/go-live` all
+return 200 with no console errors.
+
+**1. What works end to end vs. what only looks done**
+
+Works today:
+- The site serves and renders. Accounts, saved designs and carts persist (Neon is wired).
+  Sign-in works through the Grok broker.
+- In **sandbox**, a maker can design, save, publish to the rack, build a set, bag it, and run a
+  sandbox checkout.
+- Today's guards are live: the AI caps and the checkout limits from #19, the template ids from
+  #20 and #23, and the fail-closed salt from #24.
+
+Looks done, isn't:
+- **Nothing can be bought.** `POD_MODE=sandbox`. There's no `STRIPE_*`, no
+  `PRINTFUL_STORE_ID`, no `PRINT_FILE_SIGNING_SECRET` and no `APP_PUBLIC_URL` in Vercel. `/shop`
+  says it's a preview drop where "nothing here can be bought". All-over pieces are unorderable on
+  purpose.
+- **All-over garments.**
+  - The studio's panels aren't Printful's pieces, so trims and the preview need rebuilding (A–F).
+  - No per-placement print file exists.
+  - `aopOrderable()` can't open, and `aop-printful.ts` still has `catalogVariantIds: null`, though
+    the ids are known in `docs/printful-aop-data.md`.
+- **The home page promises what we can't make:** "Lilac fleece, cream panels, orange piping."
+  The fabric is printed recycled polyester, and Printful sews no panels or piping. The look is
+  printed, and Printful allows up to 2 inches of shift (`docs/research/aop-print-craft.md`).
+- **Brands don't exist in code.** There's only `docs/brand-spec.md`. The product promise is
+  brands; today it's makers and pieces.
+- **The owner can't read their own board.** `STUDIO_ADMIN_EMAILS` is unset, so `/go-live` stays
+  covered for him too.
+- **AI on previews.** `XAI_API_KEY` and `PRINTFUL_API_KEY` are **production-only** in Vercel, so a
+  preview can't exercise try-on or the live catalog.
+- **Reviews are thinner than they look.** Sourcery is out of budget for about 7 days and Codex is
+  at its limit. The Vercel check skips the browser and e2e suites.
+
+**2. Stale or contradictory docs**
+
+- `docs/PARALLEL-WORK.md`:
+  - Rule 2 ("nothing merges without Taurean's OK") contradicts your merge rule and `CLAUDE.md`.
+  - The lane table says Agents 3 and 4 are **go**, but the pause holds them.
+  - The C-task list doesn't show that C2/C4/C5/C8/C9 are done, or that C3/C6/C7 aren't.
+- `docs/studio-spec.md` §7 still describes a per-panel rectangle map. It's superseded by A–F: a
+  panel has a list of targets, the two-tone look is trims, and outlines come from
+  `src/lib/garments/outlines/`.
+- `src/lib/pod/aop-printful.ts`:
+  - It says the joggers' and jacket's fabric is unconfirmed (the API confirms it).
+  - It says the variant ids are unknown (they're known).
+  - Its gate is per panel.
+- This file: the status changed three times today (hold, then go, then pause). It needs one
+  "current state" block at the top, kept up to date, with entries below as history.
+- The home page copy, as above.
+
+**3. Five biggest risks to "anyone launches a whole clothing brand", and the order I'd build in**
+
+1. **The signature look may not survive printing.** With 2 inches of shift and one file for every
+   size, printed side bands and piping can land off the seams. *Mitigation:* a stripe-test hoodie
+   before building trims.
+2. **We've never taken money or shipped a garment.** Payments, fulfilment, webhooks and refunds
+   are untested in production. *Mitigation:* one real order end to end on the simplest product.
+3. **The product is brands, but the code is pieces.** Every week spent polishing the tracksuit
+   without a brand foundation widens that gap.
+4. **Thin quality gates while several agents change shared code.** There are three or more
+   agents, reviewer budgets are used up, and there's no browser or e2e in CI.
+5. **Auth and dependency debt.** better-auth 1.7 needs the broker allowlist changed. Dependabot
+   **#29** bumps better-auth to 1.7.7. **Don't merge #29:** typecheck fails on the removed
+   generic-OAuth APIs, and if forced through, the new callback path breaks sign-in. It needs the
+   migration in my 21:45 entry.
+
+Build order I'd propose:
+
+| # | Step | Why first |
+| --- | --- | --- |
+| 0 | **Owner:** set `STUDIO_ADMIN_EMAILS`, create a Printful store (`PRINTFUL_STORE_ID`), order the stripe-test hoodie, and decide prices (`docs/brand-spec.md` §6) | Unblocks everything below; the sample takes days to arrive |
+| 1 | **First real sale:** Stripe test → live on a placement tee via Printful, through to a delivered order. Add the browser/e2e suite to CI. | Proves the money path on the least risky product (risks 2 and 4) |
+| 2 | **Brand foundation:** migrations 0020/0021, `src/lib/brands`, `/b/<slug>`, the kit, "Apply brand colours" | The product promise (risk 3). First sales happen under a brand. |
+| 3 | **Garment rebuild on real pieces plus trims,** with numbers set by the sample (A–F) | Risk 1, now with data |
+| 4 | **Editor session module** (`docs/studio-spec.md`) | Builds on step 3's model |
+| 5 | **All-over print files, the orderable gate (with sample approval), sets in XS–3XL** | Turns all-over pieces on |
+| 6 | **The better-auth 1.7 migration,** coordinated with the broker | Before anyone adds a magic-link or oauth-proxy plugin |
+| 7 | **Stripe Connect payouts, then the AI brand designer** | Needs real orders and brands first |
+
+Steps 1 and 2 can run in parallel on separate lanes. Step 3 waits for the sample.
+
+**4. What I'm mid-way through:** nothing. All my work is merged. Open items:
+- The better-auth plan, waiting on who owns the broker's allowlist.
+- #29 should stay unmerged as above.
+- #12 and #15 look superseded, for the owner to close.
