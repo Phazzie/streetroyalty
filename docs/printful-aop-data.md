@@ -57,21 +57,37 @@ printed on their own.
 
 The jacket is the only garment with real side pieces. **None of the three has piping.**
 
-### Traced piece outlines (`docs/printful/pieces.json`)
+### Traced piece outlines (`src/lib/garments/outlines/`)
 
-Every cut piece on every main template, traced into the template's 3000-unit space as an SVG path,
-with an id, a plain title and a bounding box. Folded bands (waistbands, cuffs, hems) are one piece
-each; their fold line is not a cut. Each placement also carries its print size, pixel size,
-printfile id, template image and print area. `docs/printful/pieces-check.png` draws every traced
-piece over Printful's own template so the fit can be checked by eye.
+Every cut piece on every placement Printful cuts from, 41 pieces in all (the hoodie's back-neck
+label panel included), traced into the template's 3000-unit space. Code reads it through
+`src/lib/garments/outlines` (`outlineFor`, `placementOf`, `piecesOf`, `printPixels`,
+`templateToPrintPx`, `pieceArea`). `data.ts` is generated data, so don't hand-edit it.
+`docs/printful/pieces-check.png` draws every traced piece over Printful's own template so the fit
+can be checked by eye.
 
-- Accuracy: about ±3 template units, since it's traced from Printful's 1000 px template renders.
-  That's about 0.04 in on a 40 in hoodie sheet.
-- To place a point in a print file: `px = (u − printArea.left) / printArea.width × printPx[0]`,
-  and the same for y with `top` / `height`.
+Shape (`types.ts`):
+- `GarmentOutline`: `templateId` (ours, e.g. `aop-hoodie`), `printer: "printful"`, `placements`,
+  `labels`.
+- `OutlinePlacement`: `placement` (the printer's key), `printInches`, `printArea` (where the print
+  file sits on the sheet), `templateImage`, `pieces`.
+- `OutlinePiece`: `id` (unique within a garment), `title`, `bbox` `[x, y, w, h]`, and `path`, a
+  closed SVG path made of straight segments.
+- `OutlineLabel`: printed labels (`label_inside`, `label_outside`), with no cut piece. A complete
+  print order doesn't need them.
+
+Other notes:
+- Folded bands (waistbands, cuffs, hems) are one piece each; their fold line is not a cut.
+- Accuracy: about ±3 template units, since it's traced from Printful's 1000 px renders. That's about
+  0.04 in on a 40 in hoodie sheet.
+- To place a point in a print file: `templateToPrintPx`, or `px = (u − printArea.left) /
+  printArea.width × printPx`, and the same for y.
 - Names are by position on the sheet where Printful doesn't say which is which: the hood's four
-  pieces (outer vs lining), the jacket's two front halves, its narrow side pieces and its three
-  collar layers. A physical sample settles those.
+  pieces (outer vs lining), the jacket's front halves, its narrow side pieces and its three collar
+  layers. A physical sample settles those.
+- `outlines.test.ts` checks the outlines from the printer's side. Every placement Printful cuts
+  must be present with at least one piece, the shapes are closed and inside the sheet, pieces on
+  one sheet don't overlap, and the print sizes are 6000×6000, 4950×7500 and 6600×6900 px.
 
 ### Template geometry
 
