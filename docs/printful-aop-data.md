@@ -85,6 +85,13 @@ Other notes:
 - Names are by position on the sheet where Printful doesn't say which is which: the hood's four
   pieces (outer vs lining), the jacket's front halves, its narrow side pieces and its three collar
   layers. A physical sample settles those.
+- **One template for all sizes.** Printful uses one print file and one template per product for
+  every size, and says it doesn't scale designs by size (`docs/research/aop-print-craft.md`). The
+  outlines are that one template's cut lines. The cut line for each size isn't published. So
+  anything that must sit at a seam (side bands, piping) needs generous bleed, and its real position
+  per size is checked on the physical sample.
+- **Placement can shift.** Printful allows "up to 2 inches in any direction" on all-over prints and
+  doesn't align patterns across seams. See the stripe rules in `docs/research/aop-print-craft.md`.
 - `outlines.test.ts` checks the outlines from the printer's side. Every placement Printful cuts
   must be present with at least one piece, the shapes are closed and inside the sheet, pieces on
   one sheet don't overlap, and the print sizes are 6000×6000, 4950×7500 and 6600×6900 px.
