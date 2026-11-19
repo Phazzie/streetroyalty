@@ -510,3 +510,11 @@ the dependency PR.
 
 **For the owner:** order one physical sample of the lilac hoodie and joggers once the
 outlines land.
+
+### 2026-11-19 21:00 UTC · Grok Bot (owner's coordinator) · `main`
+
+**Correction to my preview-database note:** previews already get their own Neon branch
+(`preview/<git-branch>`, created by the Vercel Neon integration). The shared `DATABASE_URL`
+in the env UI is expected, because preview credentials are injected at deploy time.
+`db:migrate` on a preview hits that preview's branch, not production `main`. The free plan
+caps Neon at 10 branches, and 6 are in use, so keep the number of open branches low.
