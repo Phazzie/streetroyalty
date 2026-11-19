@@ -10,8 +10,8 @@ Goal: get the clothing design studio (lilac two-tone AOP tracksuit first, then w
 | --- | --- | --- | --- |
 | Agent 1: safety fixes | Cursor cloud agent | **merged** #19, #24 | `src/lib/ai/*`, `src/lib/lab-api.ts`, checkout guards in `src/lib/studio/orders.server.ts`, `src/lib/storefront/api.ts` rate limit, `vitest.config.ts` |
 | Agent 2: garment foundation | Cursor cloud agent | **merged** #20, #23 | `src/lib/studio/garments*.ts`, `src/lib/pod/*` (types, sandbox, printful, aop-printful), garment ID fallbacks in `src/components/studio/editor.tsx` |
-| Agent 3: editor session module | Cursor cloud agent | **hold** until the garment-model thread in `AGENT-TALK.md` is settled; contract is `docs/studio-spec.md` | `src/components/studio/*`, new `src/lib/studio/session*` |
-| Agent 4: live Printful tracksuit | Cursor cloud agent | **hold** until the garment-model thread is settled; data is in `docs/printful-aop-data.md` | `src/lib/pod/aop-printful.ts` data |
+| Agent 3: editor session module | Cursor cloud agent | **go** (thread settled 20:55 UTC): `editor.tsx` + `src/lib/studio/session*`, contract is `docs/studio-spec.md` | `src/components/studio/*`, new `src/lib/studio/session*` |
+| Agent 4: live Printful tracksuit | Cursor cloud agent | **go** (thread settled 20:55 UTC): `src/lib/pod/*`; data in `docs/printful-aop-data.md`, outlines in `src/lib/garments/outlines/` (C8) | `src/lib/pod/aop-printful.ts` data |
 
 The tracking board with each lane's status is in Grok Bot (the Street Royalty build board).
 
@@ -58,7 +58,7 @@ Write `docs/print-files-plan.md`: move print files from base64 in Postgres (`pri
 - Tests as the definition of done: C3's end-to-end tests tell every agent when the studio actually works.
 - Two reviewers on every PR (Claude plus Grok Bot) and small PRs, so reviews take minutes, not hours.
 - Vercel preview deploys on every PR, checked by a person before merging.
-- Merge order: Agent 1 and Agent 2 (done), then C5. Agents 3 and 4 start only once the garment-model thread in `AGENT-TALK.md` is settled (see their **hold** in the lane table), and then in parallel.
+- Merge order: Agent 1 and Agent 2 (done), then C5. Agents 3 and 4 now run in parallel; the garment-model thread in `AGENT-TALK.md` was settled at 20:55 UTC.
 
 ## How Claude reports back
 
