@@ -13,6 +13,8 @@ import {
 } from "./validate.ts";
 import type { CollectionRecord, DesignRecord, DesignSummary, ShopPiece } from "./models.ts";
 import {
+  AOP_ORDER_CLOSED,
+  canOrderProduct,
   canonicalTemplateId,
   isAopProduct,
   parseColorwayBlob,
@@ -261,6 +263,15 @@ export async function publishDesign(userId: string, designId: string): Promise<D
   if (held[0])
     throw new Error("The shop took this piece off the rack after a report. Ask the shop.");
   const config = readStudioConfig();
+  // Sharing on the rack is allowed. Sending the file to Printful is not, until
+  // every panel has a real print file. One chest logo would not match the panels.
+  if (
+    config.podMode === "live" &&
+    isAopProduct(row.product_id) &&
+    !canOrderProduct(row.product_id)
+  ) {
+    throw new Error(AOP_ORDER_CLOSED);
+  }
   let providerProductId = row.provider_product_id ?? null;
   if (config.podMode === "live") {
     const url = fileUrl(row.print_file_id);

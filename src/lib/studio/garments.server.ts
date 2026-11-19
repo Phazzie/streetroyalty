@@ -132,8 +132,12 @@ export async function createMatchedSet(
   if (source.setId) return getOwnedSet(userId, source.setId);
   const partnerTemplate = setPartner(sourceTemplate);
   const providerId = maker();
+  const sourceProductId = productForTemplate(providerId, sourceTemplate);
   const partnerProductId = partnerTemplate ? productForTemplate(providerId, partnerTemplate) : null;
   const partnerVariantId = partnerTemplate ? variantForPrinter(providerId, partnerTemplate) : null;
+  if (sourceProductId !== source.productId) {
+    throw new Error("This piece was made on a different printer.");
+  }
   if (!partnerTemplate || !partnerProductId || !partnerVariantId) {
     throw new Error("This piece has no match on this printer yet.");
   }
@@ -151,66 +155,86 @@ export async function createMatchedSet(
     { provider: providerId, templateId: partnerTemplate, colorways: partnerGarment.colorways },
   ]);
   if (!verdict.ok) throw new Error(verdict.reason);
-  if (!source.garment) {
-    await saveDesign(userId, {
-      id: source.id,
-      title: source.title,
-      collectionId: source.collectionId,
-      productId: source.productId,
-      variantId: source.variantId,
-      placement: source.placement,
-      layers: source.layers,
-      garment,
-    });
-  }
-  const partner = await saveDesign(userId, {
-    title: `${source.title} ${getTemplate(partnerTemplate)?.shortName ?? "Piece"}`.slice(0, 80),
-    productId: partnerProductId,
-    variantId: partnerVariantId,
-    placement: "front",
-    layers: [
-      {
-        id: "mark",
-        type: "text",
-        text: "SR",
-        font: "Archivo Black",
-        color:
-          garment.colorways.find((item) => item.id === garment.activeColorwayId)?.colors.mark ??
-          "#1a1024",
-        x: 0.5,
-        y: 0.4,
-        scale: 1,
-        rotation: 0,
-      },
-    ],
-    garment: partnerGarment,
-    mockupUrl: null,
-  });
   const sql = await getSql();
   const id = crypto.randomUUID();
-  const slug = slugify(name, id);
-  const blob = JSON.stringify({
-    colorways: garment.colorways,
-    activeColorwayId: garment.activeColorwayId,
-  });
+  // Claim the source before any partner exists, so two builds cannot each insert a set.
+  const claimed = await sql<{ id: string }>`
+    update designs set set_id = ${id}
+    where id = ${source.id} and user_id = ${userId} and set_id is null
+    returning id
+  `;
+  if (!claimed[0]) {
+    const again = await getDesign(userId, designId);
+    if (again.setId) {
+      try {
+        return await getOwnedSet(userId, again.setId);
+      } catch {
+        throw new Error("A set is already being made for this piece.");
+      }
+    }
+    throw new Error("A set is already being made for this piece.");
+  }
+  let partnerId: string | null = null;
   try {
+    if (!source.garment) {
+      await saveDesign(userId, {
+        id: source.id,
+        title: source.title,
+        collectionId: source.collectionId,
+        productId: source.productId,
+        variantId: source.variantId,
+        placement: source.placement,
+        layers: source.layers,
+        garment,
+      });
+    }
+    const partner = await saveDesign(userId, {
+      title: `${source.title} ${getTemplate(partnerTemplate)?.shortName ?? "Piece"}`.slice(0, 80),
+      productId: partnerProductId,
+      variantId: partnerVariantId,
+      placement: "front",
+      layers: [
+        {
+          id: "mark",
+          type: "text",
+          text: "SR",
+          font: "Archivo Black",
+          color:
+            garment.colorways.find((item) => item.id === garment.activeColorwayId)?.colors.mark ??
+            "#1a1024",
+          x: 0.5,
+          y: 0.4,
+          scale: 1,
+          rotation: 0,
+        },
+      ],
+      garment: partnerGarment,
+      mockupUrl: null,
+    });
+    partnerId = partner.id;
+    const slug = slugify(name, id);
+    const blob = JSON.stringify({
+      colorways: garment.colorways,
+      activeColorwayId: garment.activeColorwayId,
+    });
     await sql`
       insert into garment_sets (id, user_id, title, slug, status, provider, colorways_json, piece_ids_json)
       values (${id}, ${userId}, ${name}, ${slug}, 'draft', ${verdict.provider}, ${blob}, ${JSON.stringify([source.id, partner.id])})
     `;
-    await sql`update designs set set_id = ${id} where user_id = ${userId} and id = ${source.id}`;
     await sql`update designs set set_id = ${id} where user_id = ${userId} and id = ${partner.id}`;
   } catch (error) {
     // The driver has no transactions here. Undo by hand so a failed set leaves no stray partner.
-    await sql`update designs set set_id = null where user_id = ${userId} and set_id = ${id}`.catch(
+    await sql`update designs set set_id = null where user_id = ${userId} and id = ${source.id} and set_id = ${id}`.catch(
       () => undefined,
     );
     await sql`delete from garment_sets where id = ${id} and user_id = ${userId}`.catch(
       () => undefined,
     );
-    await sql`delete from designs where id = ${partner.id} and user_id = ${userId}`.catch(
-      () => undefined,
-    );
+    if (partnerId) {
+      await sql`delete from designs where id = ${partnerId} and user_id = ${userId}`.catch(
+        () => undefined,
+      );
+    }
     throw error;
   }
   return getOwnedSet(userId, id);
@@ -229,13 +253,25 @@ export async function saveSetColorways(
     activeColorwayId: parsed.activeColorwayId,
   });
   const sql = await getSql();
-  await sql`
-    update garment_sets set colorways_json = ${blob}, updated_at = now()
-    where id = ${set.id} and user_id = ${userId}
-  `;
-  for (const piece of set.pieces) {
-    const next = withSharedColorways(piece.garment, parsed.colorways, parsed.activeColorwayId);
-    await sql`update designs set garment_json = ${JSON.stringify(next)}, updated_at = now() where id = ${piece.id} and user_id = ${userId}`;
+  const written: string[] = [];
+  try {
+    for (const piece of set.pieces) {
+      const next = withSharedColorways(piece.garment, parsed.colorways, parsed.activeColorwayId);
+      await sql`update designs set garment_json = ${JSON.stringify(next)}, updated_at = now() where id = ${piece.id} and user_id = ${userId}`;
+      written.push(piece.id);
+    }
+    await sql`
+      update garment_sets set colorways_json = ${blob}, updated_at = now()
+      where id = ${set.id} and user_id = ${userId}
+    `;
+  } catch (error) {
+    for (const piece of set.pieces) {
+      if (!written.includes(piece.id)) continue;
+      await sql`update designs set garment_json = ${JSON.stringify(piece.garment)}, updated_at = now() where id = ${piece.id} and user_id = ${userId}`.catch(
+        () => undefined,
+      );
+    }
+    throw error;
   }
   return getOwnedSet(userId, set.id);
 }

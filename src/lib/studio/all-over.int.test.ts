@@ -192,6 +192,15 @@ describe("ordering an all-over piece", () => {
     expect(lines.map((line) => line.design_id)).toEqual([tee.id]);
   });
 
+  it("does not send an all-over piece to Printful until the panel files exist", async () => {
+    const piece = await publishedHoodie();
+    process.env.POD_MODE = "live";
+    process.env.PRINTFUL_API_KEY = "pf_test_key";
+    process.env.APP_PUBLIC_URL = "https://streetroyalty.com";
+    process.env.PRINT_FILE_SIGNING_SECRET = "a-long-print-secret";
+    await expect(publishDesign("ada", piece.id)).rejects.toThrow(AOP_ORDER_CLOSED);
+  });
+
   it("refuses in live mode too, before asking the printer", async () => {
     await seedUser("bo");
     const piece = await publishedHoodie();

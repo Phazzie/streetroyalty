@@ -323,7 +323,7 @@ describe("all-over pieces and sets", () => {
     const hoodie = await saveDesign("ada", piece("Live partner"));
     process.env.POD_MODE = "live";
     process.env.PRINTFUL_API_KEY = "pf_test_key";
-    await expect(createMatchedSet("ada", hoodie.id)).rejects.toThrow(/no match on this printer/);
+    await expect(createMatchedSet("ada", hoodie.id)).rejects.toThrow(/different printer/);
     const sql = await getSql();
     const extra = await sql<{ id: string }>`
       select id from designs where user_id = 'ada' and id <> ${hoodie.id}
