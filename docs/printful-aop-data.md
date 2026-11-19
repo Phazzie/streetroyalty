@@ -57,6 +57,22 @@ printed on their own.
 
 The jacket is the only garment with real side pieces. **None of the three has piping.**
 
+### Traced piece outlines (`docs/printful/pieces.json`)
+
+Every cut piece on every main template, traced into the template's 3000-unit space as an SVG path,
+with an id, a plain title and a bounding box. Folded bands (waistbands, cuffs, hems) are one piece
+each; their fold line is not a cut. Each placement also carries its print size, pixel size,
+printfile id, template image and print area. `docs/printful/pieces-check.png` draws every traced
+piece over Printful's own template so the fit can be checked by eye.
+
+- Accuracy: about ±3 template units, since it's traced from Printful's 1000 px template renders.
+  That's about 0.04 in on a 40 in hoodie sheet.
+- To place a point in a print file: `px = (u − printArea.left) / printArea.width × printPx[0]`,
+  and the same for y with `top` / `height`.
+- Names are by position on the sheet where Printful doesn't say which is which: the hood's four
+  pieces (outer vs lining), the jacket's two front halves, its narrow side pieces and its three
+  collar layers. A physical sample settles those.
+
 ### Template geometry
 
 Template images are 3000 × 3000 units (labels 560 × 560). The printable area inside each one
