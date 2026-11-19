@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, it, mock } from "node:test";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import assert from "node:assert/strict";
 import {
   callTool,
@@ -106,7 +106,7 @@ describe("callTool failure memo", () => {
 
   it("sweeps expired entries on write so unique keys do not accumulate", async () => {
     await withStubbedGate(500, { ok: false, errorMessage: "boom" }, async () => {
-      mock.timers.enable({ apis: ["Date"], now: 1_000_000 });
+      vi.useFakeTimers({ toFake: ["Date"], now: 1_000_000 });
       try {
         const sizeBefore = failureMemoSize();
         const options = {
@@ -117,7 +117,7 @@ describe("callTool failure memo", () => {
         await callTool("google_drive_search", { q: "sweep-b" }, options);
         assert.equal(failureMemoSize(), sizeBefore + 2);
 
-        mock.timers.setTime(1_000_000 + 5_001);
+        vi.setSystemTime(1_000_000 + 5_001);
         await callTool("google_drive_search", { q: "sweep-c" }, options);
         assert.equal(
           failureMemoSize(),
@@ -125,7 +125,7 @@ describe("callTool failure memo", () => {
           "expired sweep-a/sweep-b entries must be removed on the sweep-c write",
         );
       } finally {
-        mock.timers.reset();
+        vi.useRealTimers();
       }
     });
   });

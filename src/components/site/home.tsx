@@ -294,7 +294,12 @@ export function HomePage({ catalog }: { catalog: StoreCatalog }) {
               Same set, same coffee. The scene is the only thing that changes.
             </p>
           </SectionHead>
-          <ul className="no-scrollbar -mx-4 mt-10 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-4 sm:gap-4 sm:overflow-visible sm:px-0">
+          {/* On a phone this strip scrolls sideways. It takes focus so the arrow keys can scroll it. */}
+          <ul
+            tabIndex={0}
+            aria-label="Scenes"
+            className="no-scrollbar -mx-4 mt-10 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-fg sm:mx-0 sm:grid sm:grid-cols-4 sm:gap-4 sm:overflow-visible sm:px-0"
+          >
             {SCENES.map((scene, index) => (
               <Reveal
                 as="li"

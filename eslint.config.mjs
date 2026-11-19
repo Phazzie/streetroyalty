@@ -14,6 +14,10 @@ export default tseslint.config(
       ".vercel/**",
       ".nitro/**",
       "node_modules/**",
+      // Test reports.
+      "coverage/**",
+      "playwright-report/**",
+      "test-results/**",
       // Vendored third-party skill files, kept as shipped.
       ".claude/**",
       "src/routeTree.gen.ts",

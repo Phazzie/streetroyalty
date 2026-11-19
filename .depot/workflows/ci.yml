@@ -6,8 +6,11 @@ on:
     branches: [main]
 
 jobs:
+  # Lint, types, unit and integration tests on in-memory Postgres with coverage floors, then the build.
   verify:
     runs-on: depot-ubuntu-24.04
+    env:
+      CI: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -17,8 +20,43 @@ jobs:
       - run: npm ci
       - run: npm run ci
 
+  # The same integration tests against a real Postgres, which is what production runs on.
+  # The preview runs on an embedded database, and the two have to behave the same.
+  postgres:
+    runs-on: depot-ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: streetroyalty_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CI: "true"
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/streetroyalty_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Apply migrations the way a deploy does
+        run: npm run db:migrate
+      - name: Integration tests on Postgres
+        run: npx vitest run --project integration --no-file-parallelism
+
+  # Real Chromium: the print-file exporter, then every journey against the built app.
   e2e:
     runs-on: depot-ubuntu-24.04
+    env:
+      CI: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -27,15 +65,19 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - name: Print files in a real browser
+        run: npm run test:browser
       - run: npm run build
-      - name: Preview and walk the main routes
-        run: |
-          npm run preview &
-          for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
-            curl -sf http://127.0.0.1:8081/ >/dev/null && break
-            sleep 2
-          done
-          npm run e2e
+      - name: Journeys against the built app
+        run: npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
 
   ai-review:
     if: github.event_name == 'pull_request'

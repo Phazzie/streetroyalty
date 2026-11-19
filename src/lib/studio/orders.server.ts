@@ -1,10 +1,16 @@
 import { getSql, type Sql } from "../db.ts";
 import {
+  CLAIMABLE,
+  CLAIM_HOLD_MS,
+  HOLDABLE,
+  IN_PROGRESS,
   assertLivePaymentHasPrinter,
   fulfillPaidOrder,
   processPrintfulWebhook,
   processStripeWebhook,
   purchasedLineKeys,
+  settleCardPayment,
+  statusesThatCanBecome,
   type FulfillmentOrder,
   type OrderStatus,
   type OrderStore,
@@ -121,7 +127,8 @@ export async function startCheckout(
   }
 }
 
-function dbStore(sql: Sql): OrderStore {
+/** The SQL order store. Exported so the store contract can run against it. */
+export function dbStore(sql: Sql): OrderStore {
   return {
     async getOrder(id) {
       const rows = await sql<
@@ -149,6 +156,21 @@ function dbStore(sql: Sql): OrderStore {
       if (!rows[0]) return null;
       return this.getOrder(rows[0].id);
     },
+    async claimForPrint(id) {
+      // One statement, so Postgres picks a single winner among callers that arrive together.
+      const staleBefore = new Date(Date.now() - CLAIM_HOLD_MS).toISOString();
+      const claimed = await sql<{ id: string }>`
+        update orders
+        set status = 'paid', payment_status = 'paid', updated_at = now()
+        where id = ${id}
+          and (
+            status = any(string_to_array(${CLAIMABLE.join(",")}, ','))
+            or (status = 'paid' and updated_at < ${staleBefore}::timestamptz)
+          )
+        returning id
+      `;
+      return claimed.length === 1;
+    },
     async markSubmitted(id, providerStatus) {
       await sql`
         update orders
@@ -167,13 +189,20 @@ function dbStore(sql: Sql): OrderStore {
       await sql`
         update orders
         set status = 'needs_review', payment_status = 'paid', failure_reason = ${reason.slice(0, 500)}, updated_at = now()
-        where id = ${id} and status in ('draft', 'awaiting_payment', 'failed')
+        where id = ${id} and status = any(string_to_array(${HOLDABLE.join(",")}, ','))
       `;
     },
     async applyProviderUpdate(id, patch) {
+      // The legal-move check is part of the write. A check made on an earlier read
+      // lets two updates that arrive together land in the wrong order.
+      const next = patch.status ?? null;
+      const from = next ? statusesThatCanBecome(next).join(",") : "";
       await sql`
         update orders set
-          status = coalesce(${patch.status ?? null}, status),
+          status = case
+            when ${next}::text is not null and status = any(string_to_array(${from}, ',')) then ${next}::text
+            else status
+          end,
           provider_status = coalesce(${patch.providerStatus ?? null}, provider_status),
           tracking_number = coalesce(${patch.trackingNumber ?? null}, tracking_number),
           tracking_url = coalesce(${patch.trackingUrl ?? null}, tracking_url),
@@ -227,6 +256,8 @@ export async function completeSandboxPayment(userId: string, orderId: string) {
     podMode: config.podMode,
     paymentsMode: config.paymentsMode,
   });
+  // A second click while the first is still going in is not a failure. The first one finishes the job.
+  if (!result.ok && result.reason === IN_PROGRESS) return { orderId, status: "submitted" };
   if (!result.ok) throw new Error(`Payment could not submit the print order (${result.reason}).`);
   await dbStore(sql).clearPurchasedLines(orderId);
   return { orderId, status: "submitted" };
@@ -243,7 +274,7 @@ export async function syncStripeReturn(userId: string, sessionId: string) {
     id: string;
   }>`select id from orders where id = ${session.orderId} and user_id = ${userId}`;
   if (!rows[0]) throw new Error("Order not found.");
-  const result = await fulfillPaidOrder(dbStore(sql), getPodProvider(), {
+  const result = await settleCardPayment(dbStore(sql), getPodProvider(), {
     orderId: session.orderId,
     paid: session.paid,
     amountCents: session.amountCents,
@@ -300,7 +331,9 @@ export async function retryFulfillment(userId: string, orderId: string) {
     podMode: config.podMode,
     paymentsMode: config.paymentsMode,
   });
-  if (!result.ok) throw new Error(`The printer still did not take the order (${result.reason}).`);
+  if (!result.ok && result.reason !== IN_PROGRESS) {
+    throw new Error(`The printer still did not take the order (${result.reason}).`);
+  }
   return { orderId, status: "submitted" as const };
 }
 

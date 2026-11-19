@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { DEFAULT_LIMITS, clientAddress, judgeSpend, readLimits, usageDay } from "./limits.ts";
 
 describe("generation limits", () => {

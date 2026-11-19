@@ -4,7 +4,8 @@ export const STUDIO_FONTS = ["Archivo Black", "Outfit"] as const;
 
 export const MAX_LAYERS = 8;
 const MAX_LAYER_SRC = 1_400_000;
-const MAX_PRINT = 2_400_000;
+/** Longest print file, as a data URL, the server will take. */
+export const MAX_PRINT = 2_400_000;
 
 function clamp(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
@@ -211,20 +212,56 @@ export function printQualityWarning(
   return `Print file is ${size.width}×${size.height}px. About ${needW}×${needH}px (${dpi} DPI) keeps the print sharp.`;
 }
 
+function ipv4Octets(host: string): number[] | null {
+  const parts = host.split(".");
+  if (parts.length !== 4 || !parts.every((part) => /^\d{1,3}$/.test(part))) return null;
+  const octets = parts.map(Number);
+  return octets.every((octet) => octet <= 255) ? octets : null;
+}
+
+function isPrivateIpv4(octets: number[]): boolean {
+  const [a = 0, b = 0] = octets;
+  return (
+    a === 0 || // "this network"
+    a === 10 ||
+    a === 127 ||
+    (a === 100 && b >= 64 && b <= 127) || // carrier-grade NAT
+    (a === 169 && b === 254) || // link-local, where cloud metadata lives
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168)
+  );
+}
+
+function isPrivateIpv6(address: string): boolean {
+  if (address === "::" || address === "::1") return true;
+  // URL writes an IPv4-mapped address as ::ffff:0a00:0005.
+  const mapped = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(address);
+  if (mapped) {
+    const high = Number.parseInt(mapped[1] ?? "0", 16);
+    const low = Number.parseInt(mapped[2] ?? "0", 16);
+    return isPrivateIpv4([high >> 8, high & 0xff, low >> 8, low & 0xff]);
+  }
+  const first = Number.parseInt(address.split(":")[0] || "0", 16);
+  return (first & 0xfe00) === 0xfc00 || (first & 0xffc0) === 0xfe80; // unique local, link-local
+}
+
+/**
+ * True for an http(s) URL a printer on the public internet could fetch. This
+ * guards against a misconfigured APP_PUBLIC_URL: the app never fetches the URL
+ * itself, it hands it to Printful, which cannot reach a private address.
+ */
 export function isPublicHttpUrl(url: string): boolean {
+  let parsed: URL;
   try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
-    const host = parsed.hostname;
-    if (
-      host === "localhost" ||
-      host === "127.0.0.1" ||
-      host === "0.0.0.0" ||
-      host.endsWith(".local")
-    )
-      return false;
-    return true;
+    parsed = new URL(url);
   } catch {
     return false;
   }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+  const host = parsed.hostname.toLowerCase().replace(/\.$/, "");
+  if (host.startsWith("[")) return !isPrivateIpv6(host.slice(1, -1));
+  const octets = ipv4Octets(host);
+  if (octets) return !isPrivateIpv4(octets);
+  if (!host.includes(".")) return false; // a bare machine name
+  return !/(^|\.)(localhost|local|internal|lan|home|test|invalid)$/.test(host);
 }

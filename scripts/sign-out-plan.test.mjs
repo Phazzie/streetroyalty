@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { afterEach, test, vi } from "vitest";
 import {
   DEPLOYED_SIGN_OUT_TIMEOUT_MS,
   PREVIEW_SIGN_OUT_TIMEOUT_MS,
@@ -8,6 +8,10 @@ import {
   settleWithin,
   signOutTimeoutMs,
 } from "./sign-out-plan.mjs";
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 const TEST_TIMEOUT_MS = 20;
 
@@ -81,16 +85,16 @@ test("preview: a sign-out that throws synchronously still clears and redirects",
   assert.deepEqual(h.order, ["clear", "redirect"]);
 });
 
-test("preview: a sign-out that never settles clears and redirects once the wait expires", async (t) => {
-  t.mock.timers.enable({ apis: ["setTimeout"] });
+test("preview: a sign-out that never settles clears and redirects once the wait expires", async () => {
+  vi.useFakeTimers({ toFake: ["setTimeout"] });
   const h = preview({ requestSignOut: hangs });
   const done = h.run();
 
-  t.mock.timers.tick(TEST_TIMEOUT_MS - 1);
+  vi.advanceTimersByTime(TEST_TIMEOUT_MS - 1);
   await flush();
   assert.deepEqual(h.order, [], "the server still has its window — do not give up early");
 
-  t.mock.timers.tick(1);
+  vi.advanceTimersByTime(1);
   await done;
   assert.deepEqual(h.order, ["clear", "redirect"]);
 });
@@ -143,16 +147,16 @@ test("settleWithin reports the outcome and never rejects", async () => {
   assert.equal(await settleWithin(hangs, TEST_TIMEOUT_MS), "timeout");
 });
 
-test("settleWithin waits its full window, then gives up rather than hanging", async (t) => {
-  t.mock.timers.enable({ apis: ["setTimeout"] });
+test("settleWithin waits its full window, then gives up rather than hanging", async () => {
+  vi.useFakeTimers({ toFake: ["setTimeout"] });
   let outcome = null;
   const done = settleWithin(hangs, TEST_TIMEOUT_MS).then((o) => (outcome = o));
 
-  t.mock.timers.tick(TEST_TIMEOUT_MS - 1);
+  vi.advanceTimersByTime(TEST_TIMEOUT_MS - 1);
   await flush();
   assert.equal(outcome, null, "the request still has time left");
 
-  t.mock.timers.tick(1);
+  vi.advanceTimersByTime(1);
   await done;
   assert.equal(outcome, "timeout", "the caller is never left waiting on a wedged request");
 });
@@ -179,24 +183,24 @@ function preSignIn(livePreview, overrides = {}) {
   };
 }
 
-test("pre-sign-in: the preview clear gives up at the preview bound", async (t) => {
-  t.mock.timers.enable({ apis: ["setTimeout"] });
+test("pre-sign-in: the preview clear gives up at the preview bound", async () => {
+  vi.useFakeTimers({ toFake: ["setTimeout"] });
   const h = preSignIn(true);
 
-  t.mock.timers.tick(PREVIEW_SIGN_OUT_TIMEOUT_MS - 1);
+  vi.advanceTimersByTime(PREVIEW_SIGN_OUT_TIMEOUT_MS - 1);
   await flush();
   assert.equal(h.cleared, 0);
 
-  t.mock.timers.tick(1);
+  vi.advanceTimersByTime(1);
   await h.done;
   assert.equal(h.cleared, 1);
 });
 
-test("pre-sign-in: a deployed session gets the deployed window, not the preview one", async (t) => {
-  t.mock.timers.enable({ apis: ["setTimeout"] });
+test("pre-sign-in: a deployed session gets the deployed window, not the preview one", async () => {
+  vi.useFakeTimers({ toFake: ["setTimeout"] });
   const h = preSignIn(false);
 
-  t.mock.timers.tick(PREVIEW_SIGN_OUT_TIMEOUT_MS);
+  vi.advanceTimersByTime(PREVIEW_SIGN_OUT_TIMEOUT_MS);
   await flush();
   assert.equal(
     h.cleared,
@@ -204,7 +208,7 @@ test("pre-sign-in: a deployed session gets the deployed window, not the preview 
     "only the server can end a deployed session — do not start OAuth while it is still live",
   );
 
-  t.mock.timers.tick(DEPLOYED_SIGN_OUT_TIMEOUT_MS - PREVIEW_SIGN_OUT_TIMEOUT_MS);
+  vi.advanceTimersByTime(DEPLOYED_SIGN_OUT_TIMEOUT_MS - PREVIEW_SIGN_OUT_TIMEOUT_MS);
   await h.done;
   assert.equal(h.cleared, 1);
 });
@@ -234,15 +238,15 @@ test("every sign-out bound comes from one rule", () => {
   assert.equal(signOutTimeoutMs(false), DEPLOYED_SIGN_OUT_TIMEOUT_MS);
 });
 
-test("the defaults are bounded, and deployed waits longer than preview", async (t) => {
+test("the defaults are bounded, and deployed waits longer than preview", async () => {
   assert.ok(PREVIEW_SIGN_OUT_TIMEOUT_MS > 0 && PREVIEW_SIGN_OUT_TIMEOUT_MS <= 2000);
   assert.ok(DEPLOYED_SIGN_OUT_TIMEOUT_MS > PREVIEW_SIGN_OUT_TIMEOUT_MS);
   assert.ok(DEPLOYED_SIGN_OUT_TIMEOUT_MS <= 30_000);
 
-  t.mock.timers.enable({ apis: ["setTimeout"] });
+  vi.useFakeTimers({ toFake: ["setTimeout"] });
   const h = preview({ requestSignOut: hangs, timeoutMs: undefined });
   const done = h.run();
-  t.mock.timers.tick(PREVIEW_SIGN_OUT_TIMEOUT_MS);
+  vi.advanceTimersByTime(PREVIEW_SIGN_OUT_TIMEOUT_MS);
   await done;
   assert.deepEqual(h.order, ["clear", "redirect"]);
 });

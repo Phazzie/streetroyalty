@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { declaredByteLength, readCappedBytes } from "./bounded-bytes.ts";
 
 function streamOf(parts: Uint8Array[]): ReadableStream<Uint8Array> {

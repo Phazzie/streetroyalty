@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { createPrintfulProvider } from "./printful.ts";
 import { PodError } from "./types.ts";
 import { buildMockupSvg, createSandboxProvider } from "./sandbox.ts";

@@ -53,6 +53,8 @@ export function parseStoredBag(raw: string | null): BagLine[] {
     const priceCents = Number(row.priceCents);
     if (
       typeof row.variantId !== "string" ||
+      // A line with no variant could never be checked out, so it is not kept.
+      row.variantId === "" ||
       typeof row.slug !== "string" ||
       typeof row.name !== "string"
     )

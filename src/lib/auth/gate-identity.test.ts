@@ -1,4 +1,4 @@
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import assert from "node:assert/strict";
 import { generateKeyPairSync, type KeyObject } from "node:crypto";
 import { SignJWT, exportJWK, type JWK } from "jose";
@@ -212,7 +212,7 @@ describe("verifyGateIdentityToken", () => {
 
 describe("gateIdentityFromHeaders", () => {
   it("verifies the header token end to end and fails closed without it", async () => {
-    const key = await makeKey("k1");
+    const key = await makeKey("k-header-token");
     const { fetchImpl } = staticJwks([key.jwk]);
     process.env.GROK_PROJECT_ID = "proj-123";
     process.env.GROK_GATE_ORIGIN = ISSUER;
@@ -312,7 +312,7 @@ describe("gateIdentityFromHeaders", () => {
   });
 
   it("verifies a preview-audience token when only GROK_GATE_ORIGIN is set", async () => {
-    const key = await makeKey("k1");
+    const key = await makeKey("k-preview-origin");
     const { fetchImpl } = staticJwks([key.jwk]);
     delete process.env.GROK_PROJECT_ID;
     process.env.GROK_GATE_ORIGIN = ISSUER;

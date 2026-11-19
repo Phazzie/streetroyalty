@@ -16,11 +16,17 @@
     "preview:stop": "node scripts/preview.mjs stop",
     "typecheck": "tsc --noEmit",
     "check:auth": "node scripts/check-auth-invariant.mjs",
-    "test": "node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/split-pieces.test.ts src/lib/piece-batch.test.ts src/lib/bounded-bytes.test.ts src/lib/tickets.test.ts src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts src/lib/preview-path-prefix.test.ts src/lib/pod/printful.test.ts src/lib/pod/order-flow.test.ts src/lib/payments/stripe.test.ts src/lib/studio/validate.test.ts src/lib/studio/admin.test.ts src/lib/studio/design-key.test.ts src/lib/lab/closet.test.ts src/lib/ai/local.test.ts src/lib/ui/single-flight.test.ts src/lib/studio/cart-qty.test.ts src/lib/auth/account-input.test.ts src/lib/pod/money.test.ts src/lib/color.test.ts src/lib/contrast.test.ts src/lib/storefront/fourthwall.test.ts src/lib/storefront/bag.test.ts src/lib/storefront/browse.test.ts src/lib/ai/limits.test.ts src/lib/ai/art-styles.test.ts src/lib/gfx/effects.test.ts src/lib/ai/stylist.test.ts src/lib/lab/drop-card.test.ts",
+    "test": "vitest run --project unit --project integration --project dom --passWithNoTests",
     "lint": "eslint .",
     "ci": "sh scripts/ci.sh",
-    "e2e": "node scripts/e2e.mjs",
-    "format": "prettier --write ."
+    "e2e": "playwright test",
+    "format": "prettier --write .",
+    "test:watch": "vitest --project unit --project integration --project dom",
+    "test:coverage": "vitest run --project unit --project integration --project dom --coverage",
+    "test:browser": "vitest run --project browser",
+    "test:live": "LIVE=1 vitest run --project live",
+    "e2e:update": "playwright test --update-snapshots",
+    "mutation": "stryker run"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
@@ -81,19 +87,31 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^9.20.0",
+    "@playwright/test": "1.64.0",
+    "@stryker-mutator/core": "^10.1.1",
+    "@stryker-mutator/vitest-runner": "^10.1.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.12",
     "@types/node": "^22.16.5",
     "@types/pg": "^8.11.10",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@vitest/browser-playwright": "4.1.12",
+    "@vitest/coverage-v8": "4.1.12",
     "eslint": "^9.20.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.6",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
+    "fast-check": "^4.10.2",
     "globals": "^15.15.0",
+    "happy-dom": "^21.0.4",
+    "msw": "^2.15.0",
     "playwright": "^1.62.0",
     "prettier": "^3.4.0",
-    "typescript-eslint": "^8.56.1"
+    "typescript-eslint": "^8.56.1",
+    "vitest": "4.1.12"
   }
 }
