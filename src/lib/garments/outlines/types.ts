@@ -14,7 +14,7 @@ export type OutlinePiece = {
   /** Unique within a garment, e.g. "body_front", "cuff_left", "hood_3". */
   id: string;
   title: string;
-  /** Bounding box in template units: x, y, width, height. */
+  /** The path's exact extent in template units: x, y, width, height. */
   bbox: readonly [number, number, number, number];
   /** Closed SVG path in template units. Straight segments only ("M x y L x y ... Z"). */
   path: string;

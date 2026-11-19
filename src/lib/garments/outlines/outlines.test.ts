@@ -96,16 +96,25 @@ describe("printer cut outlines", () => {
     for (const templateId of OUTLINE_TEMPLATE_IDS) {
       for (const { placement, piece } of piecesOf(templateId)) {
         const where = `${templateId} ${placement} ${piece.id}`;
-        assert.match(piece.path, /^M[\d. L-]+ Z$/, where);
+        assert.match(
+          piece.path,
+          /^M-?\d+(?:\.\d+)? -?\d+(?:\.\d+)?(?: L-?\d+(?:\.\d+)? -?\d+(?:\.\d+)?)+ Z$/,
+          where,
+        );
         const points = pathPoints(piece.path);
         assert.ok(points.length >= 4, where);
         const [x, y, w, h] = piece.bbox;
         for (const point of points) {
           assert.ok(point.x >= 0 && point.x <= TEMPLATE_UNITS, where);
           assert.ok(point.y >= 0 && point.y <= TEMPLATE_UNITS, where);
-          assert.ok(point.x >= x - 6 && point.x <= x + w + 6, `${where} x outside its box`);
-          assert.ok(point.y >= y - 6 && point.y <= y + h + 6, `${where} y outside its box`);
+          assert.ok(point.x >= x && point.x <= x + w, `${where} x outside its box`);
+          assert.ok(point.y >= y && point.y <= y + h, `${where} y outside its box`);
         }
+        // The box is the path's exact extent: every side touches it.
+        assert.equal(Math.min(...points.map((p) => p.x)), x, `${where} box left`);
+        assert.equal(Math.min(...points.map((p) => p.y)), y, `${where} box top`);
+        assert.equal(Math.max(...points.map((p) => p.x)), x + w, `${where} box right`);
+        assert.equal(Math.max(...points.map((p) => p.y)), y + h, `${where} box bottom`);
         assert.ok(pieceArea(piece) > 0.4 * w * h, `${where} is thinner than its box`);
       }
     }
