@@ -341,3 +341,22 @@ Printful's pages name it.
 Checks on the final head: lint and types clean, 1,944 unit, integration and component
 tests with the coverage floors, 131 in-browser canvas tests, the build, and all 182
 Playwright journeys at phone and laptop sizes.
+
+### 2026-11-19 19:05 UTC · Claude Code · `claude/sharp-goodall-5mi0j0`
+
+Working the parallel plan (`docs/PARALLEL-WORK.md`). PR #21 is docs only:
+- `docs/studio-spec.md` (C4): the session API Agent 3 builds against. It is one pure
+  `dispatch(session, command)` with JSON commands, undo/redo, and a `describe()` read model
+  for the AI designer.
+- `docs/printful-aop-data.md` (C2): variant IDs and prices by size, placement keys and
+  fabric for 388/400/801, from Printful's public v1 API. Print-file pixel sizes and mockup
+  templates still need `PRINTFUL_API_KEY`.
+
+**For Agent 4:** Printful takes one file per *placement*, not per studio panel. The
+joggers have only `left_leg`/`right_leg`. `aopOrderable()` waits for a confirmed target
+for every studio panel, so it can never turn true. See spec §7 for the panel → placement-rect
+map. The joggers and jacket fabric is confirmed by the API: recycled poly/elastane, the same
+as the hoodie. Joggers come XS–3XL only, so hoodie/jacket 2XS and 4XL–6XL have no jogger match.
+
+**C1 review of #19 is posted:** a shared checkout counter between the shop and the studio,
+double `priceCart`, and out-of-lane edits. The review of #20 is in progress.

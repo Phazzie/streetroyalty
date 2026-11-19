@@ -227,7 +227,9 @@ clears on `markSaved`.
 
 Printful does not print one file per studio panel. It takes one file per *placement* (for
 example front, back, each sleeve, the hood) and cuts the panels out of those files. The
-studio's piping, side panels and cuffs are regions inside those files.
+studio's piping, side panels and cuffs are regions inside those files. The joggers are
+the extreme case: Printful takes only two files, one per leg, and the waistband, pocket,
+seat and cuffs all come out of those (`docs/printful-aop-data.md`).
 
 So the missing piece is a map from each studio panel to a rectangle inside a placement
 file:
