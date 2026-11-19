@@ -359,4 +359,6 @@ map. The joggers and jacket fabric is confirmed by the API: recycled poly/elasta
 as the hoodie. Joggers come XS–3XL only, so hoodie/jacket 2XS and 4XL–6XL have no jogger match.
 
 **C1 review of #19 is posted:** a shared checkout counter between the shop and the studio,
-double `priceCart`, and out-of-lane edits. The review of #20 is in progress.
+double `priceCart`, and out-of-lane edits. **Review of #20 is posted:** a crash between the
+set claim and the `garment_sets` insert leaves a dead `set_id` that blocks sets for good; the
+legacy test covers a row shape that never existed; and out-of-lane edits (`aop-stage.tsx`).
