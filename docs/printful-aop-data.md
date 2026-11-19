@@ -1,8 +1,72 @@
 # Printful AOP catalog data (task C2)
 
 Pulled 2026-11-19 for products 388 (AOP hoodie), 400 (AOP joggers) and 801 (AOP track jacket).
-No Printful API key was available. Every number below comes from a response or page that is named
-next to it. Anything without a source is marked **UNCONFIRMED**, with the call that would settle it.
+The first pass used the public v1 API with no key. The section right below was added the same day
+with the owner's `PRINTFUL_API_KEY`, and it **supersedes every UNCONFIRMED note further down**.
+Every number names the response it came from.
+
+## Confirmed with the API key (v2 catalog, 2026-11-19)
+
+Sources: `GET /v2/catalog-products/{id}`, `/v2/catalog-products/{id}/catalog-variants`
+(`placement_dimensions`), and `/v2/catalog-products/{id}/mockup-templates` (template images with
+the cut lines). The key is account-level and the account has **no store yet**, so the older
+`/mockup-generator/printfiles` and `/mockup-generator/templates` endpoints refuse with "This
+endpoint requires `store_id`". The v2 endpoints don't need one.
+
+- **v2 variant ids are the same as the v1 ids** listed further down (10869–10875 and 18730–18733,
+  11033–11039, 20370–20380).
+- **Print sizes are the same for every size of a garment.** Printful scales the cut to the size
+  itself. At 150 DPI:
+
+| Product | Placement keys (v2) | Print size per placement | Pixels at 150 DPI | Printfile id |
+| --- | --- | --- | --- | --- |
+| 388 hoodie | `front`, `back`, `sleeve_left`, `sleeve_right`, `pocket`, `hood`, `label_panel` | 40 × 40 in | 6000 × 6000 | 200 |
+| 388 hoodie | `label_inside` | 2.5 × 1 in | 375 × 150 | 64 |
+| 400 joggers | `leg_left`, `leg_right` | 33 × 50 in | 4950 × 7500 | 213 |
+| 400 joggers | `label_inside` | 2.5 × 1 in | 375 × 150 | 64 |
+| 801 jacket | `front`, `back`, `sleeve_left`, `sleeve_right`, `details`, `pocket` | 44 × 46 in | 6600 × 6900 | 693 |
+| 801 jacket | `label_inside` / `label_outside` | 2.5 × 1 in / 3 × 3 in | 375 × 150 / 450 × 450 | 64 / 400 |
+
+### What is actually inside each file (read off the template images)
+
+Solid lines on a template are cut lines, and dashed lines are the safe area. The files are listed
+in mockup-templates with `role: "template"`, and each `image_url` is on `files.cdn.printful.com`.
+
+**Hoodie (388).** Eight files, with **no side panels and no piping anywhere**:
+- `front`: the front body, plus the front half of the waistband (a folded band, drawn below it).
+  The safe area has a cut-out where the kangaroo pocket covers the body.
+- `back`: the back body, plus the back half of the waistband.
+- `sleeve_left` / `sleeve_right`: one sleeve, plus its cuff (the rectangle below it).
+- `hood`: four pieces, the outer left and right and the lining left and right. The hood is double
+  lined and printed on both sides.
+- `pocket`: the kangaroo pocket.
+- `label_panel`: a small curved panel at the back neck. `label_inside` is the printed neck label.
+
+**Joggers (400).** Two files, one per leg. Each leg is **one piece that wraps the whole leg**, front and
+back together. The waistband half is the strip across the top, and the cuff is the rectangle below.
+There is **no separate seat, back or pocket piece**. The pockets are in the side seams and aren't
+printed on their own.
+
+**Track jacket (801).** Six files:
+- `front`: two front halves split by the zip, a collar piece, two narrow pieces at the far left and
+  right (unlabelled on the template; they look like under-arm or side pieces), and two hem bands.
+- `back`: the back body, a collar piece, and the back hem band.
+- `sleeve_left` / `sleeve_right`: one sleeve, plus its cuff.
+- `details`: a collar piece and the two zip facings.
+- `pocket`: four pocket-bag pieces.
+
+The jacket is the only garment with real side pieces. **None of the three has piping.**
+
+### Template geometry
+
+Template images are 3000 × 3000 units (labels 560 × 560). The printable area inside each one
+(`print_area_left/top/width/height`) is:
+- hoodie `front` 182/−14/2636×2636 and `back` 180/0/2640×2633; the hoodie's other files cover the
+  full 3000×3000;
+- each jogger leg 510/0/1978×3000;
+- every main jacket file 122/59/2756×2882.
+
+Map that rectangle onto the print file's pixel size to place artwork.
 
 ## What the public API gives without a key
 
@@ -232,7 +296,7 @@ Source: `GET https://api.printful.com/products/801/sizes`. A = 1/2 chest width, 
 
 Needs a key: `GET /mockup-generator/printfiles/801?technique=CUT-SEW` and `GET /v2/catalog-products/801/mockup-templates`.
 
-## Still UNCONFIRMED (one key settles all of it)
+## Still UNCONFIRMED after the key (items 1, 2 and 4 are now answered at the top)
 
 1. Print-file px width × height and DPI for each placement and variant. Needs `GET /mockup-generator/printfiles/{388,400,801}?technique=CUT-SEW`.
 2. Mockup template IDs. Needs `GET /v2/catalog-products/{id}/mockup-templates` or `GET /mockup-generator/templates/{id}`.
