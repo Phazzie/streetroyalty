@@ -9,7 +9,6 @@ import { studioProofPixels } from "../garments/render.ts";
 import { aopOrderable, panelPrintTarget, type PanelPrintTarget } from "../pod/aop-printful.ts";
 import {
   aopFieldsFor,
-  isPrintfulPlacementProduct,
   isSandboxPlacementProduct,
   printfulFactsForTemplate,
   productForTemplate,
@@ -52,7 +51,6 @@ export function canOrderProduct(productId: string): boolean {
     );
   }
   if (isSandboxPlacementProduct(productId)) return true;
-  if (isPrintfulPlacementProduct(productId)) return true;
   return false;
 }
 

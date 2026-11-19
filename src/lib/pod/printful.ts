@@ -1,4 +1,4 @@
-import { aopFieldsFor } from "./garment-map.ts";
+import { aopFieldsFor, isPrintfulPlacementProduct } from "./garment-map.ts";
 import { applyMarkup, centsToDecimal, moneyToCents } from "./money.ts";
 import { PodError, type CatalogPage, type CatalogProduct, type CatalogVariant, type DraftOrderRequest, type FileUpload, type MockupRequest, type MockupResult, type PodProvider, type PrintArea, type ProviderOrder, type Recipient, type ShippingItem, type ShippingRate, type SyncProductInput, type SyncedProduct, type UploadedFile, type WebhookRegistration } from "./types.ts";
 
@@ -176,6 +176,9 @@ export function createPrintfulProvider(options: PrintfulClientOptions): PodProvi
     });
     const id = text(raw.id);
     const linked = aopFieldsFor("printful", id);
+    const techniqueKeys = techniques.map((item) => item.key);
+    const placement =
+      linked.construction !== "aop" && isPrintfulPlacementProduct(id, techniqueKeys);
     return {
       id,
       name: text(raw.name, "Untitled product"),
@@ -192,10 +195,11 @@ export function createPrintfulProvider(options: PrintfulClientOptions): PodProvi
       }),
       sizes: asArray(raw.sizes).map((size) => text(size)).filter(Boolean),
       variants,
-      construction: linked.construction,
       ...(linked.construction === "aop"
-        ? { aopTemplateId: linked.aopTemplateId, materialNote: linked.materialNote }
-        : {}),
+        ? { construction: linked.construction, aopTemplateId: linked.aopTemplateId, materialNote: linked.materialNote }
+        : placement
+          ? { construction: "placement" as const }
+          : {}),
     };
   }
 

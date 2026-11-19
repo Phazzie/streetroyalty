@@ -90,9 +90,17 @@ describe("garment template mapping", () => {
     assert.equal(aopFieldsFor("printful", "801").construction, "aop");
     assert.equal(isSandboxPlacementProduct("tee-heavy"), true);
     assert.equal(isSandboxPlacementProduct("aop-hoodie"), false);
-    assert.equal(isPrintfulPlacementProduct("71"), true);
-    assert.equal(isPrintfulPlacementProduct("388"), false);
-    assert.equal(isPrintfulPlacementProduct("yacht"), false);
+    assert.equal(isPrintfulPlacementProduct("71", ["dtg"]), true);
+    assert.equal(isPrintfulPlacementProduct("71", ["DTG"]), true);
+    assert.equal(isPrintfulPlacementProduct("71", ["embroidery"]), true);
+    assert.equal(isPrintfulPlacementProduct("71", []), false);
+    assert.equal(isPrintfulPlacementProduct("71", ["cut-sew"]), false);
+    assert.equal(isPrintfulPlacementProduct("71", ["sublimation"]), false);
+    assert.equal(isPrintfulPlacementProduct("500", ["cut_sew"]), false);
+    assert.equal(isPrintfulPlacementProduct("500", ["dtg", "cut-sew"]), false);
+    assert.equal(isPrintfulPlacementProduct("388", ["dtg"]), false);
+    assert.equal(isPrintfulPlacementProduct("yacht", ["dtg"]), true);
+    assert.equal(isPrintfulPlacementProduct("999999", []), false);
   });
 
   it("lists the tracksuit in the sandbox catalog with the mapped template id", async () => {

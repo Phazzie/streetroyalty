@@ -13,7 +13,6 @@ import {
 } from "./validate.ts";
 import type { CollectionRecord, DesignRecord, DesignSummary, ShopPiece } from "./models.ts";
 import {
-  AOP_ORDER_CLOSED,
   canOrderProduct,
   canonicalTemplateId,
   isAopProduct,
@@ -263,17 +262,13 @@ export async function publishDesign(userId: string, designId: string): Promise<D
   if (held[0])
     throw new Error("The shop took this piece off the rack after a report. Ask the shop.");
   const config = readStudioConfig();
-  // Sharing on the rack is allowed. Sending the file to Printful is not, until
-  // every panel has a real print file. One chest logo would not match the panels.
-  if (
-    config.podMode === "live" &&
-    isAopProduct(row.product_id) &&
-    !canOrderProduct(row.product_id)
-  ) {
-    throw new Error(AOP_ORDER_CLOSED);
-  }
+  // An all-over piece can go on the rack in either mode. Live mode does not
+  // sync it to Printful until every panel has a real print file. One chest
+  // logo would not match the panels the maker drew.
+  const holdPrinter =
+    isAopProduct(row.product_id) && !canOrderProduct(row.product_id);
   let providerProductId = row.provider_product_id ?? null;
-  if (config.podMode === "live") {
+  if (config.podMode === "live" && !holdPrinter) {
     const url = fileUrl(row.print_file_id);
     if (!isPublicHttpUrl(url))
       throw new Error("Set APP_PUBLIC_URL so Printful can fetch the print file.");

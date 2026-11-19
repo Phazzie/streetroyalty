@@ -134,13 +134,29 @@ export function isSandboxPlacementProduct(productId: string): boolean {
   return (SANDBOX_PLACEMENT_PRODUCT_IDS as readonly string[]).includes(productId);
 }
 
+/** Chest and sleeve prints. Not an all-over technique. */
+const PLACEMENT_TECHNIQUES = new Set(["dtg", "embroidery", "dtflex"]);
+/** Cloth that is printed as panels. A digit id alone is not enough to know this. */
+const ALLOVER_TECHNIQUES = new Set(["sublimation", "cut-sew", "all-over", "allover"]);
+
+function techniqueKey(value: string): string {
+  return value.trim().toLowerCase().replaceAll("_", "-");
+}
+
 /**
- * A digit-only Printful catalog id that is not one of our all-over products.
- * Those are placement blanks from the live catalog. Mapped all-over ids
- * (388, 400, 801) are not placement.
+ * A Printful product is a placement blank only when its catalog techniques say
+ * so. A mapped all-over id is never one. An id with no technique list is not
+ * one either: a bare number used to count as a tee.
  */
-export function isPrintfulPlacementProduct(productId: string): boolean {
-  return /^\d+$/.test(productId) && templateForProduct("printful", productId) == null;
+export function isPrintfulPlacementProduct(
+  productId: string,
+  techniques: readonly string[],
+): boolean {
+  if (templateForProduct("printful", productId)) return false;
+  const keys = techniques.map(techniqueKey).filter(Boolean);
+  if (keys.length === 0) return false;
+  if (keys.some((key) => ALLOVER_TECHNIQUES.has(key))) return false;
+  return keys.every((key) => PLACEMENT_TECHNIQUES.has(key));
 }
 
 export type AopCatalogFields =

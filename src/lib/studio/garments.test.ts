@@ -173,7 +173,7 @@ describe("all-over garments", () => {
     assert.equal(canOrderProduct("801"), false);
     assert.equal(canOrderProduct("tee-heavy"), true);
     assert.equal(canOrderProduct("hoodie-pullover"), true);
-    assert.equal(canOrderProduct("71"), true);
+    assert.equal(canOrderProduct("71"), false);
     assert.equal(canOrderProduct("yacht"), false);
     assert.equal(canOrderProduct(""), false);
     assert.equal(canOrderProduct("aop-hoodie-typo"), false);

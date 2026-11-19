@@ -174,7 +174,7 @@ function ProductPage() {
                 Will this print?
               </Button>
               {advice ? <p className="mt-3 text-sm text-muted">{advice}</p> : null}
-              {canOrderProduct(piece.productId) ? (
+              {piece.construction !== "aop" || canOrderProduct(piece.productId) ? (
                 <Button
                   className="mt-6 w-full"
                   size="lg"

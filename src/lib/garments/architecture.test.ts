@@ -124,18 +124,33 @@ describe("garment module boundaries", () => {
   });
 
   it("does not fall back to a hardcoded tracksuit id", () => {
-    const files = [
-      "src/components/studio/editor.tsx",
-      "src/lib/studio/garments.server.ts",
-      "src/lib/pod/sandbox.ts",
-    ];
-    for (const file of files) {
-      const text = readFileSync(join(root, file), "utf8");
-      assert.equal(text.includes('?? "aop-hoodie"'), false, file);
-      assert.equal(text.includes('?? "aop-joggers"'), false, file);
-      assert.equal(text.includes('"aop-hoodie"'), false, file);
-      assert.equal(text.includes('"aop-joggers"'), false, file);
-      assert.equal(text.includes('"aop-track-jacket"'), false, file);
+    const fallback = /(?:\?\?|\|\|)\s*(['"`])aop-(?:hoodie|joggers|track-jacket)\1/;
+    const skipped = new Set(["lib/garments/panels.ts", "lib/pod/garment-map.ts"]);
+    const hits: string[] = [];
+    for (const file of walk(srcRoot)) {
+      const rel = relSrc(file);
+      if (/\.test\./.test(rel) || skipped.has(rel)) continue;
+      const text = stripComments(readFileSync(file, "utf8"));
+      if (fallback.test(text)) hits.push(rel);
     }
+    assert.deepEqual(hits, []);
+  });
+
+  it("keeps the garment domain free of the printer and the studio", () => {
+    const offenders: string[] = [];
+    for (const file of walk(join(srcRoot, "lib", "garments"))) {
+      if (/\.test\./.test(file)) continue;
+      for (const next of importsOf(file)) {
+        const rel = relSrc(next);
+        if (
+          rel.startsWith("lib/pod/") ||
+          rel.startsWith("lib/studio/") ||
+          rel.startsWith("components/")
+        ) {
+          offenders.push(`${relSrc(file)} -> ${rel}`);
+        }
+      }
+    }
+    assert.deepEqual(offenders, []);
   });
 });

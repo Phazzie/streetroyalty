@@ -13,6 +13,7 @@ import {
 } from "./garments.ts";
 import { createMatchedSet } from "./garments.server.ts";
 import { startCheckout } from "./orders.server.ts";
+import { seenTo } from "../../test/msw/server.ts";
 import { truncateAll } from "../../test/db.ts";
 import { pngDataUrl } from "../../test/png.ts";
 import { RECIPIENT, TEE, seedDesign, seedUser } from "../../test/seed.ts";
@@ -192,13 +193,31 @@ describe("ordering an all-over piece", () => {
     expect(lines.map((line) => line.design_id)).toEqual([tee.id]);
   });
 
-  it("does not send an all-over piece to Printful until the panel files exist", async () => {
+  it("publishes an all-over piece to the rack in the sandbox and does not call Printful", async () => {
+    const piece = await publishedHoodie();
+    expect(piece.status).toBe("published");
+    expect(seenTo("api.printful.com")).toEqual([]);
+    const sql = await getSql();
+    const rows = await sql<{ provider_product_id: string | null }>`
+      select provider_product_id from designs where id = ${piece.id}
+    `;
+    expect(rows[0]?.provider_product_id).toBeNull();
+  });
+
+  it("publishes an all-over piece to the rack in live mode and skips the chest-file sync", async () => {
     const piece = await publishedHoodie();
     process.env.POD_MODE = "live";
     process.env.PRINTFUL_API_KEY = "pf_test_key";
     process.env.APP_PUBLIC_URL = "https://streetroyalty.com";
     process.env.PRINT_FILE_SIGNING_SECRET = "a-long-print-secret";
-    await expect(publishDesign("ada", piece.id)).rejects.toThrow(AOP_ORDER_CLOSED);
+    const again = await publishDesign("ada", piece.id);
+    expect(again.status).toBe("published");
+    expect(seenTo("api.printful.com")).toEqual([]);
+    const sql = await getSql();
+    const rows = await sql<{ provider_product_id: string | null }>`
+      select provider_product_id from designs where id = ${piece.id}
+    `;
+    expect(rows[0]?.provider_product_id).toBeNull();
   });
 
   it("refuses in live mode too, before asking the printer", async () => {
