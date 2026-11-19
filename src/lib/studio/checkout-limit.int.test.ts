@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { getSql } from "../db.ts";
 import { asVisitor } from "../../test/request.ts";
 import { truncateAll } from "../../test/db.ts";
+import { RECIPIENT, seedCart, seedUser } from "../../test/seed.ts";
 import {
   CHECKOUT_LIMIT_MESSAGE,
   assertCheckoutStartAllowed,
+  gateLiveCheckout,
 } from "./checkout-limit.ts";
 
 /**
@@ -40,6 +42,21 @@ describe("the studio checkout cap", () => {
     await expect(assertCheckoutStartAllowed("live", "live", "ada")).rejects.toThrow(
       /Too many checkouts/,
     );
+  });
+
+  it("does not count a live start until the address and the cart are real", async () => {
+    await expect(
+      gateLiveCheckout("ada", { ...RECIPIENT, name: "" }, "live", "live"),
+    ).rejects.toThrow(/name/);
+    expect(await usageCount()).toBe(0);
+
+    await seedUser("ada");
+    await expect(gateLiveCheckout("ada", RECIPIENT, "live", "live")).rejects.toThrow(/empty/);
+    expect(await usageCount()).toBe(0);
+
+    await seedCart("bo");
+    await gateLiveCheckout("bo", RECIPIENT, "live", "live");
+    expect(await usageCount()).toBeGreaterThan(0);
   });
 
   it("does not count a start that cannot open a paid draft", async () => {

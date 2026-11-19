@@ -26,3 +26,21 @@ export async function assertCheckoutStartAllowed(
   const verdict = await count("checkout", CHECKOUT_START_CAP, userId);
   if (!verdict.ok) throw new Error(CHECKOUT_LIMIT_MESSAGE);
 }
+
+/**
+ * A live start is counted only after the address parses and the cart can be priced.
+ * A bad address or an empty cart throws here and does not use up a start.
+ */
+export async function gateLiveCheckout(
+  userId: string,
+  recipient: unknown,
+  podMode: "live" | "sandbox",
+  paymentsMode: "live" | "sandbox",
+): Promise<void> {
+  if (!metersLiveCheckout(podMode, paymentsMode)) return;
+  const { parseRecipient } = await import("./validate.ts");
+  const { priceCart } = await import("./cart.server.ts");
+  parseRecipient(recipient);
+  await priceCart(userId);
+  await assertCheckoutStartAllowed(podMode, paymentsMode, userId);
+}

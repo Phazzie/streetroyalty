@@ -28,6 +28,7 @@ import {
 } from "@/lib/studio/api";
 import { isUnauthorized } from "@/lib/ai/access";
 import { suggestLines } from "@/lib/ai/api";
+import { SignInCall } from "@/components/ai/sign-in-call";
 import { usePaidAiAccess } from "@/components/ai/use-paid-ai";
 import { createSingleFlight } from "@/lib/ui/single-flight";
 import { designVisualKey } from "@/lib/studio/design-key";
@@ -831,12 +832,9 @@ export function Editor({ designId }: { designId: string }) {
                   <Button
                     variant="ghost"
                     className="w-full"
-                    disabled={busy}
+                    disabled={busy || signedOut}
                     onClick={() => {
-                      if (signedOut) {
-                        setNote(copy.signInToDraw);
-                        return;
-                      }
+                      if (signedOut) return;
                       void suggestLines({ data: { seed: `${title} ${active.text}` } })
                         .then((result) => {
                           setLines(result.lines);
@@ -849,6 +847,7 @@ export function Editor({ designId }: { designId: string }) {
                   >
                     {copy.writeLine}
                   </Button>
+                  {signedOut ? <SignInCall /> : null}
                   {lines.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {lines.map((line) => (
