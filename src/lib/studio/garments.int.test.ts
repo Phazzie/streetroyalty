@@ -319,6 +319,55 @@ describe("all-over pieces and sets", () => {
     expect(cart[0]?.designId).toBe("legacy-hoodie");
   });
 
+  it("pairs a piece again when its set id points at a set that was never written", async () => {
+    const hoodie = await saveDesign("ada", piece("Stuck hoodie"));
+    const sql = await getSql();
+    const dead = crypto.randomUUID();
+    await sql`update designs set set_id = ${dead} where id = ${hoodie.id} and user_id = 'ada'`;
+    const set = await createMatchedSet("ada", hoodie.id);
+    expect(set.pieces).toHaveLength(2);
+    expect(set.id).not.toBe(dead);
+    expect((await getDesign("ada", hoodie.id)).setId).toBe(set.id);
+    const rows = await sql<{ id: string }>`select id from garment_sets where id = ${dead}`;
+    expect(rows).toEqual([]);
+  });
+
+  it("stops a cart that holds a catalog id saved before any panel design existed", async () => {
+    // Old live mode stored 388 as a placement print. garment_json was null.
+    // parseGarment would not have accepted templateId "388", so that is not the
+    // row to reproduce. One chest file on an all-over blank still must not print.
+    const sql = await getSql();
+    const layers = JSON.stringify([
+      { id: "t", type: "text", text: "SR", x: 0.5, y: 0.4, scale: 1, rotation: 0 },
+    ]);
+    await sql`
+      insert into designs (
+        id, user_id, title, slug, status, product_id, product_name, product_type,
+        variant_id, variant_label, color_name, color_hex, size_label, placement, technique,
+        layers_json, retail_cents, currency
+      ) values (
+        'old-live-hoodie', 'ada', 'Old live hoodie', 'old-live-hoodie', 'published', '388',
+        'All-Over Print Recycled Unisex Hoodie', 'Hoodie', '9001', 'M', 'Printed',
+        '#c4a6e0', 'M', 'front', 'dtg', ${layers}, 4075, 'USD'
+      )
+    `;
+    await sql`
+      insert into cart_items (
+        id, user_id, design_id, variant_id, variant_label, quantity, colorway_id
+      ) values (
+        'old-live-line', 'bo', 'old-live-hoodie', '9001', 'M', 1, ''
+      )
+    `;
+    const loaded = await getDesign("ada", "old-live-hoodie");
+    expect(loaded.productId).toBe("388");
+    expect(loaded.garment).toBeNull();
+    const cart = await listCart("bo");
+    expect(cart.map((line) => line.designId)).toEqual(["old-live-hoodie"]);
+    await expect(
+      startCheckout("bo", { recipient: RECIPIENT, shippingMethod: "STANDARD" }),
+    ).rejects.toThrow(/Ordering opens once/);
+  });
+
   it("does not invent a partner variant while live Printful variant ids are empty", async () => {
     const hoodie = await saveDesign("ada", piece("Live partner"));
     process.env.POD_MODE = "live";

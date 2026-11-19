@@ -118,6 +118,24 @@ export async function getSetBySlug(slug: string): Promise<GarmentSetRecord | nul
   return hydrate(row);
 }
 
+/**
+ * A design can point at a set id whose row never landed (the process died after
+ * the claim). That id is not a set. Clear it so the piece can be paired again.
+ * A row that does exist is left alone, including one another request just claimed.
+ */
+async function releaseMissingSet(userId: string, designId: string, setId: string): Promise<boolean> {
+  const sql = await getSql();
+  const found = await sql<{ id: string }>`
+    select id from garment_sets where id = ${setId} and user_id = ${userId}
+  `;
+  if (found[0]) return false;
+  await sql`
+    update designs set set_id = null
+    where id = ${designId} and user_id = ${userId} and set_id = ${setId}
+  `;
+  return true;
+}
+
 /** Pair the saved piece with its partner, sharing colorways, from one maker. */
 export async function createMatchedSet(
   userId: string,
@@ -129,7 +147,11 @@ export async function createMatchedSet(
   if (!sourceTemplate || !isAopProduct(source.productId)) {
     throw new Error("Sets pair all-over garments.");
   }
-  if (source.setId) return getOwnedSet(userId, source.setId);
+  if (source.setId) {
+    if (!(await releaseMissingSet(userId, source.id, source.setId))) {
+      return getOwnedSet(userId, source.setId);
+    }
+  }
   const partnerTemplate = setPartner(sourceTemplate);
   const providerId = maker();
   const sourceProductId = productForTemplate(providerId, sourceTemplate);
