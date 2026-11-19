@@ -170,21 +170,21 @@ describe("publishing", () => {
     expect(await listShop()).toEqual([]);
   });
 
-  it("refuses to go live without a signing secret, so print files are never world-readable", async () => {
+  it("refuses to publish a sandbox blank once printing is live and that blank is not bound", async () => {
     const draft = await seedDesign("ada");
     process.env.POD_MODE = "live";
     process.env.PRINTFUL_API_KEY = "pf_test";
     process.env.APP_PUBLIC_URL = "https://streetroyalty.com";
-    await expect(publishDesign("ada", draft.id)).rejects.toThrow(/PRINT_FILE_SIGNING_SECRET/);
+    await expect(publishDesign("ada", draft.id)).rejects.toThrow(/not bound to this printer/);
   });
 
-  it("refuses to go live from an address the printer cannot reach", async () => {
+  it("leaves the draft unpublished when live printing has no binding for the blank", async () => {
     const draft = await seedDesign("ada");
     process.env.POD_MODE = "live";
     process.env.PRINTFUL_API_KEY = "pf_test";
     process.env.PRINT_FILE_SIGNING_SECRET = "a-long-secret";
     process.env.APP_PUBLIC_URL = "http://10.0.0.5:8080";
-    await expect(publishDesign("ada", draft.id)).rejects.toThrow(/APP_PUBLIC_URL/);
+    await expect(publishDesign("ada", draft.id)).rejects.toThrow(/not bound to this printer/);
     expect((await getDesign("ada", draft.id)).status).toBe("draft");
   });
 });

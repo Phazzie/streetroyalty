@@ -11,6 +11,8 @@ const SECRETS: Env = {
   STRIPE_WEBHOOK_SECRET: "whsec_Jj2Xq8842KzWv",
   PRINTFUL_API_KEY: "Pf8Zk93bd7eQxJw",
   PRINTFUL_STORE_ID: "17203355",
+  POD_MODE: "live",
+  PAYMENTS_MODE: "live",
   PRINTFUL_WEBHOOK_SECRET: "Wb4Qza1c9e0XkJv",
   PRINT_FILE_SIGNING_SECRET: "Sg6Xq5d5d0b2fZwK",
   APP_PUBLIC_URL: "https://wqzj.kxvq.example",
@@ -44,7 +46,7 @@ describe("switchboard", () => {
     });
     expect(board.canPay).toBe(false);
     expect(board.next).toBe("admins");
-    expect(board.podMode).toBe("sandbox");
+    expect(board.podMode).toBe("unset");
     expect(board.paymentsMode).toBe("sandbox");
     expect(service(board, "database").missing).toEqual(["DATABASE_URL"]);
     expect(service(board, "database").now).toMatch(/vanish when it restarts/);
@@ -57,7 +59,10 @@ describe("switchboard", () => {
       "PRINT_FILE_SIGNING_SECRET",
       "APP_PUBLIC_URL",
       "PRINTFUL_WEBHOOK_SECRET",
+      "PRINTFUL_STORE_ID",
+      "POD_MODE",
     ]);
+    expect(service(board, "printing").now).toMatch(/POD_MODE must be sandbox or live/);
   });
 
   it("reads a full environment as everything on", () => {
@@ -139,7 +144,7 @@ describe("switchboard", () => {
   });
 
   it("will not call payments on while printing is in sandbox, as checkout will not", () => {
-    const board = switchboard({ ...SECRETS, PRINTFUL_API_KEY: undefined });
+    const board = switchboard({ ...SECRETS, PRINTFUL_API_KEY: undefined, POD_MODE: "sandbox" });
     expect(board.podMode).toBe("sandbox");
     expect(board.paymentsMode).toBe("live");
     const payments = service(board, "payments");
@@ -156,7 +161,7 @@ describe("switchboard", () => {
     expect(service(held, "printing").lamp).toBe("off");
     expect(service(held, "printing").notes.join(" ")).toMatch(/POD_MODE is set to sandbox/);
     expect(service(held, "payments").lamp).toBe("off");
-    expect(service(held, "payments").notes.join(" ")).toMatch(/PAYMENTS_MODE is set to sandbox/);
+    expect(service(held, "payments").notes.join(" ")).toMatch(/PAYMENTS_MODE is not live/);
     expect(held.canPay).toBe(false);
 
     const forced = switchboard({ POD_MODE: "live", PAYMENTS_MODE: "live" });
@@ -168,9 +173,11 @@ describe("switchboard", () => {
   });
 
   it("walks printing from partly to on as each piece arrives", () => {
-    const base: Env = { PRINTFUL_API_KEY: "k" };
-    expect(service(switchboard(base), "printing").now).toMatch(/PRINT_FILE_SIGNING_SECRET/);
-    const signed = { ...base, PRINT_FILE_SIGNING_SECRET: "s" };
+    const base: Env = { POD_MODE: "live", PRINTFUL_API_KEY: "k" };
+    expect(service(switchboard(base), "printing").now).toMatch(/no Printful store/);
+    const stored = { ...base, PRINTFUL_STORE_ID: "9" };
+    expect(service(switchboard(stored), "printing").now).toMatch(/PRINT_FILE_SIGNING_SECRET/);
+    const signed = { ...stored, PRINT_FILE_SIGNING_SECRET: "s" };
     expect(service(switchboard(signed), "printing").now).toMatch(/APP_PUBLIC_URL/);
     const addressed = { ...signed, APP_PUBLIC_URL: "https://shop.example" };
     const waiting = service(switchboard(addressed), "printing");
@@ -180,8 +187,8 @@ describe("switchboard", () => {
     expect(done.lamp).toBe("on");
     expect(done.variables.find((item) => item.name === "PRINTFUL_STORE_ID")).toEqual({
       name: "PRINTFUL_STORE_ID",
-      need: "optional",
-      set: false,
+      need: "needed",
+      set: true,
     });
   });
 

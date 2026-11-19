@@ -1,8 +1,17 @@
 import { getSql } from "../db.ts";
-import { getPodProvider } from "../pod/index.ts";
+import { getPodProvider, readPodMode } from "../pod/index.ts";
 import type { CatalogProduct } from "../pod/types.ts";
 import { isPrintfulPlacementProduct } from "../pod/garment-map.ts";
-import { AOP_ORDER_CLOSED, canOrderProduct, isAopProduct, parseStoredGarment } from "./garments.ts";
+import {
+  AOP_ORDER_CLOSED,
+  activePrinter,
+  canOrderProduct,
+  catalogIdFor,
+  catalogLookupId,
+  isAopProduct,
+  parseStoredGarment,
+  resolveTemplateId,
+} from "./garments.ts";
 import { canBuyDesign, parseRecipient } from "./validate.ts";
 import { cartDelta, normalizeCartQuantity } from "./cart-qty.ts";
 import type { CartLine } from "./models.ts";
@@ -14,12 +23,23 @@ import { fileUrl, sumCents, type DesignRow } from "./shared.server.ts";
  * sandbox placement blank, or a Printful product whose techniques are placement
  * prints. A bare catalog number is not enough.
  */
+function printerNow() {
+  return activePrinter(readPodMode(process.env));
+}
+
 async function assertOrderable(productId: string): Promise<void> {
-  if (isAopProduct(productId)) {
-    if (!canOrderProduct(productId)) throw new Error(AOP_ORDER_CLOSED);
+  const printer = printerNow();
+  const templateId = resolveTemplateId(productId) ?? productId;
+  if (isAopProduct(templateId) || isAopProduct(productId)) {
+    if (!canOrderProduct(templateId, printer)) throw new Error(AOP_ORDER_CLOSED);
     return;
   }
-  if (canOrderProduct(productId)) return;
+  if (resolveTemplateId(productId)) {
+    if (!canOrderProduct(templateId, printer)) {
+      throw new Error("This blank is not bound to the printer yet.");
+    }
+    return;
+  }
   const product = await getPodProvider().getProduct(productId);
   const techniques = product.techniques.map((item) => item.key);
   if (product.construction === "aop" || !isPrintfulPlacementProduct(productId, techniques)) {
@@ -39,12 +59,17 @@ export async function addToCart(
   if (!design || !canBuyDesign({ ownerId: design.user_id, status: design.status }, userId)) {
     throw new Error("That piece is not for sale.");
   }
-  await assertOrderable(design.product_id);
-  const product = await getPodProvider().getProduct(design.product_id);
-  const variant = product.variants.find(
-    (item) => item.id === variantId && item.color === design.color_name,
-  );
-  if (!variant) throw new Error("Pick a size in this color.");
+  const templateId = design.template_id ?? design.product_id;
+  await assertOrderable(templateId);
+  const printer = printerNow();
+  const catalogId = catalogIdFor(printer, templateId, design.provider_catalog_id);
+  if (!catalogId) throw new Error("This blank is not bound to the printer yet.");
+  const product = await getPodProvider().getProduct(catalogId);
+  const variant = product.variants.find((item) => item.id === variantId);
+  const saved = product.variants.find((item) => item.id === design.variant_id);
+  if (!variant || (saved?.colorCode && variant.colorCode && saved.colorCode !== variant.colorCode)) {
+    throw new Error("Pick a size in this color.");
+  }
   const colorway = colorwayId
     ? parseStoredGarment(design.garment_json)?.colorways.find((item) => item.id === colorwayId)
     : undefined;
@@ -52,8 +77,14 @@ export async function addToCart(
   const label = colorway ? `${variant.name} · ${colorway.name}` : variant.name;
   const id = crypto.randomUUID();
   await sql`
-    insert into cart_items (id, user_id, design_id, variant_id, variant_label, quantity, colorway_id)
-    values (${id}, ${userId}, ${design.id}, ${variant.id}, ${label}, 1, ${colorwayId})
+    insert into cart_items (
+      id, user_id, design_id, variant_id, variant_label, quantity, colorway_id,
+      template_id, provider, provider_catalog_id, provider_variant_id
+    )
+    values (
+      ${id}, ${userId}, ${design.id}, ${variant.id}, ${label}, 1, ${colorwayId},
+      ${templateId}, ${printer}, ${catalogId}, ${variant.id}
+    )
     on conflict (user_id, design_id, variant_id, colorway_id)
     do update set quantity = least(10, cart_items.quantity + 1), variant_label = excluded.variant_label
   `;
@@ -109,9 +140,13 @@ async function readCartRows(userId: string): Promise<CartJoin[]> {
  * added before ordering closed, stops it here. The cart view reads
  * `readCartRows` so that line can still be seen and removed.
  */
+function rowTemplate(row: { template_id?: string | null; product_id: string }): string {
+  return row.template_id ?? row.product_id;
+}
+
 export async function cartRows(userId: string): Promise<CartJoin[]> {
   const rows = await readCartRows(userId);
-  for (const row of rows) await assertOrderable(row.product_id);
+  for (const row of rows) await assertOrderable(rowTemplate(row));
   return rows;
 }
 
@@ -122,10 +157,16 @@ export async function listCart(userId: string): Promise<CartLine[]> {
   const products = new Map<string, CatalogProduct>();
   for (const row of rows) {
     try {
-      let product = products.get(row.product_id);
+      const catalogId = catalogLookupId(
+        printerNow(),
+        rowTemplate(row),
+        row.provider_catalog_id,
+      );
+      if (!catalogId) continue;
+      let product = products.get(catalogId);
       if (!product) {
-        product = await provider.getProduct(row.product_id);
-        products.set(row.product_id, product);
+        product = await provider.getProduct(catalogId);
+        products.set(catalogId, product);
       }
       const variant = product.variants.find((item) => item.id === row.cart_variant_id);
       if (variant?.retailCents != null) prices.set(row.cart_id, variant.retailCents);
@@ -150,14 +191,18 @@ export async function priceCart(userId: string) {
   const rows = await cartRows(userId);
   if (rows.length === 0) throw new Error("The cart is empty.");
   const provider = getPodProvider();
+  const printer = printerNow();
   const products = new Map<string, CatalogProduct>();
   const lines = [];
   for (const row of rows) {
     if (!row.print_file_id) throw new Error(`${row.title} is missing a print file.`);
-    let product = products.get(row.product_id);
+    const templateId = rowTemplate(row);
+    const catalogId = catalogIdFor(printer, templateId, row.provider_catalog_id ?? row.product_id);
+    if (!catalogId) throw new Error(`${row.title} is not bound to this printer yet.`);
+    let product = products.get(catalogId);
     if (!product) {
-      product = await provider.getProduct(row.product_id);
-      products.set(row.product_id, product);
+      product = await provider.getProduct(catalogId);
+      products.set(catalogId, product);
     }
     const variant = product.variants.find((item) => item.id === row.cart_variant_id);
     if (!variant || variant.retailCents == null)
@@ -186,6 +231,10 @@ export async function priceCart(userId: string) {
       printArea: area,
       colorwayId: colorway?.id,
       colorwayName: colorway?.name,
+      templateId,
+      provider: printer,
+      providerCatalogId: catalogId,
+      providerVariantId: variant.id,
     });
   }
   return { provider, lines };

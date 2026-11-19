@@ -8,6 +8,8 @@ export type PlacementId = "front" | "back" | "sleeve_left" | "sleeve_right" | st
 export type CatalogColor = {
   name: string;
   hex: string;
+  /** Stable color id. Display names can change without changing this. */
+  code?: string;
 };
 
 export type PrintArea = {
@@ -22,7 +24,11 @@ export type CatalogVariant = {
   productId: string;
   name: string;
   size: string;
+  /** Stable size id. `size` is the label a buyer sees. */
+  sizeCode?: string;
   color: string;
+  /** Stable color id. `color` is the label a buyer sees. */
+  colorCode?: string;
   colorHex: string;
   wholesaleCents: number | null;
   retailCents: number | null;

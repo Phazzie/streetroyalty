@@ -3,7 +3,7 @@ import { type Sql } from "../db.ts";
 import { getPodProvider, readPaymentsMode, readPodMode, readMarkup } from "../pod/index.ts";
 import type { CatalogProduct } from "../pod/types.ts";
 import { printFileAuthorized, printSigningSecret, signedPrintFileUrl } from "../pod/print-access.ts";
-import { parseStoredGarment } from "./garments.ts";
+import { activePrinter, catalogIdFor, parseStoredGarment, resolveTemplateId } from "./garments.ts";
 import { parseLayers } from "./validate.ts";
 import type { DesignRecord, DesignSummary, StudioConfig } from "./models.ts";
 
@@ -31,6 +31,10 @@ export type DesignRow = {
   retail_cents: number;
   currency: string;
   provider_product_id: string | null;
+  template_id?: string | null;
+  provider?: string | null;
+  provider_catalog_id?: string | null;
+  provider_variant_id?: string | null;
   garment_json?: string | null;
   set_id?: string | null;
   updated_at: string;
@@ -58,6 +62,8 @@ export function summary(row: DesignRow): DesignSummary {
     retailCents: Number(row.retail_cents),
     currency: row.currency,
     updatedAt: String(row.updated_at),
+    templateId: row.template_id ?? row.product_id,
+    provider: row.provider === "printful" ? "printful" : "sandbox",
   };
 }
 
@@ -115,7 +121,7 @@ export async function loadCatalog(offset: number, limit: number) {
     ...readStudioConfig(),
     provider: provider.id,
     products: page.products.map((product) => ({
-      id: product.id,
+      id: resolveTemplateId(product.id) ?? product.id,
       name: product.name,
       type: product.type,
       brand: product.brand,
@@ -134,8 +140,13 @@ export async function loadCatalog(offset: number, limit: number) {
 export async function loadProduct(
   productId: string,
 ): Promise<CatalogProduct & { podMode: StudioConfig["podMode"] }> {
-  const product = await getPodProvider().getProduct(productId);
-  return { ...product, podMode: readStudioConfig().podMode };
+  const mode = readStudioConfig().podMode;
+  const printer = activePrinter(mode);
+  const catalogId = catalogIdFor(printer, productId, productId);
+  if (!catalogId) throw new Error("That garment is not bound to this printer yet.");
+  const product = await getPodProvider().getProduct(catalogId);
+  const templateId = resolveTemplateId(product.id) ?? resolveTemplateId(productId);
+  return { ...product, id: templateId ?? product.id, podMode: mode };
 }
 
 export async function ownedDesign(sql: Sql, userId: string, designId: string): Promise<DesignRow | null> {

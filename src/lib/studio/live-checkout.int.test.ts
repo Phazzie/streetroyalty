@@ -69,6 +69,7 @@ beforeEach(async () => {
   await truncateAll();
   process.env.POD_MODE = "live";
   process.env.PRINTFUL_API_KEY = "pf_test_key";
+  process.env.PRINTFUL_STORE_ID = "1";
   process.env.PAYMENTS_MODE = "live";
   process.env.STRIPE_SECRET_KEY = "sk_test_key";
   process.env.STRIPE_WEBHOOK_SECRET = STRIPE_WEBHOOK_SECRET;

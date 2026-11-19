@@ -66,6 +66,7 @@ describe("the go-live panel", () => {
     const board = switchboard({
       STUDIO_ADMIN_EMAILS: "ada@example.com",
       BETTER_AUTH_URL: "https://shop.example",
+      PAYMENTS_MODE: "live",
       STRIPE_SECRET_KEY: "Hh7Qz51Nq0aXwVb",
     });
     const { container } = render(<GoLivePanel view={{ view: "admin", board }} />);
@@ -100,7 +101,10 @@ describe("the go-live panel", () => {
       DATABASE_URL: "postgresql://x",
       STRIPE_SECRET_KEY: "a",
       STRIPE_WEBHOOK_SECRET: "b",
+      PAYMENTS_MODE: "live",
+      POD_MODE: "live",
       PRINTFUL_API_KEY: "c",
+      PRINTFUL_STORE_ID: "store",
       PRINT_FILE_SIGNING_SECRET: "d",
       APP_PUBLIC_URL: "https://shop.example",
       PRINTFUL_WEBHOOK_SECRET: "e",

@@ -69,9 +69,9 @@ export function addColorway(garment: GarmentDesign, name: string): GarmentDesign
   if (trimmed.length < 2) throw new Error("Name the colorway.");
   if (garment.colorways.length >= 8) throw new Error("Eight colorways is the limit.");
   const source = activeColorway(garment);
-  let id = colorwayId(trimmed);
-  if (garment.colorways.some((item) => item.id === id))
-    id = `${id}-${garment.colorways.length + 1}`;
+  // The id is random. The name stays the label, so two colorways can share a
+  // slug without one of them becoming "name-3" and colliding after a delete.
+  const id = crypto.randomUUID();
   const next = copyColorway({ ...source, id, name: trimmed });
   return { ...garment, colorways: [...garment.colorways, next], activeColorwayId: next.id };
 }

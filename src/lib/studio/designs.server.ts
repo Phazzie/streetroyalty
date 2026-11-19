@@ -1,5 +1,5 @@
 import { getSql } from "../db.ts";
-import { getPodProvider } from "../pod/index.ts";
+import { getPodProvider, readPodMode } from "../pod/index.ts";
 import { centsToDecimal } from "../pod/money.ts";
 import type { CatalogProduct } from "../pod/types.ts";
 import {
@@ -13,13 +13,19 @@ import {
 } from "./validate.ts";
 import type { CollectionRecord, DesignRecord, DesignSummary, ShopPiece } from "./models.ts";
 import {
+  activePrinter,
   canOrderProduct,
   canonicalTemplateId,
+  catalogIdFor,
+  catalogLookupId,
   isAopProduct,
+  materialLine,
   parseColorwayBlob,
   parseGarment,
   parseStoredGarment,
+  resolveTemplateId,
   type GarmentDesign,
+  type PrinterId,
 } from "./garments.ts";
 import {
   fileUrl,
@@ -29,6 +35,21 @@ import {
   summary,
   type DesignRow,
 } from "./shared.server.ts";
+
+function printerNow(): PrinterId {
+  return activePrinter(readPodMode(process.env));
+}
+
+/** Load the printer's product for a template id or an unmapped catalog id. */
+async function openCatalog(productId: string) {
+  const printer = printerNow();
+  const templateId = resolveTemplateId(productId);
+  const catalogId = templateId ? catalogIdFor(printer, templateId) : productId;
+  if (!catalogId) throw new Error("That garment is not bound to this printer yet.");
+  const provider = getPodProvider();
+  const product = await provider.getProduct(catalogId);
+  return { provider, printer, templateId: templateId ?? productId, catalogId, product };
+}
 
 /** Parse a maker's garment and check it belongs to this all-over product. */
 function garmentFor(product: CatalogProduct, input: unknown): GarmentDesign {
@@ -106,8 +127,7 @@ export async function saveDesign(
   if (title.length < 2) throw new Error("Name the piece.");
   const layers = parseLayers(input.layers);
   const print = parsePrintFile(input.printFile);
-  const provider = getPodProvider();
-  const product = await provider.getProduct(input.productId);
+  const { printer, templateId, catalogId, product } = await openCatalog(input.productId);
   const variant = product.variants.find((item) => item.id === input.variantId);
   if (!variant || variant.retailCents == null)
     throw new Error("That size and color is not in the catalog.");
@@ -141,11 +161,14 @@ export async function saveDesign(
     }
   }
   const layersJson = JSON.stringify(layers);
+  const keptBecauseAop =
+    isAopProduct(templateId) ||
+    (existing != null && isAopProduct(existing.template_id ?? existing.product_id));
   let garmentJson: string | null = null;
-  if (isAopProduct(product.id)) {
+  if (keptBecauseAop) {
     garmentJson =
-      input.garment != null
-        ? JSON.stringify(garmentFor(product, input.garment))
+      input.garment != null && isAopProduct(templateId)
+        ? JSON.stringify(garmentFor({ ...product, id: templateId, aopTemplateId: templateId }, input.garment))
         : (existing?.garment_json ?? null);
   }
   if (existing) {
@@ -153,7 +176,11 @@ export async function saveDesign(
       update designs set
         title = ${title},
         collection_id = ${input.collectionId || null},
-        product_id = ${product.id},
+        product_id = ${templateId},
+        template_id = ${templateId},
+        provider = ${printer},
+        provider_catalog_id = ${catalogId},
+        provider_variant_id = ${variant.id},
         product_name = ${product.name},
         product_type = ${product.type},
         variant_id = ${variant.id},
@@ -178,11 +205,13 @@ export async function saveDesign(
   const slug = slugify(title, id);
   await sql`
     insert into designs (
-      id, user_id, collection_id, title, slug, status, product_id, product_name, product_type,
+      id, user_id, collection_id, title, slug, status, product_id, template_id, provider,
+      provider_catalog_id, provider_variant_id, product_name, product_type,
       variant_id, variant_label, color_name, color_hex, size_label, placement, technique,
       layers_json, garment_json, print_file_id, mockup_url, retail_cents, currency
     ) values (
-      ${id}, ${userId}, ${input.collectionId || null}, ${title}, ${slug}, 'draft', ${product.id}, ${product.name}, ${product.type},
+      ${id}, ${userId}, ${input.collectionId || null}, ${title}, ${slug}, 'draft', ${templateId}, ${templateId}, ${printer},
+      ${catalogId}, ${variant.id}, ${product.name}, ${product.type},
       ${variant.id}, ${variant.name}, ${variant.color}, ${variant.colorHex}, ${variant.size}, ${placement.placement}, ${placement.technique},
       ${layersJson}, ${garmentJson}, ${printFileId}, ${mockup}, ${variant.retailCents}, 'USD'
     )
@@ -202,8 +231,7 @@ export async function generateMockup(input: {
   userId?: string;
 }): Promise<{ mockupUrl: string; status: string }> {
   const layers = parseLayers(input.layers);
-  const provider = getPodProvider();
-  const product = await provider.getProduct(input.productId);
+  const { provider, product } = await openCatalog(input.productId);
   // An all-over mockup is drawn from the maker's own panels. Anything else ignores them.
   const garment =
     isAopProduct(product.id) && input.garment != null
@@ -262,13 +290,17 @@ export async function publishDesign(userId: string, designId: string): Promise<D
   if (held[0])
     throw new Error("The shop took this piece off the rack after a report. Ask the shop.");
   const config = readStudioConfig();
+  const templateId = row.template_id ?? row.product_id;
+  const printer = printerNow();
   // An all-over piece can go on the rack in either mode. Live mode does not
   // sync it to Printful until every panel has a real print file. One chest
   // logo would not match the panels the maker drew.
-  const holdPrinter =
-    isAopProduct(row.product_id) && !canOrderProduct(row.product_id);
+  const holdPrinter = isAopProduct(templateId) && !canOrderProduct(templateId, printer);
   let providerProductId = row.provider_product_id ?? null;
   if (config.podMode === "live" && !holdPrinter) {
+    if (resolveTemplateId(templateId) && !catalogIdFor(printer, templateId)) {
+      throw new Error("That garment is not bound to this printer yet.");
+    }
     const url = fileUrl(row.print_file_id);
     if (!isPublicHttpUrl(url))
       throw new Error("Set APP_PUBLIC_URL so Printful can fetch the print file.");
@@ -279,7 +311,7 @@ export async function publishDesign(userId: string, designId: string): Promise<D
       existingId: providerProductId ?? undefined,
       variants: [
         {
-          catalogVariantId: row.variant_id,
+          catalogVariantId: row.provider_variant_id ?? row.variant_id,
           retailPrice: centsToDecimal(Number(row.retail_cents)),
           files: [{ placement: row.placement, url }],
         },
@@ -311,9 +343,27 @@ export async function getShopDesign(slug: string): Promise<ShopPiece> {
     await sql<DesignRow>`select * from designs where slug = ${slug} and status = 'published'`;
   const row = rows[0];
   if (!row) throw new Error("That piece is not on the rack.");
-  const product = await getPodProvider().getProduct(row.product_id);
-  const sizes = product.variants
-    .filter((variant) => variant.color === row.color_name && variant.retailCents != null)
+  const templateId = row.template_id ?? row.product_id;
+  const lookup = catalogLookupId(
+    printerNow(),
+    templateId,
+    row.provider_catalog_id,
+  );
+  let product: CatalogProduct | null = null;
+  if (lookup) {
+    try {
+      product = await getPodProvider().getProduct(lookup);
+    } catch {
+      product = null;
+    }
+  }
+  const chosen = product?.variants.find((variant) => variant.id === row.variant_id);
+  const sizes = (product?.variants ?? [])
+    .filter((variant) => {
+      if (variant.retailCents == null) return false;
+      if (chosen?.colorCode && variant.colorCode) return variant.colorCode === chosen.colorCode;
+      return variant.id === row.variant_id;
+    })
     .map((variant) => ({
       variantId: variant.id,
       label: variant.size,
@@ -389,8 +439,8 @@ export async function getShopDesign(slug: string): Promise<ShopPiece> {
     sizes,
     colorways,
     activeColorwayId,
-    materialNote: product.materialNote ?? null,
-    construction: product.construction ?? "placement",
+    materialNote: product?.materialNote ?? (materialLine(templateId) || null),
+    construction: product?.construction ?? (isAopProduct(templateId) ? "aop" : "placement"),
     set,
   };
 }

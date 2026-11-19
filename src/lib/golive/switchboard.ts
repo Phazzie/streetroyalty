@@ -56,7 +56,7 @@ export type Switchboard = {
   canPay: boolean;
   /** True when an order outlives a server restart. A paid order that does not is a lost order. */
   ordersKept: boolean;
-  podMode: PodMode;
+  podMode: PodMode | "unset";
   paymentsMode: PodMode;
   caps: AiLimits;
 };
@@ -144,14 +144,25 @@ function readSignIn(env: Env, databaseOn: boolean): Reading {
 }
 
 function readPrinting(env: Env): Reading {
-  const mode = readPodMode(env);
+  let mode: PodMode;
+  try {
+    mode = readPodMode(env);
+  } catch (error) {
+    return {
+      lamp: "off",
+      now:
+        error instanceof Error
+          ? error.message
+          : "Set POD_MODE to sandbox or live.",
+    };
+  }
   if (mode === "sandbox") {
     return {
       lamp: "off",
       now: serviceSpec("printing").without,
       notes: has(env, "PRINTFUL_API_KEY")
         ? [
-            "POD_MODE is set to sandbox, so the Printful key is ignored. Delete POD_MODE to print for real.",
+            "POD_MODE is set to sandbox, so the Printful key is ignored. Set POD_MODE to live to print for real.",
           ]
         : [],
     };
@@ -160,7 +171,14 @@ function readPrinting(env: Env): Reading {
     return {
       lamp: "partly",
       now: "Printing is switched to live with no Printful key, so the studio cannot load anything.",
-      notes: ["POD_MODE is set to live. Add the key, or delete POD_MODE to go back to practice."],
+      notes: ["POD_MODE is set to live. Add the key, or set POD_MODE to sandbox to practice."],
+    };
+  }
+  if (!has(env, "PRINTFUL_STORE_ID")) {
+    return {
+      lamp: "partly",
+      now: "Printing is switched to live with no Printful store, so orders have nowhere to go.",
+      empty: ["PRINTFUL_STORE_ID"],
     };
   }
   if (throws(() => printSigningSecret(env, mode))) {
@@ -192,7 +210,7 @@ function readPayments(env: Env, databaseOn: boolean): Reading {
       now: serviceSpec("payments").without,
       notes: has(env, "STRIPE_SECRET_KEY")
         ? [
-            "PAYMENTS_MODE is set to sandbox, so the Stripe key is ignored. Delete PAYMENTS_MODE to take real cards.",
+            "PAYMENTS_MODE is not live, so the Stripe key is ignored. Set PAYMENTS_MODE to live to take real cards.",
           ]
         : [],
     };
@@ -202,7 +220,7 @@ function readPayments(env: Env, databaseOn: boolean): Reading {
       lamp: "partly",
       now: "Checkout is switched to live with no Stripe key, so it fails for everyone.",
       notes: [
-        "PAYMENTS_MODE is set to live. Add the key, or delete PAYMENTS_MODE to go back to practice.",
+        "PAYMENTS_MODE is set to live. Add the key, or set PAYMENTS_MODE to sandbox to practice.",
       ],
     };
   }
@@ -270,7 +288,12 @@ function readDrop(env: Env): Reading {
 
 export function switchboard(env: Env): Switchboard {
   const caps = readLimits(env);
-  const podMode = readPodMode(env);
+  let podMode: PodMode | "unset" = "unset";
+  try {
+    podMode = readPodMode(env);
+  } catch {
+    podMode = "unset";
+  }
   const paymentsMode = readPaymentsMode(env);
   const database = readDatabase(env);
   const readings: Record<ServiceId, Reading> = {

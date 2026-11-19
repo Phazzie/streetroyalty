@@ -69,6 +69,9 @@ beforeAll(() => {
 beforeEach(() => {
   envBefore = { ...process.env };
   for (const name of AMBIENT) delete process.env[name];
+  // The app refuses to guess. Tests that want live mode set it themselves.
+  process.env.POD_MODE = "sandbox";
+  process.env.BETTER_AUTH_SECRET = "test-better-auth-secret";
   resetRequest();
   seen.length = 0;
 });

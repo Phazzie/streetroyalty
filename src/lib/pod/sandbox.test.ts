@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getPodProvider, readMarkup, readPaymentsMode, readPodMode } from "./index.ts";
 import { applyMarkup, centsToDecimal, clampMarkup, formatMoney, moneyToCents } from "./money.ts";
-import { buildMockupSvg, createSandboxProvider } from "./sandbox.ts";
+import { buildMockupSvg, createSandboxProvider, sandboxVariantId } from "./sandbox.ts";
 import type { DesignLayer } from "./types.ts";
 import { defaultGarment } from "../garments/index.ts";
 
@@ -81,6 +81,21 @@ describe("the sandbox catalog", () => {
     const price = (size: string) =>
       tee.variants.find((variant) => variant.id === `tee-heavy-black-${size}`)?.retailCents ?? 0;
     expect(price("2xl")).toBeGreaterThan(price("m"));
+  });
+
+  it("builds variant ids from color and size codes, not the labels", async () => {
+    expect(sandboxVariantId("tee-heavy", "black", "m")).toBe("tee-heavy-black-m");
+    expect(sandboxVariantId("tee-heavy", "black", "m")).not.toBe(sandboxVariantId("tee-heavy", "ink", "m"));
+    const tee = await provider.getProduct("tee-heavy");
+    const hot = tee.variants.find((variant) => variant.colorCode === "hot-pink" && variant.sizeCode === "m");
+    expect(hot?.color).toBe("Hot Pink");
+    expect(hot?.id).toBe("tee-heavy-hot-pink-m");
+    expect(hot?.id).not.toContain("Hot");
+    const renamed = tee.variants.map((variant) =>
+      variant.colorCode === "black" ? { ...variant, color: "Ink" } : variant,
+    );
+    const ink = renamed.find((variant) => variant.sizeCode === "m" && variant.color === "Ink");
+    expect(ink?.id).toBe("tee-heavy-black-m");
   });
 
   it("follows a different markup", async () => {
@@ -332,16 +347,17 @@ describe("sandbox orders", () => {
 });
 
 describe("which mode the shop runs in", () => {
-  it("is sandbox until a key or an explicit mode says otherwise", () => {
-    expect(readPodMode({})).toBe("sandbox");
-    expect(readPodMode({ PRINTFUL_API_KEY: "pf" })).toBe("live");
+  it("stays unset until POD_MODE says sandbox or live", () => {
+    expect(() => readPodMode({})).toThrow(/POD_MODE must be sandbox or live/);
+    expect(() => readPodMode({ PRINTFUL_API_KEY: "pf" })).toThrow(/POD_MODE must be sandbox or live/);
     expect(readPodMode({ PRINTFUL_API_KEY: "pf", POD_MODE: " Sandbox " })).toBe("sandbox");
     expect(readPodMode({ POD_MODE: "LIVE" })).toBe("live");
-    expect(readPodMode({ PRINTFUL_API_KEY: "   " })).toBe("sandbox");
+    expect(() => readPodMode({ PRINTFUL_API_KEY: "   " })).toThrow(/POD_MODE must be sandbox or live/);
     expect(readPaymentsMode({})).toBe("sandbox");
-    expect(readPaymentsMode({ STRIPE_SECRET_KEY: "sk" })).toBe("live");
+    expect(readPaymentsMode({ STRIPE_SECRET_KEY: "sk" })).toBe("sandbox");
     expect(readPaymentsMode({ STRIPE_SECRET_KEY: "sk", PAYMENTS_MODE: "sandbox" })).toBe("sandbox");
     expect(readPaymentsMode({ PAYMENTS_MODE: "live" })).toBe("live");
+    expect(readPaymentsMode({ STRIPE_SECRET_KEY: "sk", PAYMENTS_MODE: "live" })).toBe("live");
     expect(readPaymentsMode({ PAYMENTS_MODE: "banana" })).toBe("sandbox");
   });
 
@@ -353,12 +369,24 @@ describe("which mode the shop runs in", () => {
     expect(readMarkup({ STUDIO_MARKUP: "free" })).toBe(2.2);
   });
 
-  it("refuses to go live without a Printful key, rather than quietly using the sandbox", () => {
+  it("refuses to go live without a key, a store and a public address", () => {
     expect(() => getPodProvider({ POD_MODE: "live" })).toThrow(/PRINTFUL_API_KEY/);
+    expect(() => getPodProvider({ POD_MODE: "live", PRINTFUL_API_KEY: "pf" })).toThrow(
+      /PRINTFUL_STORE_ID/,
+    );
+    expect(() =>
+      getPodProvider({ POD_MODE: "live", PRINTFUL_API_KEY: "pf", PRINTFUL_STORE_ID: "12" }),
+    ).toThrow(/APP_PUBLIC_URL/);
     expect(
-      getPodProvider({ POD_MODE: "live", PRINTFUL_API_KEY: "pf", PRINTFUL_STORE_ID: " 12 " }).id,
+      getPodProvider({
+        POD_MODE: "live",
+        PRINTFUL_API_KEY: "pf",
+        PRINTFUL_STORE_ID: " 12 ",
+        APP_PUBLIC_URL: "https://shop.example",
+      }).id,
     ).toBe("printful");
-    expect(getPodProvider({}).id).toBe("sandbox");
+    expect(getPodProvider({ POD_MODE: "sandbox" }).id).toBe("sandbox");
+    expect(() => getPodProvider({})).toThrow(/POD_MODE/);
   });
 });
 

@@ -13,6 +13,7 @@ import { luminance } from "@/lib/color";
 import { fitPng, loadPixels } from "@/lib/gfx/canvas";
 import { copy } from "@/lib/copy";
 import { compressDataUrl, readFileAsDataUrl } from "@/lib/images";
+import { AOP_DPI } from "@/lib/pod/aop-printful";
 import type { CatalogProduct, DesignLayer, PrintArea } from "@/lib/pod/types";
 import { formatMoney } from "@/lib/pod/money";
 import {
@@ -197,14 +198,15 @@ export function Editor({ designId }: { designId: string }) {
   }, [chooseProduct, designId]);
 
   const variant = product?.variants.find((item) => item.id === variantId) ?? null;
+  const colorKey = (item: { color: string; colorCode?: string }) => item.colorCode ?? item.color;
   const colors = product
-    ? [...new Map(product.variants.map((item) => [item.color, item])).values()]
+    ? [...new Map(product.variants.map((item) => [colorKey(item), item])).values()]
     : [];
-  const sizes = product?.variants.filter((item) => item.color === variant?.color) ?? [];
+  const sizes = product?.variants.filter((item) => colorKey(item) === (variant ? colorKey(variant) : "")) ?? [];
   const area: PrintArea = useMemo(
     () =>
       variant?.printAreas.find((item) => item.placement === placement) ??
-      variant?.printAreas[0] ?? { placement, widthIn: 12, heightIn: 16, dpi: 150 },
+      variant?.printAreas[0] ?? { placement, widthIn: 12, heightIn: 16, dpi: AOP_DPI },
     [placement, variant],
   );
   const active = layers.find((layer) => layer.id === selected) ?? null;

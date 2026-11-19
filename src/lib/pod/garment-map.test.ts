@@ -35,13 +35,23 @@ const FIXTURE: GarmentBinding[] = [
 describe("garment template mapping", () => {
   it("maps template ids and provider product ids both ways", () => {
     assert.deepEqual(
-      bindingsFor("sandbox").map((item) => item.templateId),
+      bindingsFor("sandbox")
+        .map((item) => item.templateId)
+        .filter((id) => TEMPLATES.includes(id as (typeof TEMPLATES)[number])),
       [...TEMPLATES],
     );
     assert.deepEqual(
-      bindingsFor("printful").map((item) => item.templateId),
+      bindingsFor("printful")
+        .map((item) => item.templateId)
+        .filter((id) => TEMPLATES.includes(id as (typeof TEMPLATES)[number])),
       [...TEMPLATES],
     );
+    for (const id of SANDBOX_PLACEMENT_PRODUCT_IDS) {
+      assert.equal(productForTemplate("sandbox", id), id);
+      assert.equal(templateForProduct("sandbox", id), id);
+      assert.equal(productForTemplate("printful", id), null);
+      assert.equal(variantsForTemplate("printful", id), null);
+    }
     for (const templateId of TEMPLATES) {
       assert.equal(productForTemplate("sandbox", templateId), templateId);
       assert.equal(templateForProduct("sandbox", templateId), templateId);
@@ -52,7 +62,10 @@ describe("garment template mapping", () => {
       assert.equal(templateForProduct("sandbox", "yacht"), null);
       assert.ok(AOP_TEMPLATES[templateId]);
     }
-    assert.equal(GARMENT_BINDINGS.length, TEMPLATES.length * 2);
+    assert.equal(
+      GARMENT_BINDINGS.length,
+      (TEMPLATES.length + SANDBOX_PLACEMENT_PRODUCT_IDS.length) * 2,
+    );
   });
 
   it("maps variant ids both ways, and refuses an ambiguous or unknown one", () => {
