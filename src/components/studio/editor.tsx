@@ -40,9 +40,10 @@ import {
 } from "@/lib/studio/ink";
 import {
   AOP_ORDER_CLOSED,
-  SET_PARTNER,
   canOrderProduct,
   defaultGarment,
+  getTemplate,
+  setPartner,
   withSharedColorways,
   type GarmentDesign,
 } from "@/lib/studio/garments";
@@ -72,6 +73,21 @@ const starter: DesignLayer = {
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : "That did not land.";
+}
+
+function setPieces(garment: GarmentDesign, productName?: string) {
+  const partnerId = setPartner(garment.templateId);
+  const pieces = [{ name: productName ?? "This piece", garment }];
+  if (!partnerId) return pieces;
+  pieces.push({
+    name: getTemplate(partnerId)?.shortName ?? "The match",
+    garment: withSharedColorways(
+      defaultGarment(partnerId),
+      garment.colorways,
+      garment.activeColorwayId,
+    ),
+  });
+  return pieces;
 }
 
 export function Editor({ designId }: { designId: string }) {
@@ -662,17 +678,7 @@ export function Editor({ designId }: { designId: string }) {
               colorways={garment.colorways}
               activeColorwayId={garment.activeColorwayId}
               onPick={(id) => setGarment({ ...garment, activeColorwayId: id })}
-              pieces={[
-                { name: product?.name ?? "This piece", garment },
-                {
-                  name: "The match",
-                  garment: withSharedColorways(
-                    defaultGarment(SET_PARTNER[garment.templateId] ?? "aop-joggers"),
-                    garment.colorways,
-                    garment.activeColorwayId,
-                  ),
-                },
-              ]}
+              pieces={setPieces(garment, product?.name)}
             />
           </Panel>
         ) : null}

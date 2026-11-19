@@ -1,15 +1,30 @@
 import { getSql } from "../db.ts";
 import { getPodProvider } from "../pod/index.ts";
 import type { CatalogProduct } from "../pod/types.ts";
-import { AOP_ORDER_CLOSED, canOrderProduct, parseStoredGarment } from "./garments.ts";
+import { isPrintfulPlacementProduct } from "../pod/garment-map.ts";
+import { AOP_ORDER_CLOSED, canOrderProduct, isAopProduct, parseStoredGarment } from "./garments.ts";
 import { canBuyDesign, parseRecipient } from "./validate.ts";
 import { cartDelta, normalizeCartQuantity } from "./cart-qty.ts";
 import type { CartLine } from "./models.ts";
 import { fileUrl, sumCents, type DesignRow } from "./shared.server.ts";
 
-/** Refuses a piece the printer cannot make yet. Today that is every all-over piece. */
-function assertOrderable(productId: string): void {
-  if (!canOrderProduct(productId)) throw new Error(AOP_ORDER_CLOSED);
+/**
+ * Refuses a piece the printer cannot make yet. A known all-over id stays closed
+ * until its panel files exist. Anything else is ordered only when it is a
+ * sandbox placement blank, or a Printful product whose techniques are placement
+ * prints. A bare catalog number is not enough.
+ */
+async function assertOrderable(productId: string): Promise<void> {
+  if (isAopProduct(productId)) {
+    if (!canOrderProduct(productId)) throw new Error(AOP_ORDER_CLOSED);
+    return;
+  }
+  if (canOrderProduct(productId)) return;
+  const product = await getPodProvider().getProduct(productId);
+  const techniques = product.techniques.map((item) => item.key);
+  if (product.construction === "aop" || !isPrintfulPlacementProduct(productId, techniques)) {
+    throw new Error(AOP_ORDER_CLOSED);
+  }
 }
 
 export async function addToCart(
@@ -24,7 +39,7 @@ export async function addToCart(
   if (!design || !canBuyDesign({ ownerId: design.user_id, status: design.status }, userId)) {
     throw new Error("That piece is not for sale.");
   }
-  assertOrderable(design.product_id);
+  await assertOrderable(design.product_id);
   const product = await getPodProvider().getProduct(design.product_id);
   const variant = product.variants.find(
     (item) => item.id === variantId && item.color === design.color_name,
@@ -96,7 +111,7 @@ async function readCartRows(userId: string): Promise<CartJoin[]> {
  */
 export async function cartRows(userId: string): Promise<CartJoin[]> {
   const rows = await readCartRows(userId);
-  for (const row of rows) assertOrderable(row.product_id);
+  for (const row of rows) await assertOrderable(row.product_id);
   return rows;
 }
 

@@ -13,6 +13,8 @@ import {
 } from "./validate.ts";
 import type { CollectionRecord, DesignRecord, DesignSummary, ShopPiece } from "./models.ts";
 import {
+  canOrderProduct,
+  canonicalTemplateId,
   isAopProduct,
   parseColorwayBlob,
   parseGarment,
@@ -30,8 +32,13 @@ import {
 
 /** Parse a maker's garment and check it belongs to this all-over product. */
 function garmentFor(product: CatalogProduct, input: unknown): GarmentDesign {
-  const garment = parseGarment(input);
-  if (garment.templateId !== (product.aopTemplateId ?? product.id)) {
+  const raw = input && typeof input === "object" ? { ...(input as Record<string, unknown>) } : {};
+  if (typeof raw.templateId === "string") {
+    raw.templateId = canonicalTemplateId(raw.templateId) ?? raw.templateId;
+  }
+  const garment = parseGarment(raw);
+  const expected = product.aopTemplateId ?? canonicalTemplateId(product.id);
+  if (!expected || garment.templateId !== expected) {
     throw new Error("Those panels belong to a different garment.");
   }
   return garment;
@@ -255,8 +262,13 @@ export async function publishDesign(userId: string, designId: string): Promise<D
   if (held[0])
     throw new Error("The shop took this piece off the rack after a report. Ask the shop.");
   const config = readStudioConfig();
+  // An all-over piece can go on the rack in either mode. Live mode does not
+  // sync it to Printful until every panel has a real print file. One chest
+  // logo would not match the panels the maker drew.
+  const holdPrinter =
+    isAopProduct(row.product_id) && !canOrderProduct(row.product_id);
   let providerProductId = row.provider_product_id ?? null;
-  if (config.podMode === "live") {
+  if (config.podMode === "live" && !holdPrinter) {
     const url = fileUrl(row.print_file_id);
     if (!isPublicHttpUrl(url))
       throw new Error("Set APP_PUBLIC_URL so Printful can fetch the print file.");

@@ -78,6 +78,61 @@ describe("printful client", () => {
     assert.equal(product.variants[0]?.wholesaleCents, 1395);
     assert.equal(product.variants[0]?.retailCents, 2790);
     assert.equal(product.variants[0]?.printAreas[0]?.widthIn, 12);
+    assert.equal(product.construction, "placement");
+    assert.equal(product.aopTemplateId, undefined);
+  });
+
+  it("attaches the panel editor fields for all-over catalog products", async () => {
+    const products = [
+      { id: 388, templateId: "aop-hoodie" },
+      { id: 400, templateId: "aop-joggers" },
+      { id: 801, templateId: "aop-track-jacket" },
+    ];
+    const listed = [
+      ...products.map((item) => ({
+        id: item.id,
+        name: "All over",
+        type: "Apparel",
+        techniques: [{ key: "dtg", display_name: "DTG", is_default: true }],
+        placements: [{ placement: "front", technique: "dtg", title: "Front" }],
+      })),
+      {
+        id: 71,
+        name: "Softstyle Tee",
+        type: "T-Shirt",
+        techniques: [{ key: "dtg", display_name: "DTG", is_default: true }],
+        placements: [{ placement: "front", technique: "dtg", title: "Front" }],
+      },
+    ];
+    const { fetchImpl } = mockFetch((call) => {
+      if (call.url.includes("/catalog-variants")) return { json: { data: [{ ...variant, id: 9001 }] } };
+      if (call.url.includes("/prices")) {
+        return {
+          json: {
+            data: {
+              currency: "USD",
+              variant: { id: 9001, techniques: [{ technique_key: "dtg", discounted_price: "40.75" }] },
+            },
+          },
+        };
+      }
+      if (!/catalog-products\/\d+/.test(call.url)) {
+        return { json: { data: listed, paging: { total: listed.length, offset: 0, limit: 24 } } };
+      }
+      const id = Number(call.url.match(/catalog-products\/(\d+)/)?.[1]);
+      return { json: { data: listed.find((item) => item.id === id) ?? null } };
+    });
+    const provider = createPrintfulProvider({ apiKey: "pk_test", fetchImpl, markup: 2 });
+    for (const item of products) {
+      const product = await provider.getProduct(String(item.id));
+      assert.equal(product.construction, "aop");
+      assert.equal(product.aopTemplateId, item.templateId);
+      assert.ok(product.materialNote && product.materialNote.length > 10);
+    }
+    const page = await provider.listProducts();
+    assert.equal(page.products.find((item) => item.id === "388")?.aopTemplateId, "aop-hoodie");
+    assert.equal(page.products.find((item) => item.id === "71")?.construction, "placement");
+    assert.equal(page.products.find((item) => item.id === "71")?.aopTemplateId, undefined);
   });
 
   it("creates a draft order and does not confirm it", async () => {

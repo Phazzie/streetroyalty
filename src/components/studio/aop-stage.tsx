@@ -11,6 +11,7 @@ import {
   addColorway,
   getTemplate,
   panelExportPlan,
+  printfulCard,
   removeColorway,
   resolvePaint,
   setPanelFill,
@@ -48,6 +49,7 @@ export function AopStage({
   const [proofs, setProofs] = useState<{ title: string; href: string; note: string }[]>([]);
   const [proofNote, setProofNote] = useState("");
   if (!template) return null;
+  const linked = printfulCard(template.id);
   const colorway = activeColorway(garment);
   const panelDef = template.panels.find((item) => item.id === selected) ?? template.panels[0];
   const fill = garment.panels.find((item) => item.id === panelDef?.id)?.fill ?? {
@@ -62,9 +64,9 @@ export function AopStage({
 
   return (
     <div>
-      <p className="mb-3 text-sm text-muted">{template.printful.material.line}</p>
+      {linked ? <p className="mb-3 text-sm text-muted">{linked.materialLine}</p> : null}
       <p className="mb-3 text-sm text-muted">
-        Matched to Printful product {template.printful.catalogProductId}, {template.printful.name}.
+        {linked ? `Matched to Printful product ${linked.catalogProductId}, ${linked.name}. ` : ""}
         Each panel can take the colorway, its own color, a pattern, or art.
       </p>
       {canOrderProduct(template.id) ? null : <p className="mb-3 text-sm">{AOP_ORDER_CLOSED}</p>}

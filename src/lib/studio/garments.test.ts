@@ -6,11 +6,14 @@ import {
   MAX_ART_SRC,
   MAX_GARMENT_JSON,
   materialLine,
+  printfulCard,
+  canOrderProduct,
   addColorway,
   assessSet,
   defaultGarment,
   panelExportPlan,
   parseGarment,
+  parseStoredGarment,
   removeColorway,
   renderGarmentSvg,
   resolveGarment,
@@ -25,9 +28,10 @@ const decode = (url: string) => decodeURIComponent(url.slice(url.indexOf(",") + 
 describe("all-over garments", () => {
   it("covers a hoodie, joggers, and a track jacket, each tied to a Printful product", () => {
     assert.deepEqual(Object.keys(AOP_TEMPLATES), ["aop-hoodie", "aop-joggers", "aop-track-jacket"]);
-    assert.equal(AOP_TEMPLATES["aop-hoodie"]?.printful.catalogProductId, 388);
-    assert.equal(AOP_TEMPLATES["aop-joggers"]?.printful.catalogProductId, 400);
-    assert.equal(AOP_TEMPLATES["aop-track-jacket"]?.printful.catalogProductId, 801);
+    assert.equal(printfulCard("aop-hoodie")?.catalogProductId, 388);
+    assert.equal(printfulCard("aop-joggers")?.catalogProductId, 400);
+    assert.equal(printfulCard("aop-track-jacket")?.catalogProductId, 801);
+    assert.equal("printful" in (AOP_TEMPLATES["aop-hoodie"] ?? {}), false);
     for (const template of Object.values(AOP_TEMPLATES)) {
       const ids = template.panels.map((panel) => panel.id);
       assert.equal(new Set(ids).size, ids.length);
@@ -159,6 +163,32 @@ describe("all-over garments", () => {
     if (!clash.ok) assert.match(clash.reason, /same colorways/);
     assert.match(materialLine("aop-hoodie"), /sublimation/);
     assert.equal(materialLine("tee-heavy"), "");
+  });
+
+  it("blocks an unknown product and keeps a placement blank orderable", () => {
+    assert.equal(canOrderProduct("aop-hoodie"), false);
+    assert.equal(canOrderProduct("aop-joggers"), false);
+    assert.equal(canOrderProduct("388"), false);
+    assert.equal(canOrderProduct("400"), false);
+    assert.equal(canOrderProduct("801"), false);
+    assert.equal(canOrderProduct("tee-heavy"), true);
+    assert.equal(canOrderProduct("hoodie-pullover"), true);
+    assert.equal(canOrderProduct("71"), false);
+    assert.equal(canOrderProduct("yacht"), false);
+    assert.equal(canOrderProduct(""), false);
+    assert.equal(canOrderProduct("aop-hoodie-typo"), false);
+  });
+
+  it("reads a saved garment whose template id is still the sandbox key or a Printful catalog id", () => {
+    const legacy = defaultGarment("aop-hoodie");
+    const stored = parseStoredGarment(JSON.stringify(legacy));
+    assert.equal(stored?.templateId, "aop-hoodie");
+    assert.equal(stored?.activeColorwayId, "lilac-cream");
+    const fromCatalog = parseStoredGarment(JSON.stringify({ ...legacy, templateId: "388" }));
+    assert.equal(fromCatalog?.templateId, "aop-hoodie");
+    assert.equal(fromCatalog?.panels.length, legacy.panels.length);
+    assert.equal(parseStoredGarment("not json"), null);
+    assert.equal(parseStoredGarment(null), null);
   });
 });
 

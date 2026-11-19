@@ -1,8 +1,9 @@
 import { garmentMockupSvg } from "../gfx/garments/index.ts";
 import { luminance } from "../color.ts";
-import { renderGarmentSvg } from "../studio/garments.ts";
-import { arcLayout, clampFx, isFlatText } from "../studio/textfx.ts";
-import { PRINTFUL_AOP } from "./aop-printful.ts";
+import { getTemplate } from "../garments/panels.ts";
+import { renderGarmentSvg } from "../garments/render.ts";
+import { arcLayout, clampFx, isFlatText } from "../text/layout.ts";
+import { aopFieldsFor, bindingsFor, printfulFactsForTemplate } from "./garment-map.ts";
 import { applyMarkup } from "./money.ts";
 import type {
   CatalogPage,
@@ -80,9 +81,6 @@ type Blank = {
   sizes: string[];
   wholesaleCents: number;
   shape: "tee" | "hoodie" | "hat" | "crew" | "tote" | "joggers" | "aop";
-  construction?: "placement" | "aop";
-  materialNote?: string;
-  aopTemplateId?: string;
 };
 
 const BLANKS: Blank[] = [
@@ -234,34 +232,31 @@ const BLANKS: Blank[] = [
     wholesaleCents: 995,
     shape: "tote",
   },
-  aopBlank("aop-hoodie", "AOP Hoodie", "Hoodie", PRINTFUL_AOP.hoodie),
-  aopBlank("aop-joggers", "AOP Joggers", "Joggers", PRINTFUL_AOP.joggers),
-  aopBlank("aop-track-jacket", "AOP Track Jacket", "Jacket", PRINTFUL_AOP.jacket),
+  ...aopBlanks(),
 ];
 
-function aopBlank(
-  id: string,
-  name: string,
-  type: string,
-  printful: (typeof PRINTFUL_AOP)[keyof typeof PRINTFUL_AOP],
-): Blank {
-  return {
-    id,
-    name,
-    type,
-    description: `${printful.material.line} Matched to Printful ${printful.catalogProductId}, ${printful.name}. Panel colors are the print, not a dyed blank. Printful's template pixel sizes are not confirmed yet.`,
-    technique: "sublimation",
-    techniqueTitle: "Sublimation",
-    placements: [{ placement: "front", title: "Chest logo" }],
-    areas: CHEST,
-    colors: [{ name: "Printed", hex: "#c4a6e0" }],
-    sizes: ["S", "M", "L", "XL", "2XL"],
-    wholesaleCents: printful.startingPriceCents,
-    shape: "aop",
-    construction: "aop",
-    materialNote: printful.material.line,
-    aopTemplateId: id,
-  };
+function aopBlanks(): Blank[] {
+  return bindingsFor("sandbox").map((binding) => {
+    const template = getTemplate(binding.templateId);
+    const facts = printfulFactsForTemplate(binding.templateId);
+    if (!template || !facts) {
+      throw new Error(`Sandbox has no all-over template for ${binding.templateId}.`);
+    }
+    return {
+      id: binding.productId,
+      name: template.name,
+      type: template.kind,
+      description: `${facts.material.line} Matched to Printful ${facts.catalogProductId}, ${facts.name}. Panel colors are the print, not a dyed blank. Printful's template pixel sizes are not confirmed yet.`,
+      technique: "sublimation",
+      techniqueTitle: "Sublimation",
+      placements: [{ placement: "front", title: "Chest logo" }],
+      areas: CHEST,
+      colors: [{ name: "Printed", hex: "#c4a6e0" }],
+      sizes: ["S", "M", "L", "XL", "2XL"],
+      wholesaleCents: facts.startingPriceCents,
+      shape: "aop",
+    };
+  });
 }
 
 function sizePremium(size: string): number {
@@ -311,9 +306,7 @@ function toProduct(blank: Blank, markup: number, withVariants: boolean): Catalog
     colors: blank.colors,
     sizes: blank.sizes,
     variants: withVariants ? variantsFor(blank, markup) : [],
-    construction: blank.construction ?? "placement",
-    materialNote: blank.materialNote,
-    aopTemplateId: blank.aopTemplateId,
+    ...aopFieldsFor("sandbox", blank.id),
   };
 }
 
@@ -434,7 +427,8 @@ function mockupShape(blank: Blank): string {
 
 function blankImage(blank: Blank): string {
   // An all-over blank is its panels; the house colorway shows what the garment is.
-  if (blank.aopTemplateId) return renderGarmentSvg({ templateId: blank.aopTemplateId });
+  const templateId = aopTemplateOf(blank.id);
+  if (templateId) return renderGarmentSvg({ templateId });
   return garmentMockupSvg({
     shape: mockupShape(blank),
     colorHex: blank.colors[0]?.hex ?? "#141414",
@@ -453,6 +447,11 @@ function blankImage(blank: Blank): string {
       },
     ],
   });
+}
+
+function aopTemplateOf(productId: string): string | undefined {
+  const linked = aopFieldsFor("sandbox", productId);
+  return linked.construction === "aop" ? linked.aopTemplateId : undefined;
 }
 
 function findBlank(productId: string): Blank {
@@ -526,11 +525,12 @@ export function createSandboxProvider(
       const allowed = blank.placements.some((placement) => placement.placement === input.placement);
       if (!allowed) throw new PodError(`${blank.name} has no ${input.placement} placement`, 400);
       const label = input.layers.find((layer) => layer.type === "text")?.text;
+      const templateId = aopTemplateOf(blank.id);
       return {
         id: nextId(),
         status: "completed",
-        mockupUrl: blank.aopTemplateId
-          ? renderGarmentSvg({ templateId: blank.aopTemplateId, garment: input.garment, label })
+        mockupUrl: templateId
+          ? renderGarmentSvg({ templateId, garment: input.garment, label })
           : garmentMockupSvg({
               shape: mockupShape(blank),
               colorHex: input.colorHex,

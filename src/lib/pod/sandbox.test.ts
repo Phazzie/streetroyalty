@@ -3,7 +3,7 @@ import { getPodProvider, readMarkup, readPaymentsMode, readPodMode } from "./ind
 import { applyMarkup, centsToDecimal, clampMarkup, formatMoney, moneyToCents } from "./money.ts";
 import { buildMockupSvg, createSandboxProvider } from "./sandbox.ts";
 import type { DesignLayer } from "./types.ts";
-import { defaultGarment } from "../studio/garments.ts";
+import { defaultGarment } from "../garments/index.ts";
 
 const WORD: DesignLayer = {
   id: "t",

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getSql } from "../db.ts";
-import { addToCart } from "./cart.server.ts";
+import { addToCart, listCart } from "./cart.server.ts";
 import { getDesign, getShopDesign, publishDesign, saveDesign } from "./designs.server.ts";
 import {
   createMatchedSet,
@@ -227,5 +227,156 @@ describe("all-over pieces and sets", () => {
     const sql = await getSql();
     const orders = await sql`select id from orders where user_id = 'bo'`;
     expect(orders).toEqual([]);
+  });
+
+  it("loads designs, sets and cart lines stored the way migrations 0005 and 0013 wrote them", async () => {
+    const garment = defaultGarment("aop-hoodie");
+    const sql = await getSql();
+    const layers = JSON.stringify([
+      { id: "t", type: "text", text: "SR", x: 0.5, y: 0.4, scale: 1, rotation: 0 },
+    ]);
+    await sql`
+      insert into designs (
+        id, user_id, title, slug, status, product_id, product_name, product_type,
+        variant_id, variant_label, color_name, color_hex, size_label, placement, technique,
+        layers_json, garment_json, retail_cents, currency, set_id
+      ) values (
+        'legacy-hoodie', 'ada', 'Legacy lilac', 'legacy-lilac', 'published', 'aop-hoodie',
+        'AOP Hoodie', 'Hoodie', 'aop-hoodie-printed-m', 'AOP Hoodie / Printed / M', 'Printed',
+        '#c4a6e0', 'M', 'front', 'sublimation', ${layers}, ${JSON.stringify(garment)}, 4000,
+        'USD', 'legacy-set'
+      )
+    `;
+    const catalogJson = JSON.stringify({ ...garment, templateId: "388" });
+    await sql`
+      insert into designs (
+        id, user_id, title, slug, status, product_id, product_name, product_type,
+        variant_id, variant_label, color_name, color_hex, size_label, placement, technique,
+        layers_json, garment_json, retail_cents, currency, set_id
+      ) values (
+        'catalog-hoodie', 'ada', 'Catalog id', 'catalog-id', 'draft', '388',
+        'All-Over Print Recycled Unisex Hoodie', 'Hoodie', '9001', 'M', 'Printed',
+        '#c4a6e0', 'M', 'front', 'sublimation', ${layers}, ${catalogJson}, 4075,
+        'USD', 'legacy-set'
+      )
+    `;
+    await sql`
+      insert into designs (
+        id, user_id, title, slug, status, product_id, product_name, product_type,
+        variant_id, variant_label, color_name, color_hex, size_label, placement, technique,
+        layers_json, retail_cents, currency, set_id
+      ) values (
+        'bare-joggers', 'ada', 'Bare joggers', 'bare-joggers', 'draft', 'aop-joggers',
+        'AOP Joggers', 'Joggers', 'aop-joggers-printed-m', 'M', 'Printed',
+        '#c4a6e0', 'M', 'front', 'sublimation', ${layers}, 3948, 'USD', 'legacy-set'
+      )
+    `;
+    await sql`
+      insert into garment_sets (
+        id, user_id, title, slug, status, provider, colorways_json, piece_ids_json
+      ) values (
+        'legacy-set', 'ada', 'Legacy set', 'legacy-set', 'draft', 'sandbox',
+        ${JSON.stringify({ colorways: garment.colorways, activeColorwayId: garment.activeColorwayId })},
+        ${JSON.stringify(["legacy-hoodie", "catalog-hoodie", "bare-joggers"])}
+      )
+    `;
+    await sql`
+      insert into cart_items (
+        id, user_id, design_id, variant_id, variant_label, quantity, colorway_id
+      ) values (
+        'legacy-line', 'ada', 'legacy-hoodie', 'aop-hoodie-printed-m', 'M', 1, 'lilac-cream'
+      )
+    `;
+
+    const loaded = await getDesign("ada", "legacy-hoodie");
+    expect(loaded.garment?.templateId).toBe("aop-hoodie");
+    expect(loaded.garment?.colorways.map((item) => item.id)).toEqual([
+      "lilac-cream",
+      "lilac-white",
+      "black-gold",
+    ]);
+    const fromCatalog = await getDesign("ada", "catalog-hoodie");
+    expect(fromCatalog.productId).toBe("388");
+    expect(fromCatalog.garment?.templateId).toBe("aop-hoodie");
+
+    const set = await getOwnedSet("ada", "legacy-set");
+    expect(set.pieces.map((item) => item.productId).sort()).toEqual([
+      "388",
+      "aop-hoodie",
+      "aop-joggers",
+    ]);
+    expect(set.pieces.every((item) => item.garment.templateId.length > 0)).toBe(true);
+    expect(set.pieces.find((item) => item.productId === "388")?.garment.templateId).toBe(
+      "aop-hoodie",
+    );
+    expect(set.pieces.find((item) => item.productId === "aop-joggers")?.garment.templateId).toBe(
+      "aop-joggers",
+    );
+    expect(set.colorways[0]?.id).toBe("lilac-cream");
+
+    const cart = await listCart("ada");
+    expect(cart.map((line) => line.variantId)).toEqual(["aop-hoodie-printed-m"]);
+    expect(cart[0]?.designId).toBe("legacy-hoodie");
+  });
+
+  it("pairs a piece again when its set id points at a set that was never written", async () => {
+    const hoodie = await saveDesign("ada", piece("Stuck hoodie"));
+    const sql = await getSql();
+    const dead = crypto.randomUUID();
+    await sql`update designs set set_id = ${dead} where id = ${hoodie.id} and user_id = 'ada'`;
+    const set = await createMatchedSet("ada", hoodie.id);
+    expect(set.pieces).toHaveLength(2);
+    expect(set.id).not.toBe(dead);
+    expect((await getDesign("ada", hoodie.id)).setId).toBe(set.id);
+    const rows = await sql<{ id: string }>`select id from garment_sets where id = ${dead}`;
+    expect(rows).toEqual([]);
+  });
+
+  it("stops a cart that holds a catalog id saved before any panel design existed", async () => {
+    // Old live mode stored 388 as a placement print. garment_json was null.
+    // parseGarment would not have accepted templateId "388", so that is not the
+    // row to reproduce. One chest file on an all-over blank still must not print.
+    const sql = await getSql();
+    const layers = JSON.stringify([
+      { id: "t", type: "text", text: "SR", x: 0.5, y: 0.4, scale: 1, rotation: 0 },
+    ]);
+    await sql`
+      insert into designs (
+        id, user_id, title, slug, status, product_id, product_name, product_type,
+        variant_id, variant_label, color_name, color_hex, size_label, placement, technique,
+        layers_json, retail_cents, currency
+      ) values (
+        'old-live-hoodie', 'ada', 'Old live hoodie', 'old-live-hoodie', 'published', '388',
+        'All-Over Print Recycled Unisex Hoodie', 'Hoodie', '9001', 'M', 'Printed',
+        '#c4a6e0', 'M', 'front', 'dtg', ${layers}, 4075, 'USD'
+      )
+    `;
+    await sql`
+      insert into cart_items (
+        id, user_id, design_id, variant_id, variant_label, quantity, colorway_id
+      ) values (
+        'old-live-line', 'bo', 'old-live-hoodie', '9001', 'M', 1, ''
+      )
+    `;
+    const loaded = await getDesign("ada", "old-live-hoodie");
+    expect(loaded.productId).toBe("388");
+    expect(loaded.garment).toBeNull();
+    const cart = await listCart("bo");
+    expect(cart.map((line) => line.designId)).toEqual(["old-live-hoodie"]);
+    await expect(
+      startCheckout("bo", { recipient: RECIPIENT, shippingMethod: "STANDARD" }),
+    ).rejects.toThrow(/Ordering opens once/);
+  });
+
+  it("does not invent a partner variant while live Printful variant ids are empty", async () => {
+    const hoodie = await saveDesign("ada", piece("Live partner"));
+    process.env.POD_MODE = "live";
+    process.env.PRINTFUL_API_KEY = "pf_test_key";
+    await expect(createMatchedSet("ada", hoodie.id)).rejects.toThrow(/different printer/);
+    const sql = await getSql();
+    const extra = await sql<{ id: string }>`
+      select id from designs where user_id = 'ada' and id <> ${hoodie.id}
+    `;
+    expect(extra).toEqual([]);
   });
 });

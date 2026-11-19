@@ -9,7 +9,7 @@ import {
   OUTLINE_EM,
   TEXT_EM,
   textWidthEm,
-} from "../../studio/textfx.ts";
+} from "../../text/layout.ts";
 import {
   drawGarment,
   resolveShape,
