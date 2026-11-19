@@ -14,6 +14,18 @@ const ROUTES: [path: string, heading: string][] = [
   ["/orders", "Orders"],
   ["/checkout", "Checkout"],
   ["/login", "Sign in"],
+  ["/battles", "Which one would you wear"],
+  ["/say", "Say it"],
+  ["/patterns", "Make the cloth first"],
+  ["/clash", "The clash machine"],
+  ["/made", "How it's made"],
+  ["/math", "Do the math"],
+  ["/episodes", "Episodes"],
+  ["/episodes/episode-0", "Episode 0"],
+  ["/m/nobody-here", "Nobody trades here"],
+  ["/me", "Your name on the rack"],
+  ["/go-live", "Go live"],
+  ["/reports", "The report queue"],
 ];
 
 for (const [path, heading] of ROUTES) {
@@ -34,6 +46,9 @@ for (const [path, heading] of ROUTES) {
     });
 
     test("has no serious accessibility problems", async ({ page }) => {
+      // Contrast is measured on the finished page. Mid fade-in, text is see-through on
+      // purpose, and on a busy machine the scan can land on such a frame.
+      await page.emulateMedia({ reducedMotion: "reduce" });
       await page.goto(path);
       await expect(page.getByRole("heading", { name: heading }).first()).toBeVisible();
       const results = await new AxeBuilder({ page })

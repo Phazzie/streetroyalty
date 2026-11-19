@@ -3,6 +3,7 @@ import { getPodProvider, readMarkup, readPaymentsMode, readPodMode } from "./ind
 import { applyMarkup, centsToDecimal, clampMarkup, formatMoney, moneyToCents } from "./money.ts";
 import { buildMockupSvg, createSandboxProvider } from "./sandbox.ts";
 import type { DesignLayer } from "./types.ts";
+import { defaultGarment } from "../studio/garments.ts";
 
 const WORD: DesignLayer = {
   id: "t",
@@ -45,16 +46,22 @@ const DRAFT = {
 describe("the sandbox catalog", () => {
   const provider = createSandboxProvider();
 
-  it("lists four blanks, a page at a time", async () => {
+  it("lists the house blanks, a page at a time", async () => {
     const all = await provider.listProducts();
     expect(all.products.map((product) => product.id)).toEqual([
       "tee-heavy",
       "hoodie-pullover",
       "hat-dad",
       "crew-sweat",
+      "longsleeve-block",
+      "jogger-court",
+      "tote-corner",
+      "aop-hoodie",
+      "aop-joggers",
+      "aop-track-jacket",
     ]);
     const page = await provider.listProducts({ offset: 1, limit: 2 });
-    expect(page).toMatchObject({ total: 4, offset: 1, limit: 2 });
+    expect(page).toMatchObject({ total: 10, offset: 1, limit: 2 });
     expect(page.products.map((product) => product.id)).toEqual(["hoodie-pullover", "hat-dad"]);
   });
 
@@ -79,6 +86,37 @@ describe("the sandbox catalog", () => {
   it("follows a different markup", async () => {
     const cheap = await createSandboxProvider(new Map(), 1).getProduct("tee-heavy");
     expect(cheap.variants[0]?.retailCents).toBe(cheap.variants[0]?.wholesaleCents);
+  });
+
+  it("labels all-over blanks as sublimation on polyester, not sewn cotton", async () => {
+    const hoodie = await provider.getProduct("aop-hoodie");
+    expect(hoodie.construction).toBe("aop");
+    expect(hoodie.techniques[0]?.key).toBe("sublimation");
+    expect(hoodie.materialNote).toMatch(/sublimation/);
+    expect(hoodie.materialNote).toMatch(/not sewn cotton/);
+    expect(hoodie.description).toMatch(/388/);
+    for (const id of ["aop-joggers", "aop-track-jacket"]) {
+      const piece = await provider.getProduct(id);
+      expect(piece.materialNote).toMatch(/fabric is not confirmed/);
+      expect(piece.materialNote).not.toMatch(/sublimation|polyester|cotton/);
+      expect(piece.description).not.toMatch(/polyester|spandex/);
+    }
+  });
+
+  it("draws an all-over mockup from the garment it is given", async () => {
+    const mockup = await provider.createMockup({
+      productId: "aop-hoodie",
+      variantId: "aop-hoodie-printed-m",
+      placement: "front",
+      technique: "sublimation",
+      colorHex: "#c4a6e0",
+      productType: "Hoodie",
+      layers: [],
+      garment: { ...defaultGarment("aop-hoodie"), activeColorwayId: "black-gold" },
+    });
+    const svg = decodeURIComponent(mockup.mockupUrl ?? "");
+    expect(svg).toContain("#141414");
+    expect(svg).not.toContain("#c4a6e0");
   });
 
   it("answers 404 for a product it does not carry", async () => {
@@ -199,6 +237,20 @@ describe("sandbox mockups", () => {
       }),
     );
     expect(svg.match(/<image /g)).toHaveLength(2);
+  });
+
+  it("draws an arched word one letter at a time", () => {
+    const svg = decode(
+      buildMockupSvg({
+        shape: "tee",
+        colorHex: "#141414",
+        placement: "front",
+        layers: [{ ...WORD, arc: -40 }],
+      }),
+    );
+    expect(svg.match(/<text /g)).toHaveLength(5);
+    expect(svg).toContain(">C</text>");
+    expect(svg).toContain(">N</text>");
   });
 });
 

@@ -1,6 +1,7 @@
 import { getSql } from "../db.ts";
 import { getPodProvider } from "../pod/index.ts";
 import { centsToDecimal } from "../pod/money.ts";
+import type { CatalogProduct } from "../pod/types.ts";
 import {
   imageDimensions,
   isPublicHttpUrl,
@@ -10,8 +11,31 @@ import {
   printQualityWarning,
   slugify,
 } from "./validate.ts";
-import type { CollectionRecord, DesignRecord, DesignSummary } from "./models.ts";
-import { fileUrl, ownedDesign, readStudioConfig, record, summary, type DesignRow } from "./shared.server.ts";
+import type { CollectionRecord, DesignRecord, DesignSummary, ShopPiece } from "./models.ts";
+import {
+  isAopProduct,
+  parseColorwayBlob,
+  parseGarment,
+  parseStoredGarment,
+  type GarmentDesign,
+} from "./garments.ts";
+import {
+  fileUrl,
+  ownedDesign,
+  readStudioConfig,
+  record,
+  summary,
+  type DesignRow,
+} from "./shared.server.ts";
+
+/** Parse a maker's garment and check it belongs to this all-over product. */
+function garmentFor(product: CatalogProduct, input: unknown): GarmentDesign {
+  const garment = parseGarment(input);
+  if (garment.templateId !== (product.aopTemplateId ?? product.id)) {
+    throw new Error("Those panels belong to a different garment.");
+  }
+  return garment;
+}
 
 export async function listCollections(userId: string): Promise<CollectionRecord[]> {
   const sql = await getSql();
@@ -64,6 +88,7 @@ type SaveInput = {
   layers: unknown;
   printFile?: unknown;
   mockupUrl?: string | null;
+  garment?: unknown;
 };
 
 export async function saveDesign(
@@ -109,6 +134,13 @@ export async function saveDesign(
     }
   }
   const layersJson = JSON.stringify(layers);
+  let garmentJson: string | null = null;
+  if (isAopProduct(product.id)) {
+    garmentJson =
+      input.garment != null
+        ? JSON.stringify(garmentFor(product, input.garment))
+        : (existing?.garment_json ?? null);
+  }
   if (existing) {
     await sql`
       update designs set
@@ -125,6 +157,7 @@ export async function saveDesign(
         placement = ${placement.placement},
         technique = ${placement.technique},
         layers_json = ${layersJson},
+        garment_json = ${garmentJson},
         print_file_id = ${printFileId},
         mockup_url = ${mockup},
         retail_cents = ${variant.retailCents},
@@ -140,11 +173,11 @@ export async function saveDesign(
     insert into designs (
       id, user_id, collection_id, title, slug, status, product_id, product_name, product_type,
       variant_id, variant_label, color_name, color_hex, size_label, placement, technique,
-      layers_json, print_file_id, mockup_url, retail_cents, currency
+      layers_json, garment_json, print_file_id, mockup_url, retail_cents, currency
     ) values (
       ${id}, ${userId}, ${input.collectionId || null}, ${title}, ${slug}, 'draft', ${product.id}, ${product.name}, ${product.type},
       ${variant.id}, ${variant.name}, ${variant.color}, ${variant.colorHex}, ${variant.size}, ${placement.placement}, ${placement.technique},
-      ${layersJson}, ${printFileId}, ${mockup}, ${variant.retailCents}, 'USD'
+      ${layersJson}, ${garmentJson}, ${printFileId}, ${mockup}, ${variant.retailCents}, 'USD'
     )
   `;
   const saved = await ownedDesign(sql, userId, id);
@@ -158,11 +191,17 @@ export async function generateMockup(input: {
   placement: string;
   layers: unknown;
   printFile?: unknown;
+  garment?: unknown;
   userId?: string;
 }): Promise<{ mockupUrl: string; status: string }> {
   const layers = parseLayers(input.layers);
   const provider = getPodProvider();
   const product = await provider.getProduct(input.productId);
+  // An all-over mockup is drawn from the maker's own panels. Anything else ignores them.
+  const garment =
+    isAopProduct(product.id) && input.garment != null
+      ? garmentFor(product, input.garment)
+      : undefined;
   const variant = product.variants.find((item) => item.id === input.variantId);
   if (!variant) throw new Error("Pick a color and size first.");
   const placement = product.placements.find((item) => item.placement === input.placement);
@@ -196,6 +235,7 @@ export async function generateMockup(input: {
     productType: product.type,
     layers,
     printArea: area,
+    garment,
   });
   if (mockup.status === "failed") throw new Error(mockup.error || "Mockup failed.");
   if (!mockup.mockupUrl) throw new Error("The mockup is still rendering. Try again in a moment.");
@@ -208,6 +248,12 @@ export async function publishDesign(userId: string, designId: string): Promise<D
   if (!row) throw new Error("That design is not on your rack.");
   if (!row.print_file_id) throw new Error("Save a print file before publishing.");
   if (!row.mockup_url) throw new Error("Generate a mockup before publishing.");
+  // The shop took this piece off the rack after a report. Only the shop can put it back.
+  const held = await sql<{ id: string }>`
+    select id from reports where kind = 'piece' and target_id = ${row.id} and status = 'removed' limit 1
+  `;
+  if (held[0])
+    throw new Error("The shop took this piece off the rack after a report. Ask the shop.");
   const config = readStudioConfig();
   let providerProductId = row.provider_product_id ?? null;
   if (config.podMode === "live") {
@@ -247,9 +293,7 @@ export async function listShop(): Promise<DesignSummary[]> {
   return rows.map(summary);
 }
 
-export async function getShopDesign(
-  slug: string,
-): Promise<DesignSummary & { sizes: { variantId: string; label: string; retailCents: number }[] }> {
+export async function getShopDesign(slug: string): Promise<ShopPiece> {
   const sql = await getSql();
   const rows =
     await sql<DesignRow>`select * from designs where slug = ${slug} and status = 'published'`;
@@ -270,7 +314,73 @@ export async function getShopDesign(
       retailCents: Number(row.retail_cents),
     });
   }
-  return { ...summary(row), sizes };
+  const garment = parseStoredGarment(row.garment_json);
+  let colorways = garment?.colorways ?? [];
+  let activeColorwayId = garment?.activeColorwayId ?? null;
+  let set: {
+    id: string;
+    title: string;
+    slug: string;
+    provider: string;
+    colorways: typeof colorways;
+    activeColorwayId: string;
+    pieces: { id: string; title: string; slug: string; productType: string }[];
+  } | null = null;
+  if (row.set_id) {
+    const sets = await sql<{
+      id: string;
+      title: string;
+      slug: string;
+      provider: string;
+      status: string;
+      colorways_json: string;
+      piece_ids_json: string;
+    }>`select id, title, slug, provider, status, colorways_json, piece_ids_json from garment_sets where id = ${row.set_id}`;
+    const found = sets[0];
+    if (found?.status === "published") {
+      const blob = parseColorwayBlob(found.colorways_json);
+      colorways = blob.colorways;
+      activeColorwayId = blob.activeColorwayId;
+      const ids = JSON.parse(found.piece_ids_json) as string[];
+      const pieces = [];
+      for (const id of ids) {
+        const pieceRows = await sql<{
+          id: string;
+          title: string;
+          slug: string;
+          product_type: string;
+        }>`
+          select id, title, slug, product_type from designs where id = ${id}
+        `;
+        const piece = pieceRows[0];
+        if (piece)
+          pieces.push({
+            id: piece.id,
+            title: piece.title,
+            slug: piece.slug,
+            productType: piece.product_type,
+          });
+      }
+      set = {
+        id: found.id,
+        title: found.title,
+        slug: found.slug,
+        provider: found.provider,
+        colorways,
+        activeColorwayId: activeColorwayId ?? "",
+        pieces,
+      };
+    }
+  }
+  return {
+    ...summary(row),
+    sizes,
+    colorways,
+    activeColorwayId,
+    materialNote: product.materialNote ?? null,
+    construction: product.construction ?? "placement",
+    set,
+  };
 }
 
 export async function readPrintFile(

@@ -48,12 +48,14 @@ export const makeMockup = createServerFn({ method: "POST" })
       placement?: string;
       layers?: unknown;
       printFile?: unknown;
+      garment?: unknown;
     }) => ({
       productId: String(input?.productId ?? ""),
       variantId: String(input?.variantId ?? ""),
       placement: String(input?.placement ?? "front"),
       layers: input?.layers,
       printFile: input?.printFile,
+      garment: input?.garment,
     }),
   )
   .handler(async ({ data, context }) => {
@@ -76,6 +78,7 @@ export const savePiece = createServerFn({ method: "POST" })
       layers: data.layers,
       printFile: data.printFile,
       mockupUrl: data.mockupUrl ? String(data.mockupUrl) : null,
+      garment: data.garment,
     });
   });
 
@@ -122,6 +125,45 @@ export const shopList = createServerFn({ method: "GET" }).handler(async () => {
   return listShop();
 });
 
+export const buildSet = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { designId?: string; title?: string }) => ({
+    designId: String(input?.designId ?? ""),
+    title: input?.title ? String(input.title) : undefined,
+  }))
+  .handler(async ({ data, context }) => {
+    const { createMatchedSet } = await import("./garments.server.ts");
+    return createMatchedSet(context.userId, data.designId, data.title);
+  });
+
+export const readSet = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .validator((input: { setId?: string }) => ({ setId: String(input?.setId ?? "") }))
+  .handler(async ({ data, context }) => {
+    const { getOwnedSet } = await import("./garments.server.ts");
+    return getOwnedSet(context.userId, data.setId);
+  });
+
+export const saveSetColors = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { setId?: string; colorways?: unknown; activeColorwayId?: string }) => ({
+    setId: String(input?.setId ?? ""),
+    colorways: input?.colorways,
+    activeColorwayId: String(input?.activeColorwayId ?? ""),
+  }))
+  .handler(async ({ data, context }) => {
+    const { saveSetColorways } = await import("./garments.server.ts");
+    return saveSetColorways(context.userId, data.setId, data.colorways, data.activeColorwayId);
+  });
+
+export const publishSetPiece = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { setId?: string }) => ({ setId: String(input?.setId ?? "") }))
+  .handler(async ({ data, context }) => {
+    const { publishSet } = await import("./garments.server.ts");
+    return publishSet(context.userId, data.setId);
+  });
+
 export const shopPiece = createServerFn({ method: "GET" })
   .validator((input: { slug?: string }) => ({ slug: String(input?.slug ?? "") }))
   .handler(async ({ data }) => {
@@ -131,13 +173,14 @@ export const shopPiece = createServerFn({ method: "GET" })
 
 export const cartAdd = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((input: { designId?: string; variantId?: string }) => ({
+  .validator((input: { designId?: string; variantId?: string; colorwayId?: string }) => ({
     designId: String(input?.designId ?? ""),
     variantId: String(input?.variantId ?? ""),
+    colorwayId: String(input?.colorwayId ?? "").slice(0, 40),
   }))
   .handler(async ({ data, context }) => {
     const { addToCart } = await import("./repo.server.ts");
-    await addToCart(context.userId, data.designId, data.variantId);
+    await addToCart(context.userId, data.designId, data.variantId, data.colorwayId);
     return { ok: true };
   });
 

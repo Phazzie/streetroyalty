@@ -1,4 +1,5 @@
 /** Shared print-on-demand types. Safe to import from client code. */
+import type { GarmentDesign } from "../studio/garments.ts";
 
 export type PodMode = "live" | "sandbox";
 
@@ -50,6 +51,11 @@ export type CatalogProduct = {
   colors: CatalogColor[];
   sizes: string[];
   variants: CatalogVariant[];
+  /** placement = one print on a blank. aop = a panel-built sublimation garment. */
+  construction?: "placement" | "aop";
+  /** Shown on all-over pieces. Names the fabric and the print method. */
+  materialNote?: string;
+  aopTemplateId?: string;
 };
 
 export type CatalogPage = {
@@ -79,6 +85,11 @@ export type DesignLayer =
       y: number;
       scale: number;
       rotation: number;
+      /** Bend in degrees. Absent means flat, which is how older layers were saved. */
+      arc?: number;
+      outline?: boolean;
+      /** Letter spacing as a fraction of the font size. */
+      tracking?: number;
     };
 
 export type MockupRequest = {
@@ -91,6 +102,8 @@ export type MockupRequest = {
   productType: string;
   layers: DesignLayer[];
   printArea?: PrintArea;
+  /** The maker's panels and colorways on an all-over piece, already parsed. */
+  garment?: GarmentDesign;
 };
 
 export type MockupResult = {
@@ -197,7 +210,11 @@ export interface PodProvider {
   uploadFile(file: FileUpload): Promise<UploadedFile>;
   createMockup(input: MockupRequest): Promise<MockupResult>;
   getMockup(taskId: string): Promise<MockupResult>;
-  shippingRates(input: { recipient: Recipient; items: ShippingItem[]; currency: string }): Promise<ShippingRate[]>;
+  shippingRates(input: {
+    recipient: Recipient;
+    items: ShippingItem[];
+    currency: string;
+  }): Promise<ShippingRate[]>;
   createDraftOrder(input: DraftOrderRequest): Promise<ProviderOrder>;
   confirmOrder(orderId: string): Promise<ProviderOrder>;
   cancelOrder(orderId: string): Promise<void>;

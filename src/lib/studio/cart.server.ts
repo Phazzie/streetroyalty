@@ -1,15 +1,22 @@
 import { getSql } from "../db.ts";
 import { getPodProvider } from "../pod/index.ts";
 import type { CatalogProduct } from "../pod/types.ts";
+import { AOP_ORDER_CLOSED, canOrderProduct, parseStoredGarment } from "./garments.ts";
 import { canBuyDesign, parseRecipient } from "./validate.ts";
 import { cartDelta, normalizeCartQuantity } from "./cart-qty.ts";
 import type { CartLine } from "./models.ts";
 import { fileUrl, sumCents, type DesignRow } from "./shared.server.ts";
 
+/** Refuses a piece the printer cannot make yet. Today that is every all-over piece. */
+function assertOrderable(productId: string): void {
+  if (!canOrderProduct(productId)) throw new Error(AOP_ORDER_CLOSED);
+}
+
 export async function addToCart(
   userId: string,
   designId: string,
   variantId: string,
+  colorwayId = "",
 ): Promise<void> {
   const sql = await getSql();
   const rows = await sql<DesignRow>`select * from designs where id = ${designId}`;
@@ -17,17 +24,23 @@ export async function addToCart(
   if (!design || !canBuyDesign({ ownerId: design.user_id, status: design.status }, userId)) {
     throw new Error("That piece is not for sale.");
   }
+  assertOrderable(design.product_id);
   const product = await getPodProvider().getProduct(design.product_id);
   const variant = product.variants.find(
     (item) => item.id === variantId && item.color === design.color_name,
   );
   if (!variant) throw new Error("Pick a size in this color.");
+  const colorway = colorwayId
+    ? parseStoredGarment(design.garment_json)?.colorways.find((item) => item.id === colorwayId)
+    : undefined;
+  if (colorwayId && !colorway) throw new Error("That colorway is not on this piece.");
+  const label = colorway ? `${variant.name} · ${colorway.name}` : variant.name;
   const id = crypto.randomUUID();
   await sql`
-    insert into cart_items (id, user_id, design_id, variant_id, variant_label, quantity)
-    values (${id}, ${userId}, ${design.id}, ${variant.id}, ${variant.name}, 1)
-    on conflict (user_id, design_id, variant_id)
-    do update set quantity = least(10, cart_items.quantity + 1)
+    insert into cart_items (id, user_id, design_id, variant_id, variant_label, quantity, colorway_id)
+    values (${id}, ${userId}, ${design.id}, ${variant.id}, ${label}, 1, ${colorwayId})
+    on conflict (user_id, design_id, variant_id, colorway_id)
+    do update set quantity = least(10, cart_items.quantity + 1), variant_label = excluded.variant_label
   `;
 }
 
@@ -60,13 +73,14 @@ type CartJoin = DesignRow & {
   cart_id: string;
   cart_variant_id: string;
   cart_variant_label: string;
+  cart_colorway_id: string;
   quantity: number;
 };
 
-export async function cartRows(userId: string): Promise<CartJoin[]> {
+async function readCartRows(userId: string): Promise<CartJoin[]> {
   const sql = await getSql();
   return sql<CartJoin>`
-    select d.*, c.id as cart_id, c.variant_id as cart_variant_id, c.variant_label as cart_variant_label, c.quantity
+    select d.*, c.id as cart_id, c.variant_id as cart_variant_id, c.variant_label as cart_variant_label, c.colorway_id as cart_colorway_id, c.quantity
     from cart_items c
     join designs d on d.id = c.design_id
     where c.user_id = ${userId}
@@ -74,8 +88,20 @@ export async function cartRows(userId: string): Promise<CartJoin[]> {
   `;
 }
 
+/**
+ * The cart on its way to the printer, for pricing, shipping quotes and
+ * checkout. A line the printer cannot make yet, such as an all-over piece
+ * added before ordering closed, stops it here. The cart view reads
+ * `readCartRows` so that line can still be seen and removed.
+ */
+export async function cartRows(userId: string): Promise<CartJoin[]> {
+  const rows = await readCartRows(userId);
+  for (const row of rows) assertOrderable(row.product_id);
+  return rows;
+}
+
 export async function listCart(userId: string): Promise<CartLine[]> {
-  const rows = await cartRows(userId);
+  const rows = await readCartRows(userId);
   const prices = new Map<string, number>();
   const provider = getPodProvider();
   const products = new Map<string, CatalogProduct>();
@@ -123,17 +149,28 @@ export async function priceCart(userId: string) {
       throw new Error(`${row.title} is not available in that size.`);
     const area =
       variant.printAreas.find((item) => item.placement === row.placement) ?? variant.printAreas[0];
+    const colorway = row.cart_colorway_id
+      ? parseStoredGarment(row.garment_json)?.colorways.find(
+          (item) => item.id === row.cart_colorway_id,
+        )
+      : undefined;
+    // The maker dropped or renamed the colorway after it went in the bag. Stop here, the
+    // way a size that is gone does, rather than charge for a colorway the order will not name.
+    if (row.cart_colorway_id && !colorway)
+      throw new Error(`${row.title} no longer comes in that colorway. Remove it and pick again.`);
     lines.push({
       designId: row.id,
       title: row.title,
       variantId: variant.id,
-      variantLabel: variant.name,
+      variantLabel: colorway ? `${variant.name} · ${colorway.name}` : variant.name,
       quantity: Number(row.quantity),
       unitCents: variant.retailCents,
       placement: row.placement,
       technique: row.technique,
       fileUrl: fileUrl(row.print_file_id),
       printArea: area,
+      colorwayId: colorway?.id,
+      colorwayName: colorway?.name,
     });
   }
   return { provider, lines };

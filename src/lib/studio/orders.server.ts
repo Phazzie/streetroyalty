@@ -58,7 +58,7 @@ export async function startCheckout(
       shippingMethod: rate.id,
       currency: "USD",
       items: lines.map((line) => ({
-        externalId: `${orderId}:${line.designId}:${line.variantId}`,
+        externalId: `${orderId}:${line.designId}:${line.variantId}${line.colorwayId ? `:${line.colorwayId}` : ""}`,
         variantId: line.variantId,
         quantity: line.quantity,
         retailCents: line.unitCents,
@@ -79,6 +79,8 @@ export async function startCheckout(
         quantity: line.quantity,
         variantLabel: line.variantLabel,
         unitCents: line.unitCents,
+        colorwayId: line.colorwayId ?? null,
+        colorwayName: line.colorwayName ?? null,
       })),
     );
     await sql`
