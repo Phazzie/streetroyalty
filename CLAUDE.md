@@ -11,5 +11,8 @@
 - Prove it. Run it, look at it, generate with the real key. No "should work".
 - Before calling anything done, look at it once as a stranger would and fix what you see.
 - Don't ask permission to do work. Ask before spending real money, deleting things, or
-  changing accounts outside this repo (Fourthwall, Vercel settings, merges).
+  changing accounts outside this repo (Fourthwall, Vercel settings).
+- Merge a pull request yourself once every review comment on it has been addressed and CI
+  is green on its latest commit. Don't merge before both are true, and don't wait to be
+  asked once they are.
 - Talk plainly and briefly. No ceremony blocks.
