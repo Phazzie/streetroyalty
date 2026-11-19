@@ -1,5 +1,5 @@
 /** Shared print-on-demand types. Safe to import from client code. */
-import type { GarmentDesign } from "../studio/garments.ts";
+import type { GarmentDesign } from "../garments/types.ts";
 
 export type PodMode = "live" | "sandbox";
 

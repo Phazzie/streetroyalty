@@ -1,16 +1,20 @@
 import { getSql } from "../db.ts";
 import {
   assessSet,
+  canonicalTemplateId,
   defaultGarment,
+  getTemplate,
   isAopProduct,
   parseColorwayBlob,
-  parseGarment,
+  parseColorways,
   parseStoredGarment,
-  SET_PARTNER,
-  variantIdFor,
+  productForTemplate,
+  setPartner,
+  variantForPrinter,
   withSharedColorways,
   type Colorway,
   type GarmentDesign,
+  type PrinterId,
 } from "./garments.ts";
 import { getDesign, publishDesign, saveDesign } from "./designs.server.ts";
 import { slugify } from "./validate.ts";
@@ -46,15 +50,9 @@ type SetRow = {
   piece_ids_json: string;
 };
 
-function maker(): string {
+function maker(): PrinterId {
   return readStudioConfig().podMode === "live" ? "printful" : "sandbox";
 }
-
-const PARTNER_NAME: Record<string, string> = {
-  "aop-hoodie": "Hoodie",
-  "aop-joggers": "Joggers",
-  "aop-track-jacket": "Track jacket",
-};
 
 async function hydrate(row: SetRow): Promise<GarmentSetRecord> {
   const blob = parseColorwayBlob(row.colorways_json);
@@ -74,7 +72,12 @@ async function hydrate(row: SetRow): Promise<GarmentSetRecord> {
     }>`select id, title, slug, product_id, product_type, status, garment_json, user_id from designs where id = ${id}`;
     const piece = found[0];
     if (!piece || piece.user_id !== row.user_id) throw new Error("A piece of this set is missing.");
-    const garment = parseStoredGarment(piece.garment_json) ?? defaultGarment(piece.product_id);
+    const stored = parseStoredGarment(piece.garment_json);
+    const templateId = stored?.templateId ?? canonicalTemplateId(piece.product_id);
+    if (!templateId || !getTemplate(templateId)) {
+      throw new Error("That garment template is not in the studio.");
+    }
+    const garment = stored ?? defaultGarment(templateId);
     pieces.push({
       id: piece.id,
       title: piece.title,
@@ -122,22 +125,30 @@ export async function createMatchedSet(
   title?: string,
 ): Promise<GarmentSetRecord> {
   const source = await getDesign(userId, designId);
-  if (!isAopProduct(source.productId)) throw new Error("Sets pair all-over garments.");
+  const sourceTemplate = canonicalTemplateId(source.productId);
+  if (!sourceTemplate || !isAopProduct(source.productId)) {
+    throw new Error("Sets pair all-over garments.");
+  }
   if (source.setId) return getOwnedSet(userId, source.setId);
-  const partnerId = SET_PARTNER[source.productId];
-  if (!partnerId) throw new Error("This piece has no match.");
+  const partnerTemplate = setPartner(sourceTemplate);
+  const providerId = maker();
+  const partnerProductId = partnerTemplate ? productForTemplate(providerId, partnerTemplate) : null;
+  const partnerVariantId = partnerTemplate ? variantForPrinter(providerId, partnerTemplate) : null;
+  if (!partnerTemplate || !partnerProductId || !partnerVariantId) {
+    throw new Error("This piece has no match on this printer yet.");
+  }
   // Every check that can fail goes before the first write, so a refusal leaves nothing behind.
   const name = (title?.trim() || `${source.title} set`).slice(0, 80);
   if (name.length < 2) throw new Error("Name the set.");
-  const garment = source.garment ?? defaultGarment(source.productId);
+  const garment = source.garment ?? defaultGarment(sourceTemplate);
   const partnerGarment = withSharedColorways(
-    defaultGarment(partnerId),
+    defaultGarment(partnerTemplate),
     garment.colorways,
     garment.activeColorwayId,
   );
   const verdict = assessSet([
-    { provider: maker(), templateId: source.productId, colorways: garment.colorways },
-    { provider: maker(), templateId: partnerId, colorways: partnerGarment.colorways },
+    { provider: providerId, templateId: sourceTemplate, colorways: garment.colorways },
+    { provider: providerId, templateId: partnerTemplate, colorways: partnerGarment.colorways },
   ]);
   if (!verdict.ok) throw new Error(verdict.reason);
   if (!source.garment) {
@@ -153,9 +164,9 @@ export async function createMatchedSet(
     });
   }
   const partner = await saveDesign(userId, {
-    title: `${source.title} ${PARTNER_NAME[partnerId] ?? "Piece"}`.slice(0, 80),
-    productId: partnerId,
-    variantId: variantIdFor(partnerId),
+    title: `${source.title} ${getTemplate(partnerTemplate)?.shortName ?? "Piece"}`.slice(0, 80),
+    productId: partnerProductId,
+    variantId: partnerVariantId,
     placement: "front",
     layers: [
       {
@@ -212,12 +223,7 @@ export async function saveSetColorways(
   activeColorwayId: string,
 ): Promise<GarmentSetRecord> {
   const set = await getOwnedSet(userId, setId);
-  const parsed = parseGarment({
-    templateId: set.pieces[0]?.productId ?? "aop-hoodie",
-    colorways,
-    activeColorwayId,
-    panels: [],
-  });
+  const parsed = parseColorways(colorways, activeColorwayId);
   const blob = JSON.stringify({
     colorways: parsed.colorways,
     activeColorwayId: parsed.activeColorwayId,

@@ -7,6 +7,7 @@ import {
   AOP_TEMPLATES,
   canOrderProduct,
   defaultGarment,
+  printfulCard,
   setPanelFill,
   type GarmentDesign,
 } from "./garments.ts";
@@ -162,7 +163,7 @@ describe("ordering an all-over piece", () => {
       expect(canOrderProduct(template.id)).toBe(false);
       expect(
         aopOrderable(
-          template.printful.catalogProductId,
+          printfulCard(template.id)?.catalogProductId ?? 0,
           template.panels.map((item) => item.id),
         ),
       ).toBe(false);

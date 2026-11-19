@@ -13,6 +13,7 @@ import {
 } from "./validate.ts";
 import type { CollectionRecord, DesignRecord, DesignSummary, ShopPiece } from "./models.ts";
 import {
+  canonicalTemplateId,
   isAopProduct,
   parseColorwayBlob,
   parseGarment,
@@ -30,8 +31,13 @@ import {
 
 /** Parse a maker's garment and check it belongs to this all-over product. */
 function garmentFor(product: CatalogProduct, input: unknown): GarmentDesign {
-  const garment = parseGarment(input);
-  if (garment.templateId !== (product.aopTemplateId ?? product.id)) {
+  const raw = input && typeof input === "object" ? { ...(input as Record<string, unknown>) } : {};
+  if (typeof raw.templateId === "string") {
+    raw.templateId = canonicalTemplateId(raw.templateId) ?? raw.templateId;
+  }
+  const garment = parseGarment(raw);
+  const expected = product.aopTemplateId ?? canonicalTemplateId(product.id);
+  if (!expected || garment.templateId !== expected) {
     throw new Error("Those panels belong to a different garment.");
   }
   return garment;
