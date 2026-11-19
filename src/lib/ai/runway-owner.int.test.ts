@@ -16,6 +16,12 @@ describe("who may poll a runway video", () => {
     await expect(assertRunwayOwner("", "ada")).rejects.toMatchObject({ status: 404 });
   });
 
+  it("refuses to hash a visitor when the auth secret is missing", async () => {
+    delete process.env.BETTER_AUTH_SECRET;
+    asVisitor("203.0.113.7");
+    await expect(claimRunway("req_nosecret1", "dev-user")).rejects.toThrow(/BETTER_AUTH_SECRET/);
+  });
+
   it("keeps the shared dev user on the address that started the video", async () => {
     asVisitor("203.0.113.7");
     await claimRunway("req_visitor1", "dev-user");

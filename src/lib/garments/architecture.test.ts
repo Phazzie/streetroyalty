@@ -123,6 +123,23 @@ describe("garment module boundaries", () => {
     assert.deepEqual(fresh, []);
   });
 
+  it("does not fall back to a literal secret", () => {
+    const named =
+      /process\.env\.(?:BETTER_AUTH_SECRET|PRINTFUL_API_KEY|STRIPE_SECRET_KEY|STRIPE_WEBHOOK_SECRET|PRINTFUL_WEBHOOK_SECRET|PRINT_FILE_SIGNING_SECRET|XAI_API_KEY|GROK_AUTH_CLIENT_SECRET|DATABASE_URL)[^\n;]{0,160}(?:\|\||\?\?)\s*(['"`])([^'"`]+)\1/g;
+    const street = /\|\|\s*(['"`])street-royalty\1/;
+    const hits: string[] = [];
+    for (const file of walk(srcRoot)) {
+      const rel = relSrc(file);
+      if (/\.test\./.test(rel) || rel.startsWith("test/")) continue;
+      const text = stripComments(readFileSync(file, "utf8"));
+      if (street.test(text)) hits.push(`${rel} (street-royalty)`);
+      for (const match of text.matchAll(named)) {
+        if (match[2]) hits.push(rel);
+      }
+    }
+    assert.deepEqual(hits, []);
+  });
+
   it("does not fall back to a hardcoded tracksuit id", () => {
     const fallback = /(?:\?\?|\|\|)\s*(['"`])aop-(?:hoodie|joggers|track-jacket)\1/;
     const skipped = new Set(["lib/garments/panels.ts", "lib/pod/garment-map.ts"]);

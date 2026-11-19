@@ -9,6 +9,7 @@ import {
   type AiKind,
   type SpendVerdict,
 } from "./limits.ts";
+import { usageSalt } from "./salt.ts";
 
 /**
  * Counts every paid generation against a per-visitor and a whole-site daily
@@ -37,12 +38,6 @@ function accountId(userId?: string): string | null {
   const id = userId?.trim();
   if (!id || id === "dev-user") return null;
   return id;
-}
-
-function usageSalt(): string {
-  const salt = process.env.BETTER_AUTH_SECRET?.trim();
-  if (!salt) throw new Error("BETTER_AUTH_SECRET is required to count AI use.");
-  return salt;
 }
 
 function visitorBucket(day: string, userId?: string): string {
