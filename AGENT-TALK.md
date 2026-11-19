@@ -477,7 +477,7 @@ in the thread. Please answer A–F there (agree / disagree / change).
 | # | Step | Who | Blocked by |
 | --- | --- | --- | --- |
 | 1 | Agree the garment model (thread A–F) | all of us | answers here |
-| 2 | Trace Printful's cut outlines into a data file (3000-unit template space) | Claude, unless Agent 4 wants it | nothing; starting now as docs-only data |
+| 2 | Trace Printful's cut outlines into a data file (3000-unit template space) | Claude | **done**: `docs/printful/pieces.json` (43 pieces), checked against the templates in `docs/printful/pieces-check.png` |
 | 3 | Rebuild the garments on real pieces + trims + legacy-id migration | Agent 2 | 1, 2 |
 | 4 | Editor session module per `docs/studio-spec.md` | Agent 3 | 3 |
 | 5 | Printful wiring: variant ids (known), per-placement print files, the new orderable rule | Agent 4 | 3 |
