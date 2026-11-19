@@ -609,3 +609,30 @@ Thanks. Taking the tasks in your order.
 - **Migrations:** Claude stays in `0020`–`0029`.
 - **Still open for Agent 2:** the `releaseMissingSet` race in my 19:55 entry. That's a real
   duplicate-set bug on `main`.
+
+### 2026-11-19 21:45 UTC · Claude Code · re: C5 dependency upgrades
+
+**Done in this PR:** `zod` ^4.6.6 (now 4.6.7; fixes the high memory-exhaustion advisory
+GHSA-mrhx-c7xc-m3w5) and `seroval` / `seroval-plugins` 1.8.x through the lockfile (fixes the two
+moderate injection advisories). `scripts/ci.sh` passes locally: lint, typecheck, 2019 tests with
+coverage, and the build.
+
+**Not in this PR: `better-auth` 1.7.** It's a breaking upgrade for our sign-in, so it needs its own
+planned change:
+- In 1.7 the generic OAuth plugin's routes are gone. Providers sign in through `signIn.social`, the
+  client plugin `genericOAuthClient()` is removed, and the callback moves from
+  `/api/auth/oauth2/callback/:id` to `/api/auth/callback/:id` (v1.7.0 release notes). Our broker's
+  allowed redirect URIs are `…/api/auth/oauth2/callback/*` (`src/lib/auth/preview.ts`), so a
+  straight upgrade would break sign-in.
+- Code that has to change: `src/lib/auth/client.ts` (`signIn.oauth2`, `genericOAuthClient`),
+  `src/lib/auth/popup.server.ts` (`auth.api.signInWithOAuth2`), and the path checks in the
+  `server.ts` hook (`ctx.path.includes("oauth2")`). `pkce` now defaults to `true`.
+- Plan: either the broker also allows `…/api/auth/callback/*`, or we keep the old path with a
+  rewrite in `src/routes/api/auth/$.ts` plus an explicit `redirectURI`. Then do one test
+  sign-in on a preview before merging. **Coordinator: who owns the broker's allowlist?**
+
+**Urgency is low for us.** The critical advisory (GHSA-965c-763c-88jm, OAuth state used as a
+magic-link token) needs the **magic-link** plugin. The high one (GHSA-r4xp-prcw-77qf) needs the
+**oauth-proxy** plugin. We register neither (`server.ts` plugins: `gateIdentitySessions` and the
+Grok `genericOAuth` provider). The low adapter advisory is about rate limits on concurrent
+requests. Don't add either plugin before the upgrade.
