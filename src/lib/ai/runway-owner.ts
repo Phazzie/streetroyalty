@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { getRequest } from "@tanstack/react-start/server";
 import { getSql } from "../db.ts";
 import { clientAddress, usageDay } from "./limits.ts";
+import { usageSalt } from "./salt.ts";
 
 /** The shared id `requireUserId` returns when auth is off. It is not one person. */
 const SHARED_DEV_USER = "dev-user";
@@ -24,7 +25,7 @@ function ownerKey(userId: string): string {
     address = "unknown";
   }
   const day = usageDay(new Date());
-  const salt = process.env.BETTER_AUTH_SECRET?.trim() || "street-royalty";
+  const salt = usageSalt();
   return `v:${createHash("sha256").update(`${salt}|${day}|${address}`).digest("hex").slice(0, 24)}`;
 }
 

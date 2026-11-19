@@ -72,6 +72,37 @@ function relSrc(file: string): string {
   return relative(srcRoot, file).split("\\").join("/");
 }
 
+const SECRET_ENV =
+  "BETTER_AUTH_SECRET|PRINTFUL_API_KEY|STRIPE_SECRET_KEY|STRIPE_WEBHOOK_SECRET|PRINTFUL_WEBHOOK_SECRET|PRINT_FILE_SIGNING_SECRET|XAI_API_KEY|GROK_AUTH_CLIENT_SECRET|DATABASE_URL";
+
+/** Non-empty string literals used as a stand-in for a missing secret. */
+function literalSecretFallbacks(text: string): string[] {
+  const hits: string[] = [];
+  if (/\|\|\s*(['"`])street-royalty\1/.test(text)) hits.push("street-royalty");
+  const direct = new RegExp(
+    `process\\.env\\.(?:${SECRET_ENV})[^;]{0,240}(?:\\|\\||\\?\\?)\\s*(['"\`])([^'"\`]{1,80})\\1`,
+    "g",
+  );
+  for (const match of text.matchAll(direct)) {
+    if (match[2]) hits.push("direct");
+  }
+  const alias = new RegExp(
+    `(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*process\\.env\\.(?:${SECRET_ENV})(?:\\?\\.trim\\(\\))?\\s*;`,
+    "g",
+  );
+  for (const match of text.matchAll(alias)) {
+    const name = match[1];
+    if (!name) continue;
+    const start = (match.index ?? 0) + match[0].length;
+    const window = text.slice(start, start + 500);
+    const used = new RegExp(
+      `\\b${name}\\b[^;]{0,160}(?:\\|\\||\\?\\?)\\s*(['"\`])([^'"\`]{1,80})\\1`,
+    );
+    if (used.test(window)) hits.push(`alias:${name}`);
+  }
+  return hits;
+}
+
 describe("garment module boundaries", () => {
   it("does not let the pod layer import studio code or components", () => {
     const offenders: string[] = [];
@@ -121,6 +152,40 @@ describe("garment module boundaries", () => {
     }
     const fresh = [...cycles].filter((cycle) => !KNOWN_CYCLES.has(cycle)).sort();
     assert.deepEqual(fresh, []);
+  });
+
+  it("does not fall back to a literal secret", () => {
+    assert.ok(
+      literalSecretFallbacks(
+        'const salt = process.env.BETTER_AUTH_SECRET?.trim() || "street-royalty";',
+      ).length > 0,
+    );
+    assert.ok(
+      literalSecretFallbacks(
+        'const salt = process.env.BETTER_AUTH_SECRET?.trim()\n  || "other-salt";',
+      ).length > 0,
+    );
+    assert.ok(
+      literalSecretFallbacks(
+        'const configured = process.env.BETTER_AUTH_SECRET?.trim();\nconst salt = configured || "shared-secret";',
+      ).includes("alias:configured"),
+    );
+    assert.deepEqual(
+      literalSecretFallbacks('process.env.STRIPE_WEBHOOK_SECRET?.trim() ?? ""'),
+      [],
+    );
+    assert.deepEqual(
+      literalSecretFallbacks("process.env.BETTER_AUTH_SECRET ?? previewAuthSecret()"),
+      [],
+    );
+    const hits: string[] = [];
+    for (const file of walk(srcRoot)) {
+      const rel = relSrc(file);
+      if (/\.test\./.test(rel) || rel.startsWith("test/")) continue;
+      const found = literalSecretFallbacks(stripComments(readFileSync(file, "utf8")));
+      for (const hit of found) hits.push(`${rel} (${hit})`);
+    }
+    assert.deepEqual(hits, []);
   });
 
   it("does not fall back to a hardcoded tracksuit id", () => {
