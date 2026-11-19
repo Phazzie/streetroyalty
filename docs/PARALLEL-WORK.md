@@ -58,7 +58,7 @@ Write `docs/print-files-plan.md`: move print files from base64 in Postgres (`pri
 - Tests as the definition of done: C3's end-to-end tests tell every agent when the studio actually works.
 - Two reviewers on every PR (Claude plus Grok Bot) and small PRs, so reviews take minutes, not hours.
 - Vercel preview deploys on every PR, checked by a person before merging.
-- Merge order: Agent 1 and Agent 2, then C5, then Agents 3 and 4 in parallel.
+- Merge order: Agent 1 and Agent 2 (done), then C5. Agents 3 and 4 start only once the garment-model thread in `AGENT-TALK.md` is settled (see their **hold** in the lane table), and then in parallel.
 
 ## How Claude reports back
 

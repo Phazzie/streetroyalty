@@ -453,16 +453,31 @@ against `main`, and all three are fixed:
 - the cart is priced once at checkout;
 - a dead `set_id` is released by `releaseMissingSet`.
 
+**New bug for Agent 2 (on `main`):** `releaseMissingSet` can't tell a dead claim from a build that
+is still running. Take two `createMatchedSet` calls for the same piece. B has claimed `set_id` but
+hasn't inserted its `garment_sets` row yet. A sees no row, releases B's claim, and both go on to
+create a set. Fix: insert the `garment_sets` row first with `status = 'pending'`, then claim. Or
+store a claim time and only release claims older than a few minutes. Add a test that runs the two
+calls interleaved.
+
 **Owner decisions today (binding):**
 1. Matching sets are sold only in **XS–3XL**, the sizes where both pieces exist. Hoodie and
    jacket on their own sell in every size (2XS–6XL).
 2. All-over pieces stay unorderable until the garment model is fixed **and** a physical
-   sample has been checked.
-3. Claude merges its own PRs once review comments are addressed and CI is green
-   (`CLAUDE.md`). CI here means the Vercel check: each Vercel build runs the full test suite.
-   The Depot CI never reports to GitHub.
+   sample has been checked. The ordering gate has to check this itself, not just variant ids
+   and piece coverage. It should need an explicit owner "sample approved" flag per product,
+   and the set rule (sets only in XS–3XL) has to be enforced before any set can be bought.
+3. Claude merges **its own** PRs once review comments are addressed and CI is green
+   (`CLAUDE.md`). Rule 2 of `docs/PARALLEL-WORK.md` (the owner's OK before a merge) still
+   applies to everyone else's PRs unless the owner says otherwise.
+   **What "green" covers:** the Vercel check runs `scripts/ci.sh`: lint, typecheck, unit and
+   integration tests with coverage floors, and the build. It does **not** run the browser tests
+   (`npm run test:browser`) or Playwright (`npm run e2e`), and the Depot CI never reports to
+   GitHub. So a PR that touches UI or canvas code also needs those two runs, with the results
+   in its description.
 4. `PRINTFUL_API_KEY` is set (Vercel and the Claude environment). The account has no
-   Printful store yet, so endpoints that need `store_id` refuse.
+   Printful store yet, so endpoints that need `store_id` refuse, and live mode won't start
+   (`assertLivePodEnv` needs `PRINTFUL_STORE_ID`).
 
 **The one blocker: the garment model.** See the thread above, "Is the all-over garment set
 up right?". The studio's panels don't match what Printful cuts: the hoodie has no side
@@ -482,8 +497,13 @@ in the thread. Please answer A–F there (agree / disagree / change).
 | 4 | Editor session module per `docs/studio-spec.md` | Agent 3 | 3 |
 | 5 | Printful wiring: variant ids (known), per-placement print files, the new orderable rule | Agent 4 | 3 |
 | 6 | Set size rule (XS–3XL for sets) | Agent 2 or 4 | 3 |
-| 7 | Owner orders one physical sample (lilac hoodie + joggers) | owner | 5 |
-| 8 | Stripe checkout, then maker payouts | Grok's agent | 7 |
+| 7 | Owner creates a Printful store (a "Manual order / API" store) and sets `PRINTFUL_STORE_ID` in Vercel | owner | nothing; can be done any time |
+| 8 | Owner orders one physical sample (lilac hoodie + joggers), then marks it approved | owner | 5, 6, 7 |
+| 9 | One cart, one order across Fourthwall and Printful (C7 in `docs/PARALLEL-WORK.md`) | Grok's agent | 3 |
+| 10 | Stripe checkout, then maker payouts | Grok's agent | 8, 9 |
+
+Ordering opens only after step 8. The ordering gate checks the sample-approved flag and the set
+size rule, not just the data from step 5.
 
 **Housekeeping for the owner (not urgent):**
 - #1 (Dependabot) and C5 cover the security upgrades. GitHub reports 12 vulnerabilities
