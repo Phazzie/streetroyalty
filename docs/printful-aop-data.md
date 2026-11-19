@@ -2,7 +2,7 @@
 
 Pulled 2026-11-19 for products 388 (AOP hoodie), 400 (AOP joggers) and 801 (AOP track jacket).
 The first pass used the public v1 API with no key. The section right below was added the same day
-with the owner's `PRINTFUL_API_KEY`, and it **supersedes every UNCONFIRMED note further down**.
+with the owner's `PRINTFUL_API_KEY`. The older sections below have been updated to match it.
 Every number names the response it came from.
 
 ## Confirmed with the API key (v2 catalog, 2026-11-19)
@@ -94,7 +94,7 @@ Raw JSON used here is saved outside the repo in
 
 - **150 DPI minimum.** Printful's graphics guide says: "All files must be at least 300 DPI for paper prints and 150 DPI for everything else." It also says to avoid going over 600 DPI or under 150 DPI. Source: https://www.printful.com/graphics-and-embroidery-guide
 - **Format.** The same guide says: "For all-over print (AOP), sublimation printing, and paper printing, JPG files work better." It says to use the sRGB color profile. https://www.printful.com/creating-aop-file says to use PNG or JPEG, JPEG when the design covers the whole product, and to keep key graphics inside the safe zone so they don't end up in seams.
-- **Per-printfile DPI is UNCONFIRMED.** The printfiles response carries a `dpi` field for each printfile. Needs a key: `GET /mockup-generator/printfiles/{id}?technique=CUT-SEW`.
+- **Per-printfile DPI: still unread.** The printfiles response carries a `dpi` field, but that endpoint needs a Printful **store** (`store_id`), and the account has none. The pixel sizes at the top assume the guide's 150 DPI. A store would confirm it: `GET /mockup-generator/printfiles/{id}?technique=CUT-SEW`.
 
 ## Product 388: All-Over Print Recycled Unisex Hoodie
 
@@ -129,7 +129,7 @@ Source for this section unless noted: `GET https://api.printful.com/products/388
 | `label_inside` | `label_inside` | Inside label |
 | `preview` | `mockup` | Mockup |
 
-No placement has an `additional_price`. The v2 placement key strings are **UNCONFIRMED**. Needs a key: `GET /v2/catalog-products/388` (its `placements` list).
+No placement has an `additional_price`. The v2 placement keys are confirmed in the top section.
 
 ### Variants
 
@@ -163,11 +163,9 @@ Source: `GET https://api.printful.com/products/388/sizes`. A = 1/2 chest width, 
 
 The size guide says items "may vary by up to 1"" because they are made by hand. These are garment sizes, **not print-file sizes**.
 
-### Print areas and templates: UNCONFIRMED
+### Print areas and templates
 
-Width × height in px and DPI per placement (front, back, sleeve_left, sleeve_right, pocket, hood, label_panel, label_inside) are **UNCONFIRMED**. Needs a key: `GET /mockup-generator/printfiles/388?technique=CUT-SEW`. It returns `printfiles[]` (`printfile_id`, `width`, `height`, `dpi`, `fill_mode`, `can_rotate`) and `variant_printfiles[]` (variant_id → placement → printfile_id). AOP print files can differ by size, so read the mapping for every variant.
-
-Mockup template IDs are **UNCONFIRMED**. Needs a key: `GET /v2/catalog-products/388/mockup-templates` or `GET /mockup-generator/templates/388`.
+Confirmed: see the top section. Every placement is 40 × 40 in (labels 2.5 × 1 in) for every size, printfile 200. The template images and print-area geometry come from `/v2/catalog-products/388/mockup-templates`.
 
 ## Product 400: All-Over Print Recycled Men's Joggers
 
@@ -197,7 +195,7 @@ Source: `GET https://api.printful.com/products/400`.
 | `label_inside` | `label_inside` | Inside label |
 | `preview` | `mockup` | Mockup |
 
-The file `id` and `type` differ here (`left_leg` vs `leg_left`). There is **no** pocket, waistband, back or cuff placement. Those parts get their print from the two leg files. How the leg print file maps onto the pocket, waistband and cuff pieces is **UNCONFIRMED**: see the printfile and template for 400. The v2 placement keys are **UNCONFIRMED**. Needs a key: `GET /v2/catalog-products/400`.
+The file `id` and `type` differ here (`left_leg` vs `leg_left`). There is **no** pocket, waistband, back or cuff placement. Those parts get their print from the two leg files. Confirmed from the template: each leg file holds one wrap-around leg piece, a waistband half across the top and a cuff below. The pockets aren't printed on their own. The v2 keys are `leg_left` / `leg_right` (see the top section).
 
 ### Variants
 
@@ -226,9 +224,9 @@ Source: `GET https://api.printful.com/products/400/sizes`. A = 1/2 waist width, 
 | C | 37.80 | 38.19 | 38.58 | 38.98 | 39.37 | 39.76 | 40.16 |
 | D | 4.92 | 5.12 | 5.31 | 5.51 | 5.51 | 5.71 | 5.91 |
 
-### Print areas and templates: UNCONFIRMED
+### Print areas and templates
 
-Needs a key: `GET /mockup-generator/printfiles/400?technique=CUT-SEW` for px and DPI per leg and per variant. Template IDs need `GET /v2/catalog-products/400/mockup-templates`.
+Confirmed: see the top section. Each leg is 33 × 50 in for every size, printfile 213.
 
 ## Product 801: All-Over Print Recycled Unisex Track Jacket
 
@@ -262,7 +260,7 @@ Source: `GET https://api.printful.com/products/801`.
 | `label_outside` | `label_outside` | Outside label |
 | `preview` | `mockup` | Mockup |
 
-Which jacket pieces "Details" covers (collar, cuffs, hem or zipper facing) is **UNCONFIRMED**. Its printfile and template would show it: `GET /mockup-generator/printfiles/801?technique=CUT-SEW` and `GET /mockup-generator/templates/801`.
+Confirmed from the template: `details` is a collar piece plus the two zip facings. Still a guess: what the two narrow pieces in `front` are (side or under-arm pieces). A sample would settle it.
 
 ### Variants
 
@@ -292,17 +290,17 @@ Source: `GET https://api.printful.com/products/801/sizes`. A = 1/2 chest width, 
 | B | 25.39 | 25.39 | 26.57 | 26.57 | 27.76 | 27.76 | 28.94 | 28.94 | 30.51 | 30.51 | 30.51 |
 | C | 22.64 | 22.64 | 23.23 | 23.82 | 24.41 | 25.00 | 25.59 | 26.18 | 26.38 | 26.57 | 26.77 |
 
-### Print areas and templates: UNCONFIRMED
+### Print areas and templates
 
-Needs a key: `GET /mockup-generator/printfiles/801?technique=CUT-SEW` and `GET /v2/catalog-products/801/mockup-templates`.
+Confirmed: see the top section. Every main placement is 44 × 46 in for every size, printfile 693.
 
-## Still UNCONFIRMED after the key (items 1, 2 and 4 are now answered at the top)
+## Still open after the key
 
-1. Print-file px width × height and DPI for each placement and variant. Needs `GET /mockup-generator/printfiles/{388,400,801}?technique=CUT-SEW`.
-2. Mockup template IDs. Needs `GET /v2/catalog-products/{id}/mockup-templates` or `GET /mockup-generator/templates/{id}`.
-3. v2 placement key strings, and whether v2 `catalog_variant_id` equals the v1 variant IDs above. I believe Printful kept the same IDs in v2, but I did not verify it. Check with `GET /v2/catalog-products/{id}/catalog-variants`.
-4. What the jacket's `details` placement covers, and how the jogger leg files wrap the pocket, waistband and cuffs. Needs the templates in item 1 and item 2.
-5. v2 prices per selling region. Needs `GET /v2/catalog-products/{id}/prices`. The v1 prices above are USD.
+Answered (top section): print sizes, templates, v2 placement keys, v2 = v1 variant ids, the jacket's `details` piece, and how the jogger legs wrap.
+
+1. The printfile `dpi` field. It needs a Printful store (`store_id`); the account has none. The guide's 150 DPI is assumed.
+2. What the two narrow pieces in the jacket's `front` file are.
+3. v2 prices per selling region. Needs `GET /v2/catalog-products/{id}/prices`. The v1 prices above are USD.
 
 ## Mapping to `src/lib/pod/aop-printful.ts`
 
@@ -320,19 +318,19 @@ Steps:
   - joggers: `{ XS: 11033, S: 11034, M: 11035, L: 11036, XL: 11037, "2XL": 11038, "3XL": 11039 }`
   - jacket: `{ "2XS": 20370, XS: 20371, …, "6XL": 20380 }`
 
-  These are confirmed v1 IDs. Re-check them against v2 before relying on them there (item 3 above).
-- **Panel targets.** `panelPrintTarget` must return `{ confirmed: true, widthPx, heightPx, placementKey, dpi }`. `widthPx`, `heightPx` and the per-placement DPI can't be filled until the printfiles call is made with a key, so **`aopOrderable` cannot honestly turn true from public data.** Variant IDs and placement keys can be filled now.
+  These are confirmed, and v2 uses the same ids.
+- **Panel targets.** `panelPrintTarget` must return `{ confirmed: true, widthPx, heightPx, placementKey, dpi }`. Sizes and placement keys are now known (top section). Read the `AGENT-TALK.md` thread "Is the all-over garment set up right?" before filling these in: several studio panels aren't Printful pieces, so a single target per panel doesn't fit.
 - **Placements are not panels.** The studio's panel IDs (`src/lib/studio/garments.ts`) are colour regions, not Printful placements. The target needs a panel → placement map, and each print file must be composed from several panels:
 
 | Studio panel(s) | Hoodie 388 placement | Jacket 801 placement | Joggers 400 placement |
 |---|---|---|---|
-| `body_front`, `side_*`, `piping_*`, `waistband` / `hem`, `mark` | `front` (v1 id `default`) | `front` (v1 id `default`); hem or trims possibly `details` (UNCONFIRMED) | n/a |
+| `body_front`, `side_*`, `piping_*`, `waistband` / `hem`, `mark` | `front` (v1 id `default`); `waistband` is split across `front` and `back`; `side_*` / `piping_*` are not pieces | `front` (v1 id `default`); the hem bands are in `front` and `back` | n/a |
 | `body_back` | `back` | `back` | no back placement: part of `leg_left` / `leg_right` |
-| `sleeve_left` + `cuff_left` | `sleeve_left` (whether the cuff is in the sleeve file is UNCONFIRMED) | `sleeve_left`, or `details` (UNCONFIRMED) | n/a |
-| `sleeve_right` + `cuff_right` | `sleeve_right` | `sleeve_right`, or `details` | n/a |
+| `sleeve_left` + `cuff_left` | `sleeve_left` (the cuff is in the same file) | `sleeve_left` (the cuff is in the same file) | n/a |
+| `sleeve_right` + `cuff_right` | `sleeve_right` | `sleeve_right` | n/a |
 | `hood` | `hood` | n/a | n/a |
 | `pocket` | `pocket` | `pocket` | no pocket placement |
-| `collar` | n/a | probably `details` (UNCONFIRMED) | n/a |
+| `collar` | n/a | collar pieces in `front`, `back` and `details` | n/a |
 | `leg_left` / `leg_right` (+ `cuff_*`, `waistband`) | n/a | n/a | `leg_left` / `leg_right` (v1 ids `left_leg` / `right_leg`) |
 | (none in studio) | `label_panel`, `label_inside` | `label_inside`, `label_outside` | `label_inside` |
 

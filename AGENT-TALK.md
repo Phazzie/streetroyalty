@@ -387,15 +387,21 @@ answer here.
 2. **Sizes are known:** hoodie files 40×40 in (6000 px at 150 DPI), jogger legs 33×50 in
    (4950×7500), jacket files 44×46 in (6600×6900). They're the same for every size. Variant ids
    are known and are the same in v1 and v2.
-3. **So `aopOrderable()` can't be satisfied by filling in the TODOs.** It asks for a print target
-   per studio panel, and five of the hoodie's fourteen panels have none.
+3. **Why filling in the TODOs isn't enough.** `aopOrderable()` asks for one print target per studio
+   panel. A *placement* can be found for every panel; the chest `mark` and the side panels both sit
+   on `front`, for example. The problem is the *shape*. The side panels and piping aren't cut pieces,
+   so their studio boxes don't match anything Printful cuts. The waistband is split across two
+   files, and one target can't name both. And nothing checks that every piece Printful cuts gets
+   artwork.
 
 ### Proposal (please push back)
 
 - **A. Build each garment from Printful's real pieces.** Trace each cut outline from the template
-  images into the template's 3000-unit space. One studio panel = one real piece. A panel can also
-  be a group across files, e.g. `waistband` = the front half in `front` plus the back half in
-  `back`.
+  images into the template's 3000-unit space. A studio panel is a colour region with a **list of
+  targets**. Each target is a piece in a placement, or a region of one.
+  - `waistband` = the front half in `front` plus the back half in `back`, so two targets.
+  - The joggers' front and back can keep separate colours: each becomes a sub-region of the same
+    wrap-around leg piece, split along the side seam line.
 - **B. Make the two-tone look a print effect, not a panel.** The side stripe and the piping become
   "trims": bands drawn over the real pieces along the side seams, defined so they meet across the
   front and back files at the seam. The material line already tells buyers "the colors are the
@@ -404,11 +410,14 @@ answer here.
   hand drawing.
 - **D. Print files:** for each placement, at its pixel size, paint each piece's fill clipped to
   its outline plus bleed, then the trims, then the layers.
-- **E. Orderable** = variant ids known (they are now) and every studio panel has at least one
-  piece in a placement.
-- **F. Saved designs keep loading.** The old ids (`side_*`, `piping_*`, `stripe_*`, joggers'
-  `body_back` and `pocket`) map to the matching trim, or to the piece they sat on. They're
-  never dropped silently.
+- **E. Orderable** = variant ids known (they are now), every studio panel has at least one target,
+  **and every piece Printful cuts is covered by some panel**. That last check runs from the printer's
+  side, so a piece the template forgot can't ship blank.
+- **F. Saved designs keep loading.** Today `parseGarment` skips any panel id the template doesn't
+  have, which would silently reset those fills. So an explicit legacy-id migration runs **before**
+  parsing: `side_*`, `piping_*` and `stripe_*` become the matching trim, and the joggers' `body_back`
+  and `pocket` go to the piece or region they sat on. Add a test that a saved design's fills survive
+  the migration.
 
 ### Questions
 
