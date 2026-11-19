@@ -148,6 +148,23 @@ describe("starting checkout", () => {
   });
 });
 
+describe("a repeated checkout", () => {
+  it("returns the same order for a retry and for two tabs at once", async () => {
+    await seedCart("ada");
+    const [first, second] = await Promise.all([
+      startCheckout("ada", STANDARD),
+      startCheckout("ada", STANDARD),
+    ]);
+    expect(second.orderId).toBe(first.orderId);
+    expect(await orderCount()).toBe(1);
+    expect(sharedSandboxOrders().size).toBe(1);
+    const again = await startCheckout("ada", STANDARD);
+    expect(again).toMatchObject({ mode: "sandbox", orderId: first.orderId, totalCents: first.totalCents });
+    expect(await orderCount()).toBe(1);
+    expect(sharedSandboxOrders().size).toBe(1);
+  });
+});
+
 describe("paying in sandbox", () => {
   it("sends the order to print and empties the cart of what was bought", async () => {
     await seedCart("ada");

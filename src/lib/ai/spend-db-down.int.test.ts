@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { spend } from "./guard.server.ts";
+import { count, spend } from "./guard.server.ts";
 import { asVisitor } from "../../test/request.ts";
 
 vi.mock("../db.ts", () => ({
@@ -19,6 +19,18 @@ describe("the AI caps with the database down", () => {
     expect((await spend("image")).ok).toBe(true);
     expect((await spend("image")).ok).toBe(true);
     expect(await spend("image")).toEqual({ ok: false, reason: "visitor" });
+  });
+
+  it("does not admit a checkout when the count cannot be stored", async () => {
+    const cap = { visitor: 5, global: 5 };
+    expect(await count("studio-checkout", cap, "ada", { onStoreError: "closed" })).toEqual({
+      ok: false,
+      reason: "global",
+    });
+    expect(await count("studio-checkout", cap, "ada", { onStoreError: "closed" })).toEqual({
+      ok: false,
+      reason: "global",
+    });
   });
 
   it("still stops the whole site at its cap", async () => {

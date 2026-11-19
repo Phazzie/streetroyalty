@@ -26,10 +26,9 @@ import {
   publishPiece,
   savePiece,
 } from "@/lib/studio/api";
-import { isUnauthorized } from "@/lib/ai/access";
 import { suggestLines } from "@/lib/ai/api";
 import { SignInCall } from "@/components/ai/sign-in-call";
-import { usePaidAiAccess } from "@/components/ai/use-paid-ai";
+import { useAiPrompt } from "@/components/ai/use-paid-ai";
 import { createSingleFlight } from "@/lib/ui/single-flight";
 import { designVisualKey } from "@/lib/studio/design-key";
 import {
@@ -95,7 +94,7 @@ function setPieces(garment: GarmentDesign, productName?: string) {
 
 export function Editor({ designId }: { designId: string }) {
   const navigate = useNavigate();
-  const { signedOut } = usePaidAiAccess();
+  const ai = useAiPrompt();
   const areaRef = useRef<HTMLDivElement>(null);
   const [catalog, setCatalog] = useState<CatalogCard[]>([]);
   const [product, setProduct] = useState<CatalogProduct | null>(null);
@@ -832,22 +831,23 @@ export function Editor({ designId }: { designId: string }) {
                   <Button
                     variant="ghost"
                     className="w-full"
-                    disabled={busy || signedOut}
+                    disabled={busy || ai.blocked}
                     onClick={() => {
-                      if (signedOut) return;
+                      if (ai.blocked) return;
                       void suggestLines({ data: { seed: `${title} ${active.text}` } })
                         .then((result) => {
                           setLines(result.lines);
                           setNote(result.source === "grok" ? "Lines from the crown." : "Lines from the house, no key needed.");
                         })
-                        .catch((error) =>
-                          setNote(isUnauthorized(error) ? copy.signInToDraw : errorText(error)),
-                        );
+                        .catch((error) => {
+                          if (ai.refused(error)) setNote(copy.signInToDraw);
+                          else setNote(errorText(error));
+                        });
                     }}
                   >
                     {copy.writeLine}
                   </Button>
-                  {signedOut ? <SignInCall /> : null}
+                  {ai.showSignIn ? <SignInCall /> : null}
                   {lines.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {lines.map((line) => (

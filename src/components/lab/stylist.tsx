@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
-import { usePaidAiAccess } from "@/components/ai/use-paid-ai";
+import { SignInCall } from "@/components/ai/sign-in-call";
+import { useAiPrompt } from "@/components/ai/use-paid-ai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { isUnauthorized } from "@/lib/ai/access";
 import { planOutfit } from "@/lib/ai/api";
 import { localPlan, type OutfitPlan } from "@/lib/ai/stylist";
 import { useLab } from "@/lib/store";
@@ -21,10 +21,10 @@ export function Stylist() {
   const [thinking, setThinking] = useState(false);
   const flight = useRef(createSingleFlight());
   const latest = useRef("");
-  const { signedOut } = usePaidAiAccess();
+  const ai = useAiPrompt();
 
   function ask() {
-    if (signedOut) return;
+    if (ai.blocked) return;
     const words = occasion.trim();
     if (!words) return;
     latest.current = words;
@@ -35,7 +35,7 @@ export function Stylist() {
         // The occasion may have been retyped while the stylist was thinking.
         if (latest.current === words) setPlan(answer);
       } catch (reason) {
-        if (isUnauthorized(reason)) return;
+        if (ai.refused(reason)) return;
         if (latest.current === words) setPlan({ ...localPlan(words), source: "local" });
       } finally {
         setThinking(false);
@@ -43,7 +43,8 @@ export function Stylist() {
     });
   }
 
-  if (signedOut) return null;
+  if (ai.signedOut) return null;
+  if (ai.showSignIn) return <SignInCall />;
 
   if (!open) {
     return (
@@ -77,7 +78,7 @@ export function Stylist() {
           type="submit"
           variant="ghost"
           className="min-w-20"
-          disabled={thinking || occasion.trim().length === 0}
+          disabled={thinking || ai.blocked || occasion.trim().length === 0}
         >
           {thinking ? "..." : "Plan"}
         </Button>

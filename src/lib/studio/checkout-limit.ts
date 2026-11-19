@@ -25,6 +25,8 @@ export async function assertCheckoutStartAllowed(
 ): Promise<void> {
   if (!metersLiveCheckout(podMode, paymentsMode)) return;
   const { count } = await import("../ai/guard.server.ts");
-  const verdict = await count(STUDIO_CHECKOUT_KIND, CHECKOUT_START_CAP, userId);
+  const verdict = await count(STUDIO_CHECKOUT_KIND, CHECKOUT_START_CAP, userId, {
+    onStoreError: "closed",
+  });
   if (!verdict.ok) throw new Error(CHECKOUT_LIMIT_MESSAGE);
 }

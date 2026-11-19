@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { SignInCall } from "@/components/ai/sign-in-call";
-import { usePaidAiAccess } from "@/components/ai/use-paid-ai";
+import { useAiPrompt } from "@/components/ai/use-paid-ai";
 import { Button } from "@/components/ui/button";
 import { Header, Shell, TextButton } from "@/components/lab/chrome";
-import { isUnauthorized } from "@/lib/ai/access";
 import { pickCrowd } from "@/lib/ai/api";
 import { localCrowd } from "@/lib/ai/local";
 import { copy } from "@/lib/copy";
@@ -31,7 +30,7 @@ export function RunwayScreen() {
   const [broken, setBroken] = useState(false);
   const [picking, setPicking] = useState(false);
   const flight = useRef(createSingleFlight());
-  const { signedOut } = usePaidAiAccess();
+  const ai = useAiPrompt();
   const videoUrl = draft?.videoUrl;
 
   useEffect(() => {
@@ -143,19 +142,19 @@ export function RunwayScreen() {
             })}
           </div>
         </div>
-        {signedOut ? <SignInCall /> : null}
+        {ai.showSignIn ? <SignInCall /> : null}
         <Button
           variant="ghost"
-          disabled={picking || !draft || signedOut}
+          disabled={picking || !draft || ai.blocked}
           onClick={() => {
-            if (signedOut) return;
+            if (ai.blocked) return;
             void flight.current(async () => {
               setPicking(true);
               try {
                 const result = await pickCrowd({ data: { spoken: draft?.spoken ?? "" } });
                 setReaction(result.crowd);
               } catch (reason) {
-                if (!isUnauthorized(reason)) setReaction(localCrowd());
+                if (!ai.refused(reason)) setReaction(localCrowd());
               } finally {
                 setPicking(false);
               }
@@ -164,7 +163,7 @@ export function RunwayScreen() {
         >
           Crown picks the crowd
         </Button>
-        <Button variant={mismatch || broken ? "primary" : "ghost"} disabled={busy || !draft} onClick={retryReaction}>
+        <Button variant={mismatch || broken ? "primary" : "ghost"} disabled={busy || !draft || ai.blocked} onClick={retryReaction}>
           {copy.tryReaction}
         </Button>
         </div>

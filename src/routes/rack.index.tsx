@@ -6,8 +6,7 @@ import { MakerLine } from "@/components/rack/maker-line";
 import { RackCard } from "@/components/rack/rack-card";
 import { StudioShell } from "@/components/studio/shell";
 import { SignInCall } from "@/components/ai/sign-in-call";
-import { usePaidAiAccess } from "@/components/ai/use-paid-ai";
-import { isUnauthorized } from "@/lib/ai/access";
+import { useAiPrompt } from "@/components/ai/use-paid-ai";
 import { filterByTerms, searchTerms } from "@/lib/ai/local";
 import { vibeTerms } from "@/lib/ai/api";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -35,7 +34,7 @@ function RackPage() {
   const navigate = useNavigate();
   const sort = sortOf(Route.useSearch().sort);
   const { user, isPending } = useCurrentUserState();
-  const { signedOut } = usePaidAiAccess();
+  const ai = useAiPrompt();
   const [pieces, setPieces] = useState<RackPiece[] | null>(null);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
@@ -102,7 +101,7 @@ function RackPage() {
         onSubmit={(event) => {
           event.preventDefault();
           void flight.current(async () => {
-            if (signedOut) {
+            if (ai.blocked) {
               setTerms(searchTerms(query));
               setSource("local");
               return;
@@ -112,10 +111,9 @@ function RackPage() {
               setTerms(result.terms);
               setSource(result.source);
             } catch (reason) {
-              if (!isUnauthorized(reason)) {
-                setTerms(searchTerms(query));
-                setSource("local");
-              }
+              if (ai.refused(reason)) return;
+              setTerms(searchTerms(query));
+              setSource("local");
             }
           });
         }}
@@ -147,7 +145,7 @@ function RackPage() {
           Surprise me
         </Button>
       </form>
-      {signedOut ? (
+      {ai.showSignIn ? (
         <div className="mb-4">
           <SignInCall>Sign in and the crown reads the search. The words you typed still match.</SignInCall>
         </div>

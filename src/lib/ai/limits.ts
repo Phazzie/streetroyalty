@@ -24,8 +24,9 @@ function readCap(env: LimitEnv, key: string, fallback: number): number {
 }
 
 /**
- * AI_VISITOR_IMAGE and friends cap one visitor per day; AI_DAILY_IMAGE and
- * friends cap everyone together. Zero turns a kind off.
+ * AI_VISITOR_IMAGE and friends cap one signed-in account per day. A call with
+ * no account is capped per address instead. AI_DAILY_IMAGE and friends cap
+ * everyone together. Zero turns a kind off.
  */
 export function readLimits(env: LimitEnv): AiLimits {
   return {

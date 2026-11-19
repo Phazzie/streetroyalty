@@ -1,9 +1,8 @@
 import { useRef, useState } from "react";
 import { SignInCall } from "@/components/ai/sign-in-call";
-import { usePaidAiAccess } from "@/components/ai/use-paid-ai";
+import { useAiPrompt } from "@/components/ai/use-paid-ai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { isUnauthorized } from "@/lib/ai/access";
 import { generateArt } from "@/lib/ai/art";
 import { copy } from "@/lib/copy";
 import { ART_STYLES, type ArtStyleId } from "@/lib/ai/art-styles";
@@ -44,10 +43,10 @@ export function ArtMaker({
   const [style, setStyle] = useState<ArtStyleId>("ink");
   const [busy, setBusy] = useState(false);
   const flight = useRef(createSingleFlight());
-  const { signedOut } = usePaidAiAccess();
+  const ai = useAiPrompt();
 
   function make() {
-    if (signedOut) return;
+    if (ai.blocked) return;
     const words = idea.trim();
     if (!words) {
       onNote("Say what the art is first. A panther in a crown, a rose on fire.");
@@ -69,13 +68,11 @@ export function ArtMaker({
           "Art is on the piece with the white cut away. Pick an ink below to make it one colour.",
         );
       } catch (reason: unknown) {
-        onNote(
-          isUnauthorized(reason)
-            ? copy.signInToDraw
-            : reason instanceof Error
-              ? reason.message
-              : "That one did not land.",
-        );
+        if (ai.refused(reason)) {
+          onNote(copy.signInToDraw);
+          return;
+        }
+        onNote(reason instanceof Error ? reason.message : "That one did not land.");
       } finally {
         setBusy(false);
       }
@@ -113,8 +110,8 @@ export function ArtMaker({
           </button>
         ))}
       </div>
-      {signedOut ? <SignInCall /> : null}
-      <Button type="submit" disabled={busy || full || signedOut}>
+      {ai.showSignIn ? <SignInCall /> : null}
+      <Button type="submit" disabled={busy || full || ai.blocked}>
         {busy ? "Drawing" : "Make it"}
       </Button>
       {full ? (
@@ -292,10 +289,10 @@ export function WornPreview({
   const [yours, setYours] = useState(false);
   const [busy, setBusy] = useState(false);
   const flight = useRef(createSingleFlight());
-  const { signedOut } = usePaidAiAccess();
+  const ai = useAiPrompt();
 
   function wear() {
-    if (signedOut) return;
+    if (ai.blocked) return;
     void flight.current(async () => {
       setBusy(true);
       onNote("Putting it on the model. Give it a moment.");
@@ -334,13 +331,11 @@ export function WornPreview({
             : "That is the house model. Lock your face in the lab to see it on you.",
         );
       } catch (reason: unknown) {
-        onNote(
-          isUnauthorized(reason)
-            ? copy.signInToDraw
-            : reason instanceof Error
-              ? reason.message
-              : "That one did not land.",
-        );
+        if (ai.refused(reason)) {
+          onNote(copy.signInToDraw);
+          return;
+        }
+        onNote(reason instanceof Error ? reason.message : "That one did not land.");
       } finally {
         setBusy(false);
       }
@@ -366,9 +361,11 @@ export function WornPreview({
           you.
         </p>
       )}
-      {signedOut ? <SignInCall>Sign in to see this piece worn. It uses the studio's daily allowance.</SignInCall> : null}
+      {ai.showSignIn ? (
+        <SignInCall>Sign in to see this piece worn. It uses the studio's daily allowance.</SignInCall>
+      ) : null}
       <div className="flex flex-wrap gap-2">
-        <Button variant={image ? "ghost" : "primary"} disabled={busy || !ready || signedOut} onClick={wear}>
+        <Button variant={image ? "ghost" : "primary"} disabled={busy || !ready || ai.blocked} onClick={wear}>
           {busy ? "Dressing" : image ? "Try again" : "See it worn"}
         </Button>
         {image ? (

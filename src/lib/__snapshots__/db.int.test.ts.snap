@@ -47,6 +47,12 @@ exports[`the database handle > has the tables and columns the app reads 1`] = `
     "variant_id: text",
     "variant_label: text",
   ],
+  "checkout_claims": [
+    "created_at: timestamp with time zone",
+    "idempotency_key: text",
+    "order_id: text",
+    "user_id: text",
+  ],
   "collections": [
     "created_at: timestamp with time zone",
     "id: text",
@@ -110,10 +116,12 @@ exports[`the database handle > has the tables and columns the app reads 1`] = `
     "user_id: text",
   ],
   "orders": [
+    "checkout_url: text",
     "created_at: timestamp with time zone",
     "currency: text",
     "failure_reason: text",
     "id: text",
+    "idempotency_key: text",
     "items_json: text",
     "payment_provider: text",
     "payment_session_id: text",
@@ -158,6 +166,11 @@ exports[`the database handle > has the tables and columns the app reads 1`] = `
     "resolved_by: text",
     "status: text",
     "target_id: text",
+  ],
+  "runway_runs": [
+    "created_at: timestamp with time zone",
+    "owner_key: text",
+    "request_id: text",
   ],
   "session": [
     "createdAt: timestamp with time zone",

@@ -25,12 +25,14 @@ describe("studio checkout metering", () => {
     const to = orders.indexOf("export function dbStore");
     const body = orders.slice(from, to);
     const price = body.indexOf("await priceCart(");
-    const meter = body.indexOf("await assertCheckoutStartAllowed(");
     const rates = body.indexOf("shippingRates(");
+    const claim = body.indexOf("await claimCheckout(");
+    const meter = body.indexOf("await assertCheckoutStartAllowed(");
     const draft = body.indexOf("createDraftOrder(");
     expect(price).toBeGreaterThan(-1);
-    expect(meter).toBeGreaterThan(price);
-    expect(rates).toBeGreaterThan(meter);
+    expect(rates).toBeGreaterThan(price);
+    expect(claim).toBeGreaterThan(rates);
+    expect(meter).toBeGreaterThan(claim);
     expect(draft).toBeGreaterThan(meter);
     expect(body.match(/priceCart\(/g)).toHaveLength(1);
     const shop = readFileSync("src/lib/storefront/api.ts", "utf8");

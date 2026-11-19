@@ -102,6 +102,25 @@ describe("the gate in front of a paid call", () => {
     expect(texts[40]).toBe(false);
   });
 
+  it("keeps the address count when that person signs in", async () => {
+    process.env.AI_VISITOR_IMAGE = "2";
+    asVisitor("203.0.113.7");
+    expect((await spend("image")).ok).toBe(true);
+    expect((await spend("image", "ada")).ok).toBe(true);
+    expect((await spend("image", "ada")).ok).toBe(false);
+    asVisitor("198.51.100.9");
+    expect((await spend("image", "ada")).ok).toBe(false);
+  });
+
+  it("does not give the shared dev user one allowance for every address", async () => {
+    process.env.AI_VISITOR_IMAGE = "1";
+    asVisitor("203.0.113.7");
+    expect((await spend("image", "dev-user")).ok).toBe(true);
+    asVisitor("198.51.100.9");
+    expect((await spend("image", "dev-user")).ok).toBe(true);
+    expect((await spend("image", "dev-user")).ok).toBe(false);
+  });
+
   it("counts a signed-in account once, whichever address they use", async () => {
     process.env.AI_VISITOR_IMAGE = "1";
     asVisitor("203.0.113.7");

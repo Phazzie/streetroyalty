@@ -1,9 +1,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { SignInCall } from "@/components/ai/sign-in-call";
-import { usePaidAiAccess } from "@/components/ai/use-paid-ai";
+import { useAiPrompt } from "@/components/ai/use-paid-ai";
 import { Button } from "@/components/ui/button";
-import { isUnauthorized } from "@/lib/ai/access";
 import { FittingMirror, type CurtainState } from "@/components/tryon/mirror";
 import { generateLook } from "@/lib/lab-api";
 import { tryOnStatus } from "@/lib/tryon/api";
@@ -58,9 +57,8 @@ export function TryOn({
   const [exact, setExact] = useState(true);
   const [fail, setFail] = useState<TryOnFail | null>(null);
   const flight = useRef(createSingleFlight());
-  const { signedOut } = usePaidAiAccess();
-  const [forcedSignIn, setForcedSignIn] = useState(false);
-  const showSignIn = signedOut || forcedSignIn;
+  const ai = useAiPrompt();
+  const showSignIn = ai.showSignIn;
   /** Counts fittings, so a picture that lands after the visitor moved to another piece is dropped. */
   const fitting = useRef(0);
   const askRef = useRef<HTMLDivElement>(null);
@@ -105,7 +103,7 @@ export function TryOn({
   }, [step]);
 
   function wear() {
-    if (showSignIn) return;
+    if (ai.blocked) return;
     void flight.current(async () => {
       const mine = fitting.current;
       const moved = () => mine !== fitting.current;
@@ -143,8 +141,7 @@ export function TryOn({
         setStep("shown");
       } catch (reason) {
         if (moved()) return;
-        if (isUnauthorized(reason)) {
-          setForcedSignIn(true);
+        if (ai.refused(reason)) {
           setStep("idle");
           return;
         }
@@ -258,7 +255,7 @@ export function TryOn({
               )}
               {spent ? null : (
                 <div className="flex flex-wrap gap-3">
-                  <Button disabled={open === null || step === "dressing"} onClick={ask}>
+                  <Button disabled={open === null || step === "dressing" || ai.blocked} onClick={ask}>
                     {step === "dressing"
                       ? "Changing"
                       : hasFace === false

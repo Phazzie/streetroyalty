@@ -96,7 +96,12 @@ export const startRunway = createServerFn({ method: "POST" })
     const refusal = await refuse("video", context.userId);
     if (refusal) return refusal;
     const { runStart } = await import("./imagine.server.ts");
-    return runStart(data);
+    const started = await runStart(data);
+    if (started.ok) {
+      const { claimRunway } = await import("./ai/runway-owner.ts");
+      await claimRunway(started.requestId, context.userId);
+    }
+    return started;
   });
 
 export const pollRunway = createServerFn({ method: "POST" })
@@ -104,7 +109,9 @@ export const pollRunway = createServerFn({ method: "POST" })
   .validator((input: { requestId?: string }) => ({
     requestId: String(input?.requestId ?? ""),
   }))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const { assertRunwayOwner } = await import("./ai/runway-owner.ts");
+    await assertRunwayOwner(data.requestId, context.userId);
     const { runPoll } = await import("./imagine.server.ts");
     return runPoll(data.requestId);
   });

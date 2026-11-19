@@ -17,8 +17,7 @@ import { TryOn } from "@/components/rack/try-on";
 import { Note, StudioShell } from "@/components/studio/shell";
 import { formatMoney } from "@/lib/pod/money";
 import { SignInCall } from "@/components/ai/sign-in-call";
-import { usePaidAiAccess } from "@/components/ai/use-paid-ai";
-import { isUnauthorized } from "@/lib/ai/access";
+import { useAiPrompt } from "@/components/ai/use-paid-ai";
 import { printNote } from "@/lib/ai/api";
 import { localPrintNote } from "@/lib/ai/local";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -36,7 +35,7 @@ function ProductPage() {
   const { slug } = Route.useParams();
   const navigate = useNavigate();
   const { user, isPending } = useCurrentUserState();
-  const { signedOut } = usePaidAiAccess();
+  const ai = useAiPrompt();
   const [piece, setPiece] = useState<Piece | null>(null);
   const [shop, setShop] = useState<Shop | null>(null);
   const [variantId, setVariantId] = useState("");
@@ -157,7 +156,7 @@ function ProductPage() {
                   </button>
                 ))}
               </div>
-              {signedOut ? (
+              {ai.showSignIn ? (
                 <div className="mt-4">
                   <SignInCall>Sign in for a print note from the crown.</SignInCall>
                 </div>
@@ -165,9 +164,9 @@ function ProductPage() {
                 <Button
                   variant="ghost"
                   className="mt-4 w-full"
-                  disabled={adding}
+                  disabled={adding || ai.blocked}
                   onClick={() => {
-                    if (!piece || signedOut) return;
+                    if (!piece || ai.blocked) return;
                     void flight.current(async () => {
                       try {
                         const result = await printNote({
@@ -175,7 +174,7 @@ function ProductPage() {
                         });
                         setAdvice(result.note);
                       } catch (reason) {
-                        if (isUnauthorized(reason)) return;
+                        if (ai.refused(reason)) return;
                         setAdvice(localPrintNote(piece.placement, piece.productName));
                       }
                     });

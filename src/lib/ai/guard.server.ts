@@ -29,10 +29,14 @@ function memory(day: string): Memory {
   return fresh;
 }
 
-/** A signed-in account. Blank is not an account, so the address cap still applies. */
+/**
+ * A signed-in account. Blank is not an account, and neither is the shared dev id
+ * everyone receives when auth is off, so those calls stay on the address cap.
+ */
 function accountId(userId?: string): string | null {
   const id = userId?.trim();
-  return id ? id : null;
+  if (!id || id === "dev-user") return null;
+  return id;
 }
 
 function visitorBucket(day: string, userId?: string): string {
@@ -51,14 +55,22 @@ function visitorBucket(day: string, userId?: string): string {
   return `v:${createHash("sha256").update(`${salt}|${day}|${address}`).digest("hex").slice(0, 24)}`;
 }
 
-async function bump(day: string, bucket: string, kind: string): Promise<number> {
+async function bump(day: string, bucket: string, kind: string, seed = 0): Promise<number> {
   const sql = await getSql();
   const rows = await sql<{ count: number }>`
-    insert into ai_usage (day, bucket, kind, count) values (${day}, ${bucket}, ${kind}, 1)
+    insert into ai_usage (day, bucket, kind, count) values (${day}, ${bucket}, ${kind}, ${1 + seed})
     on conflict (day, bucket, kind) do update set count = ai_usage.count + 1
     returning count
   `;
   return Number(rows[0]?.count ?? 1);
+}
+
+async function readCount(day: string, bucket: string, kind: string): Promise<number> {
+  const sql = await getSql();
+  const rows = await sql<{ count: number }>`
+    select count from ai_usage where day = ${day} and bucket = ${bucket} and kind = ${kind}
+  `;
+  return Number(rows[0]?.count ?? 0);
 }
 
 function bumpMemory(day: string, bucket: string, kind: string): number {
@@ -92,15 +104,22 @@ export async function spend(kind: AiKind, userId?: string): Promise<SpendVerdict
  * Pass the verified account when the caller is signed in so a new address does not
  * open a fresh allowance. With no account the address is the bucket, as before.
  */
+export type CountOptions = { onStoreError?: "memory" | "closed" };
+
 export async function count(
   kind: string,
   cap: { visitor: number; global: number },
   userId?: string,
+  options?: CountOptions,
 ): Promise<SpendVerdict> {
   const day = usageDay(new Date());
-  const bucket = visitorBucket(day, userId);
+  const account = accountId(userId);
+  const addressBucket = visitorBucket(day);
+  const bucket = account ? visitorBucket(day, userId) : addressBucket;
   try {
-    const visitor = await bump(day, bucket, kind);
+    // The first signed-in call keeps whatever this address already used today.
+    const seed = account ? await readCount(day, addressBucket, kind) : 0;
+    const visitor = await bump(day, bucket, kind, seed);
     const first = judgeSpend({ visitor, global: null }, cap);
     if (!first.ok) return first;
     const global = await bump(day, "global", kind);
@@ -108,6 +127,7 @@ export async function count(
     return judgeSpend({ visitor, global }, cap);
   } catch (error) {
     console.error("ai usage", error);
+    if (options?.onStoreError === "closed") return { ok: false, reason: "global" };
     const visitor = bumpMemory(day, bucket, kind);
     const first = judgeSpend({ visitor, global: null }, cap);
     if (!first.ok) return first;

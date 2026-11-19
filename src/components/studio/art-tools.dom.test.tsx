@@ -102,6 +102,7 @@ describe("make art while signed out", () => {
     renderMaker((text) => notes.push(text));
     submitIdea();
     await waitFor(() => expect(notes.join(" ")).toMatch(/Sign in to draw/));
+    expect(screen.getByRole("link", { name: "Sign in" }).getAttribute("href")).toBe("/login");
     expect(notes.join(" ")).not.toMatch(/Unauthorized/);
   });
 });
