@@ -29,6 +29,9 @@ export type DesignSummary = {
   retailCents: number;
   currency: string;
   updatedAt: string;
+  /** Our garment id. Placement blanks use their sandbox id. */
+  templateId: string;
+  provider: "sandbox" | "printful";
 };
 
 export type ShopPiece = DesignSummary & {

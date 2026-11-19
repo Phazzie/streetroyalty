@@ -1,3 +1,4 @@
+import { AOP_DPI } from "./aop-printful.ts";
 import { aopFieldsFor, isPrintfulPlacementProduct } from "./garment-map.ts";
 import { applyMarkup, centsToDecimal, moneyToCents } from "./money.ts";
 import { PodError, type CatalogPage, type CatalogProduct, type CatalogVariant, type DraftOrderRequest, type FileUpload, type MockupRequest, type MockupResult, type PodProvider, type PrintArea, type ProviderOrder, type Recipient, type ShippingItem, type ShippingRate, type SyncProductInput, type SyncedProduct, type UploadedFile, type WebhookRegistration } from "./types.ts";
@@ -103,7 +104,7 @@ export function createPrintfulProvider(options: PrintfulClientOptions): PodProvi
         placement: text(area.placement, "front"),
         widthIn,
         heightIn,
-        dpi: 150,
+        dpi: AOP_DPI,
       };
       return spec;
     }).filter((area): area is PrintArea => area !== null);

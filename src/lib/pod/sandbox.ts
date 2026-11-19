@@ -3,6 +3,7 @@ import { luminance } from "../color.ts";
 import { getTemplate } from "../garments/panels.ts";
 import { renderGarmentSvg } from "../garments/render.ts";
 import { arcLayout, clampFx, isFlatText } from "../text/layout.ts";
+import { AOP_DPI } from "./aop-printful.ts";
 import { aopFieldsFor, bindingsFor, printfulFactsForTemplate } from "./garment-map.ts";
 import { applyMarkup } from "./money.ts";
 import type {
@@ -31,42 +32,55 @@ type SandboxOrder = {
 };
 
 const TEE: PrintArea[] = [
-  { placement: "front", widthIn: 12, heightIn: 16, dpi: 150 },
-  { placement: "back", widthIn: 12, heightIn: 16, dpi: 150 },
-  { placement: "sleeve_left", widthIn: 3.5, heightIn: 3.5, dpi: 150 },
-  { placement: "sleeve_right", widthIn: 3.5, heightIn: 3.5, dpi: 150 },
+  { placement: "front", widthIn: 12, heightIn: 16, dpi: AOP_DPI },
+  { placement: "back", widthIn: 12, heightIn: 16, dpi: AOP_DPI },
+  { placement: "sleeve_left", widthIn: 3.5, heightIn: 3.5, dpi: AOP_DPI },
+  { placement: "sleeve_right", widthIn: 3.5, heightIn: 3.5, dpi: AOP_DPI },
 ];
 
 const HOODIE: PrintArea[] = [
-  { placement: "front", widthIn: 12, heightIn: 12, dpi: 150 },
-  { placement: "back", widthIn: 12, heightIn: 16, dpi: 150 },
+  { placement: "front", widthIn: 12, heightIn: 12, dpi: AOP_DPI },
+  { placement: "back", widthIn: 12, heightIn: 16, dpi: AOP_DPI },
 ];
 
-const HAT: PrintArea[] = [{ placement: "front", widthIn: 4, heightIn: 2, dpi: 150 }];
+const HAT: PrintArea[] = [{ placement: "front", widthIn: 4, heightIn: 2, dpi: AOP_DPI }];
 
 const CREW: PrintArea[] = [
-  { placement: "front", widthIn: 12, heightIn: 14, dpi: 150 },
-  { placement: "back", widthIn: 12, heightIn: 16, dpi: 150 },
+  { placement: "front", widthIn: 12, heightIn: 14, dpi: AOP_DPI },
+  { placement: "back", widthIn: 12, heightIn: 16, dpi: AOP_DPI },
 ];
 
 const LONGSLEEVE: PrintArea[] = [
-  { placement: "front", widthIn: 12, heightIn: 16, dpi: 150 },
-  { placement: "back", widthIn: 12, heightIn: 16, dpi: 150 },
-  { placement: "sleeve_left", widthIn: 3.5, heightIn: 12, dpi: 150 },
-  { placement: "sleeve_right", widthIn: 3.5, heightIn: 12, dpi: 150 },
+  { placement: "front", widthIn: 12, heightIn: 16, dpi: AOP_DPI },
+  { placement: "back", widthIn: 12, heightIn: 16, dpi: AOP_DPI },
+  { placement: "sleeve_left", widthIn: 3.5, heightIn: 12, dpi: AOP_DPI },
+  { placement: "sleeve_right", widthIn: 3.5, heightIn: 12, dpi: AOP_DPI },
 ];
 
 const JOGGER: PrintArea[] = [
-  { placement: "front", widthIn: 5, heightIn: 5, dpi: 150 },
-  { placement: "back", widthIn: 8, heightIn: 4, dpi: 150 },
+  { placement: "front", widthIn: 5, heightIn: 5, dpi: AOP_DPI },
+  { placement: "back", widthIn: 8, heightIn: 4, dpi: AOP_DPI },
 ];
 
 const TOTE: PrintArea[] = [
-  { placement: "front", widthIn: 12, heightIn: 12, dpi: 150 },
-  { placement: "back", widthIn: 12, heightIn: 12, dpi: 150 },
+  { placement: "front", widthIn: 12, heightIn: 12, dpi: AOP_DPI },
+  { placement: "back", widthIn: 12, heightIn: 12, dpi: AOP_DPI },
 ];
 
-const CHEST: PrintArea[] = [{ placement: "front", widthIn: 4, heightIn: 3, dpi: 150 }];
+const CHEST: PrintArea[] = [{ placement: "front", widthIn: 4, heightIn: 3, dpi: AOP_DPI }];
+
+const APPAREL_SIZES = [
+  { code: "s", name: "S" },
+  { code: "m", name: "M" },
+  { code: "l", name: "L" },
+  { code: "xl", name: "XL" },
+  { code: "2xl", name: "2XL" },
+];
+
+/** Variant ids use the codes, never the labels a buyer sees. */
+export function sandboxVariantId(productId: string, colorCode: string, sizeCode: string): string {
+  return `${productId}-${colorCode}-${sizeCode}`;
+}
 
 type Blank = {
   id: string;
@@ -77,8 +91,8 @@ type Blank = {
   techniqueTitle: string;
   placements: { placement: string; title: string }[];
   areas: PrintArea[];
-  colors: { name: string; hex: string }[];
-  sizes: string[];
+  colors: { code: string; name: string; hex: string }[];
+  sizes: { code: string; name: string }[];
   wholesaleCents: number;
   shape: "tee" | "hoodie" | "hat" | "crew" | "tote" | "joggers" | "aop";
 };
@@ -99,12 +113,12 @@ const BLANKS: Blank[] = [
     ],
     areas: TEE,
     colors: [
-      { name: "Black", hex: "#141414" },
-      { name: "Bone", hex: "#efe6d6" },
-      { name: "Hot Pink", hex: "#ff2d95" },
-      { name: "Royal", hex: "#2f5bff" },
+      { code: "black", name: "Black", hex: "#141414" },
+      { code: "bone", name: "Bone", hex: "#efe6d6" },
+      { code: "hot-pink", name: "Hot Pink", hex: "#ff2d95" },
+      { code: "royal", name: "Royal", hex: "#2f5bff" },
     ],
-    sizes: ["S", "M", "L", "XL", "2XL"],
+    sizes: APPAREL_SIZES,
     wholesaleCents: 1395,
     shape: "tee",
   },
@@ -121,11 +135,11 @@ const BLANKS: Blank[] = [
     ],
     areas: HOODIE,
     colors: [
-      { name: "Black", hex: "#141414" },
-      { name: "Bone", hex: "#efe6d6" },
-      { name: "Lime", hex: "#d6ff3c" },
+      { code: "black", name: "Black", hex: "#141414" },
+      { code: "bone", name: "Bone", hex: "#efe6d6" },
+      { code: "lime", name: "Lime", hex: "#d6ff3c" },
     ],
-    sizes: ["S", "M", "L", "XL", "2XL"],
+    sizes: APPAREL_SIZES,
     wholesaleCents: 2895,
     shape: "hoodie",
   },
@@ -139,11 +153,11 @@ const BLANKS: Blank[] = [
     placements: [{ placement: "front", title: "Front" }],
     areas: HAT,
     colors: [
-      { name: "Black", hex: "#141414" },
-      { name: "Bone", hex: "#efe6d6" },
-      { name: "Hot Pink", hex: "#ff2d95" },
+      { code: "black", name: "Black", hex: "#141414" },
+      { code: "bone", name: "Bone", hex: "#efe6d6" },
+      { code: "hot-pink", name: "Hot Pink", hex: "#ff2d95" },
     ],
-    sizes: ["One size"],
+    sizes: [{ code: "one-size", name: "One size" }],
     wholesaleCents: 1195,
     shape: "hat",
   },
@@ -160,11 +174,11 @@ const BLANKS: Blank[] = [
     ],
     areas: CREW,
     colors: [
-      { name: "Black", hex: "#141414" },
-      { name: "Bone", hex: "#efe6d6" },
-      { name: "Royal", hex: "#2f5bff" },
+      { code: "black", name: "Black", hex: "#141414" },
+      { code: "bone", name: "Bone", hex: "#efe6d6" },
+      { code: "royal", name: "Royal", hex: "#2f5bff" },
     ],
-    sizes: ["S", "M", "L", "XL", "2XL"],
+    sizes: APPAREL_SIZES,
     wholesaleCents: 2495,
     shape: "crew",
   },
@@ -183,11 +197,11 @@ const BLANKS: Blank[] = [
     ],
     areas: LONGSLEEVE,
     colors: [
-      { name: "Black", hex: "#141414" },
-      { name: "Bone", hex: "#efe6d6" },
-      { name: "Violet", hex: "#7c5cff" },
+      { code: "black", name: "Black", hex: "#141414" },
+      { code: "bone", name: "Bone", hex: "#efe6d6" },
+      { code: "violet", name: "Violet", hex: "#7c5cff" },
     ],
-    sizes: ["S", "M", "L", "XL", "2XL"],
+    sizes: APPAREL_SIZES,
     wholesaleCents: 1895,
     shape: "tee",
   },
@@ -204,11 +218,11 @@ const BLANKS: Blank[] = [
     ],
     areas: JOGGER,
     colors: [
-      { name: "Black", hex: "#141414" },
-      { name: "Bone", hex: "#efe6d6" },
-      { name: "Royal", hex: "#2f5bff" },
+      { code: "black", name: "Black", hex: "#141414" },
+      { code: "bone", name: "Bone", hex: "#efe6d6" },
+      { code: "royal", name: "Royal", hex: "#2f5bff" },
     ],
-    sizes: ["S", "M", "L", "XL", "2XL"],
+    sizes: APPAREL_SIZES,
     wholesaleCents: 2695,
     shape: "joggers",
   },
@@ -225,10 +239,10 @@ const BLANKS: Blank[] = [
     ],
     areas: TOTE,
     colors: [
-      { name: "Bone", hex: "#efe6d6" },
-      { name: "Black", hex: "#141414" },
+      { code: "bone", name: "Bone", hex: "#efe6d6" },
+      { code: "black", name: "Black", hex: "#141414" },
     ],
-    sizes: ["One size"],
+    sizes: [{ code: "one-size", name: "One size" }],
     wholesaleCents: 995,
     shape: "tote",
   },
@@ -236,10 +250,12 @@ const BLANKS: Blank[] = [
 ];
 
 function aopBlanks(): Blank[] {
-  return bindingsFor("sandbox").map((binding) => {
+  return bindingsFor("sandbox")
+    .filter((binding) => getTemplate(binding.templateId))
+    .map((binding) => {
     const template = getTemplate(binding.templateId);
     const facts = printfulFactsForTemplate(binding.templateId);
-    if (!template || !facts) {
+    if (!template || !facts || !binding.productId) {
       throw new Error(`Sandbox has no all-over template for ${binding.templateId}.`);
     }
     return {
@@ -251,8 +267,8 @@ function aopBlanks(): Blank[] {
       techniqueTitle: "Sublimation",
       placements: [{ placement: "front", title: "Chest logo" }],
       areas: CHEST,
-      colors: [{ name: "Printed", hex: "#c4a6e0" }],
-      sizes: ["S", "M", "L", "XL", "2XL"],
+      colors: [{ code: "printed", name: "Printed", hex: "#c4a6e0" }],
+      sizes: APPAREL_SIZES,
       wholesaleCents: facts.startingPriceCents,
       shape: "aop",
     };
@@ -269,13 +285,15 @@ function variantsFor(blank: Blank, markup: number): CatalogVariant[] {
   const variants: CatalogVariant[] = [];
   for (const color of blank.colors) {
     for (const size of blank.sizes) {
-      const wholesale = blank.wholesaleCents + sizePremium(size);
+      const wholesale = blank.wholesaleCents + sizePremium(size.name);
       variants.push({
-        id: `${blank.id}-${color.name.toLowerCase().replace(/\s+/g, "-")}-${size.toLowerCase().replace(/\s+/g, "-")}`,
+        id: sandboxVariantId(blank.id, color.code, size.code),
         productId: blank.id,
-        name: `${blank.name} / ${color.name} / ${size}`,
-        size,
+        name: `${blank.name} / ${color.name} / ${size.name}`,
+        size: size.name,
+        sizeCode: size.code,
         color: color.name,
+        colorCode: color.code,
         colorHex: color.hex,
         wholesaleCents: wholesale,
         retailCents: applyMarkup(wholesale, markup),
@@ -303,8 +321,8 @@ function toProduct(blank: Blank, markup: number, withVariants: boolean): Catalog
       technique: blank.technique,
       title: placement.title,
     })),
-    colors: blank.colors,
-    sizes: blank.sizes,
+    colors: blank.colors.map((color) => ({ code: color.code, name: color.name, hex: color.hex })),
+    sizes: blank.sizes.map((size) => size.name),
     variants: withVariants ? variantsFor(blank, markup) : [],
     ...aopFieldsFor("sandbox", blank.id),
   };

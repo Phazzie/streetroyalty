@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StudioShell } from "@/components/studio/shell";
 import { accountInputError } from "@/lib/auth/account-input";
-import { GROK_PROVIDERS, authClient, authEnabled, signIn } from "@/lib/auth/client";
+import { authClient, authEnabled, signIn } from "@/lib/auth/client";
+import { useOAuthProviders } from "@/lib/auth/oauth-buttons";
 import { createSingleFlight } from "@/lib/ui/single-flight";
 
 export const Route = createFileRoute("/login")({ component: LoginPage });
@@ -17,6 +18,7 @@ function LoginPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const flight = useRef(createSingleFlight());
+  const oauthProviders = useOAuthProviders();
 
   return (
     <StudioShell current="/login">
@@ -79,13 +81,15 @@ function LoginPage() {
                 {mode === "up" ? "Create account" : "Sign in"}
               </Button>
             </form>
-            <div className="mt-6 flex flex-col gap-2">
-              {GROK_PROVIDERS.map((provider) => (
-                <Button key={provider.providerId} variant="ghost" onClick={() => void signIn(provider.providerId, { callbackURL: "/studio" })}>
-                  Continue with {provider.label}
-                </Button>
-              ))}
-            </div>
+            {oauthProviders.length > 0 ? (
+              <div className="mt-6 flex flex-col gap-2">
+                {oauthProviders.map((provider) => (
+                  <Button key={provider.providerId} variant="ghost" onClick={() => void signIn(provider.providerId, { callbackURL: "/studio" })}>
+                    Continue with {provider.label}
+                  </Button>
+                ))}
+              </div>
+            ) : null}
           </>
         ) : (
           <p>Sign-in is off.</p>

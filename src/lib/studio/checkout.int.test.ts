@@ -118,6 +118,7 @@ describe("starting checkout", () => {
 
   it("refuses a live printer when payments were never switched on", async () => {
     await seedCart("ada");
+    process.env.POD_MODE = "live";
     process.env.PRINTFUL_API_KEY = "pf_test_x";
     await expect(startCheckout("ada", STANDARD)).rejects.toThrow(/Sandbox payment/);
     expect(await orderCount()).toBe(0);
@@ -199,6 +200,7 @@ describe("paying in sandbox", () => {
   it("is switched off when payments are live", async () => {
     await seedCart("ada");
     const { orderId } = await startCheckout("ada", STANDARD);
+    process.env.PAYMENTS_MODE = "live";
     process.env.STRIPE_SECRET_KEY = "sk_live_x";
     await expect(completeSandboxPayment("ada", orderId)).rejects.toThrow(/Sandbox payment is off/);
     expect((await orderRow(orderId))?.status).toBe("awaiting_payment");

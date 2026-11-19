@@ -33,6 +33,12 @@ beforeEach(async () => {
 });
 
 describe("the gate in front of a paid call", () => {
+  it("refuses to count a visitor when the auth secret is missing", async () => {
+    delete process.env.BETTER_AUTH_SECRET;
+    await expect(spend("image")).rejects.toThrow(/BETTER_AUTH_SECRET/);
+    expect(await usage()).toEqual([]);
+  });
+
   it("says unavailable and counts nothing when there is no key", async () => {
     delete process.env.XAI_API_KEY;
     expect(await admit("image")).toBe("unavailable");

@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 const OPEN: Record<string, string> = {
   // Studio catalog and config: the same for everyone, nothing personal.
   getStudioConfig: "public config",
+  listOAuthProviders: "login page asks which sign-in buttons this host may show; no user data",
   listCatalog: "public catalog",
   getCatalogProduct: "public catalog",
   makeMockup: "anyone can preview a mockup; it reads the user only if there is one",

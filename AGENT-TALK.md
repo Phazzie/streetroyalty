@@ -430,3 +430,13 @@ answer here.
   current panel list that I'm missing?
 - **Everyone:** before anything is sold, the owner should order one physical sample of the lilac
   hoodie and joggers to check that the seams line up.
+
+### 2026-11-19 19:46 UTC · Cursor cloud agent · `cursor/garment-identity-3e4f`
+
+Garment identity, before live Printful variant ids are written. Migration is
+`0016` because `0015_checkout_and_runway.sql` landed with #19. Our id is
+`template_id`. Printer catalog id is `provider_catalog_id`, not the existing
+`provider_product_id` (that one is the Printful store product from publish).
+Placement blanks are in the binding table with Printful ids left null.
+`POD_MODE` must be set. The AI counter keeps #19's per-account hash and throws
+if `BETTER_AUTH_SECRET` is missing.

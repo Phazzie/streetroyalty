@@ -98,6 +98,10 @@ export async function startCheckout(
         unitCents: line.unitCents,
         colorwayId: line.colorwayId ?? null,
         colorwayName: line.colorwayName ?? null,
+        templateId: line.templateId,
+        provider: line.provider,
+        providerCatalogId: line.providerCatalogId,
+        providerVariantId: line.providerVariantId,
       })),
     );
     await sql`

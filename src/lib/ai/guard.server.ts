@@ -39,9 +39,15 @@ function accountId(userId?: string): string | null {
   return id;
 }
 
+function usageSalt(): string {
+  const salt = process.env.BETTER_AUTH_SECRET?.trim();
+  if (!salt) throw new Error("BETTER_AUTH_SECRET is required to count AI use.");
+  return salt;
+}
+
 function visitorBucket(day: string, userId?: string): string {
   // The day is part of the hash, so the same person cannot be followed from one day to the next.
-  const salt = process.env.BETTER_AUTH_SECRET?.trim() || "street-royalty";
+  const salt = usageSalt();
   const account = accountId(userId);
   if (account) {
     return `u:${createHash("sha256").update(`${salt}|${day}|user|${account}`).digest("hex").slice(0, 24)}`;

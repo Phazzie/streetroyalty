@@ -14,9 +14,9 @@
  * Tri-mode:
  *   - Deployed: the deployer injects a per-app `GROK_AUTH_*` + `BETTER_AUTH_URL`
  *     + `DATABASE_URL`, so real federated auth is persisted in Postgres.
- *   - Sandbox live preview: no injection -> falls back to the shared **preview
- *     client** (`./preview`) and derives the preview's `https://*.grok-sandbox.com`
- *     origin from the request, so real sign-in works (no demo users). Sessions
+ *   - Sandbox live preview: no injection -> the shared **preview client**
+ *     (`./preview`) is used only when the request host is `*.grok-sandbox.com`.
+ *     Any other host without real `GROK_AUTH_*` keys hides Google and X. Sessions
  *     and identities persist in the embedded PGLite DB (same DB as app data);
  *     the process restart wipes both. Live-preview iframe clients use a bearer
  *     token (partitioned cookies) — see `client.ts`.
@@ -30,9 +30,10 @@
  * a verified id via `@/lib/auth/middleware`.
  */
 import { betterAuth } from "better-auth";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { bearer, genericOAuth } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
-import { getCookie } from "@tanstack/react-start/server";
+import { getCookie, getRequest } from "@tanstack/react-start/server";
 import { randomBytes } from "node:crypto";
 import { Pool } from "pg";
 import { ensureDbReady, getPglite } from "../db";
@@ -40,6 +41,7 @@ import { emailAndPasswordEnabled } from "./email-password";
 import { GATE_PROVIDER_ID, gateIdentitySessions } from "./gate-session.server";
 import { GROK_PROVIDERS } from "./providers";
 import { pgliteDialect } from "./pglite-dialect";
+import { grokOAuthAllowed, isPreviewHostname } from "./oauth-host";
 import {
   GROK_ISSUER_DEFAULT,
   PREVIEW_ALLOWED_HOSTS,
@@ -74,16 +76,55 @@ const env = (key: string): string | undefined => {
 // provisions auth; set it to "false" to force auth off everywhere (dev user).
 const authDisabled = env("VITE_AUTH_ENABLED") === "false";
 
-// Broker federation creds: the deployer injects a per-app client when deployed;
-// otherwise fall back to the shared live-preview client, which the broker accepts
-// for any `*.grok-sandbox.com` callback (see `./preview`).
+// Broker federation creds. A deployed app injects its own client. The baked
+// preview client is only for `*.grok-sandbox.com`. A non-preview host with no
+// real keys does not get that client.
 const grokIssuer = env("GROK_AUTH_ISSUER") ?? GROK_ISSUER_DEFAULT;
-const grokClientId = env("GROK_AUTH_CLIENT_ID") ?? PREVIEW_CLIENT_ID;
-const grokClientSecret = env("GROK_AUTH_CLIENT_SECRET") ?? PREVIEW_CLIENT_SECRET;
+const realClientId = env("GROK_AUTH_CLIENT_ID");
+const realClientSecret = env("GROK_AUTH_CLIENT_SECRET");
+const hasRealGrokClient = Boolean(realClientId && realClientSecret);
+const configuredHost = (() => {
+  const url = env("BETTER_AUTH_URL");
+  if (!url) return null;
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return null;
+  }
+})();
+// No public URL means this process may be the sandbox preview, which learns
+// its host per request. A URL on any other host means the preview client
+// must not be installed at all.
+const previewClientAllowed = configuredHost == null || isPreviewHostname(configuredHost);
+const grokClientId = hasRealGrokClient
+  ? realClientId
+  : previewClientAllowed
+    ? PREVIEW_CLIENT_ID
+    : undefined;
+const grokClientSecret = hasRealGrokClient
+  ? realClientSecret
+  : previewClientAllowed
+    ? PREVIEW_CLIENT_SECRET
+    : undefined;
 
-/** True when federated sign-in is active (real auth is enforced). */
-export const authConfigured =
-  !authDisabled && Boolean(grokClientId && grokClientSecret);
+/**
+ * Better Auth itself is on. This does not depend on Google or X. A deployed
+ * site with no GROK_AUTH_* keys still signs people in with email and password.
+ * Auth is off only when VITE_AUTH_ENABLED=false. A signing secret is always
+ * installed: the deployed BETTER_AUTH_SECRET, or the preview secret below.
+ */
+export const authConfigured = !authDisabled;
+
+/** Google and X buttons. Hidden when this host has no real client and is not a preview. */
+export function grokOAuthButtonsVisible(): boolean {
+  let hostname = "";
+  try {
+    hostname = new URL(getRequest().url).hostname;
+  } catch {
+    hostname = "";
+  }
+  return grokOAuthAllowed(hostname, hasRealGrokClient);
+}
 
 // This app's own Better Auth origin. When deployed the deployer injects the
 // public URL. In the sandbox live preview there's no fixed URL (each preview gets
@@ -150,7 +191,8 @@ export const SESSION_TOKEN_COOKIE = "__Host-grok-auth.session_token";
 
 // Built separately so the `betterAuth({...})` call stays easy to edit without
 // breaking brackets (models often trip on the conditional plugin spread).
-const grokOAuthPlugin = authConfigured
+const grokOAuthPlugin =
+  authConfigured && grokClientId && grokClientSecret
   ? genericOAuth({
       config: GROK_PROVIDERS.map(({ providerId, idp }) => ({
         providerId,
@@ -172,8 +214,30 @@ const grokOAuthPlugin = authConfigured
     })
   : null;
 
+function hostFromAuthRequest(request: Request | undefined): string {
+  if (!request) return "";
+  const forwarded = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "";
+  const fromHeader = forwarded.split(",")[0]?.trim().split(":")[0] ?? "";
+  if (fromHeader) return fromHeader;
+  try {
+    return new URL(request.url).hostname;
+  } catch {
+    return "";
+  }
+}
+
 export const auth = betterAuth({
   baseURL,
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (!ctx.path.includes("oauth2") && !ctx.path.includes("sign-in/social")) return;
+      const hostname = hostFromAuthRequest(ctx.request);
+      if (grokOAuthAllowed(hostname, hasRealGrokClient)) return;
+      throw new APIError("FORBIDDEN", {
+        message: "Google and X sign-in are not configured on this site.",
+      });
+    }),
+  },
   // Deployed apps inject BETTER_AUTH_SECRET. Preview: process-stable secret on
   // globalThis so HMR doesn't invalidate PGLite-backed sessions (see above).
   secret: env("BETTER_AUTH_SECRET") ?? previewAuthSecret(),

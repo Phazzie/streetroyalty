@@ -13,7 +13,12 @@ export type PrinterId = "sandbox" | "printful";
 export type GarmentBinding = {
   templateId: string;
   provider: PrinterId;
-  productId: string;
+  /**
+   * The printer's catalog product id. Null when that printer has no verified
+   * binding yet. Sandbox ids match the template id. Printful ids are catalog
+   * numbers, and only when a public page or the catalog has confirmed them.
+   */
+  productId: string | null;
   /** Known catalog variant ids, or null when the printer has not published them. */
   variantIds: readonly string[] | null;
 };
@@ -56,16 +61,37 @@ function printfulBinding(templateId: (typeof TEMPLATE_ORDER)[number]): GarmentBi
   };
 }
 
+function placementBindings(): GarmentBinding[] {
+  return SANDBOX_PLACEMENT_PRODUCT_IDS.flatMap((templateId) => [
+    {
+      templateId,
+      provider: "sandbox" as const,
+      productId: templateId,
+      // Sandbox variants are `${productId}-{colorCode}-{sizeCode}`.
+      variantIds: null,
+    },
+    {
+      templateId,
+      provider: "printful" as const,
+      // No Printful catalog id is verified for these blanks. docs/printful-aop-data.md
+      // and docs/studio-spec.md cover 388/400/801 only. Leave the id null.
+      productId: null,
+      variantIds: null,
+    },
+  ]);
+}
+
 export const GARMENT_BINDINGS: readonly GarmentBinding[] = [
   ...TEMPLATE_ORDER.map((templateId): GarmentBinding => ({
     templateId,
     provider: "sandbox",
     // Same string as the template id on purpose. Saved product_id columns use it.
     productId: templateId,
-    // Sandbox variants are `${productId}-{color}-{size}`, resolved by prefix.
+    // Sandbox variants are `${productId}-{colorCode}-{sizeCode}`, resolved by prefix.
     variantIds: null,
   })),
   ...TEMPLATE_ORDER.map(printfulBinding),
+  ...placementBindings(),
 ];
 
 export function bindingsFor(
@@ -81,8 +107,9 @@ export function templateForProduct(
   bindings: readonly GarmentBinding[] = GARMENT_BINDINGS,
 ): string | null {
   return (
-    bindings.find((item) => item.provider === provider && item.productId === productId)
-      ?.templateId ?? null
+    bindings.find(
+      (item) => item.provider === provider && item.productId != null && item.productId === productId,
+    )?.templateId ?? null
   );
 }
 
@@ -120,8 +147,8 @@ export function templateForVariant(
   if (listed.length > 1) return null;
   if (provider !== "sandbox") return null;
   const matches = bindingsFor("sandbox", bindings)
-    .filter((item) => variantId.startsWith(`${item.productId}-`))
-    .sort((a, b) => b.productId.length - a.productId.length);
+    .filter((item) => item.productId != null && variantId.startsWith(`${item.productId}-`))
+    .sort((a, b) => (b.productId?.length ?? 0) - (a.productId?.length ?? 0));
   return matches[0]?.templateId ?? null;
 }
 
@@ -166,10 +193,13 @@ export type AopCatalogFields =
 /** What a catalog product should carry so the panel editor can attach. */
 export function aopFieldsFor(provider: PrinterId, productId: string): AopCatalogFields {
   const templateId = templateForProduct(provider, productId);
-  if (!templateId) return { construction: "placement" };
+  const facts = templateId ? printfulFactsForTemplate(templateId) : null;
+  // A placement blank is in the binding table too. Only an all-over template
+  // with Printful facts is cut-and-sew.
+  if (!templateId || !facts) return { construction: "placement" };
   return {
     construction: "aop",
     aopTemplateId: templateId,
-    materialNote: printfulFactsForTemplate(templateId)?.material.line ?? "",
+    materialNote: facts.material.line,
   };
 }

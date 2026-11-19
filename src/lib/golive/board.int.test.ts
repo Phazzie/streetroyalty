@@ -13,6 +13,8 @@ describe("readBoard", () => {
   it("gives a visitor the two modes the studio already shows, and nothing else", async () => {
     process.env.STUDIO_ADMIN_EMAILS = "ada@example.com";
     process.env.STRIPE_SECRET_KEY = "Hh7Qz51Nq0aXwVb";
+    expect(await readBoard(null)).toEqual(VISITOR);
+    process.env.PAYMENTS_MODE = "live";
     expect(await readBoard(null)).toEqual({ ...VISITOR, paymentsMode: "live" });
   });
 
@@ -50,7 +52,7 @@ describe("readBoard", () => {
     expect(view.board.services.map((service) => `${service.id}:${service.lamp}`)).toEqual([
       "admins:on",
       "database:off",
-      "signin:off",
+      "signin:partly",
       "payments:off",
       "printing:off",
       "pictures:off",
@@ -70,6 +72,8 @@ describe("readBoard", () => {
       PRINT_FILE_SIGNING_SECRET: "Sg6Xq5d5d0b2fZwK",
       XAI_API_KEY: "Lm5Zq77c0f4e2XkV",
     };
+    process.env.POD_MODE = "live";
+    process.env.PAYMENTS_MODE = "live";
     Object.assign(process.env, secrets);
     const view = await readBoard("ada");
     if (view.view !== "admin") throw new Error("expected the live board");
@@ -80,6 +84,10 @@ describe("readBoard", () => {
     for (const value of Object.values(secrets)) expect(printed).not.toContain(value);
     const printing = view.board.services.find((service) => service.id === "printing");
     expect(printing?.lamp).toBe("partly");
-    expect(printing?.missing).toEqual(["APP_PUBLIC_URL", "PRINTFUL_WEBHOOK_SECRET"]);
+    expect(printing?.missing).toEqual([
+      "APP_PUBLIC_URL",
+      "PRINTFUL_WEBHOOK_SECRET",
+      "PRINTFUL_STORE_ID",
+    ]);
   });
 });

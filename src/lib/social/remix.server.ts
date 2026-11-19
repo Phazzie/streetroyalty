@@ -117,12 +117,14 @@ export async function remixDesign(userId: string, slug: string): Promise<{ desig
     ),
     copy as (
       insert into designs (
-        id, user_id, collection_id, title, slug, status, product_id, product_name, product_type,
+        id, user_id, collection_id, title, slug, status, product_id, template_id, provider,
+        provider_catalog_id, provider_variant_id, product_name, product_type,
         variant_id, variant_label, color_name, color_hex, size_label, placement, technique,
         layers_json, print_file_id, mockup_url, retail_cents, currency, provider_product_id
       )
       select
-        ${id}, ${userId}, null, ${title}, ${newSlug}, 'draft', product_id, product_name, product_type,
+        ${id}, ${userId}, null, ${title}, ${newSlug}, 'draft', product_id, template_id, provider,
+        provider_catalog_id, provider_variant_id, product_name, product_type,
         variant_id, variant_label, color_name, color_hex, size_label, placement, technique,
         layers_json, null, null, retail_cents, currency, null
       from src

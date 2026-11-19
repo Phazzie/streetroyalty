@@ -131,7 +131,7 @@ export const SERVICES: ServiceSpec[] = [
       {
         name: "PAYMENTS_MODE",
         need: "optional",
-        what: "Leave it out. Set it to sandbox only to force practice mode.",
+        what: "Set it to live to take real cards. Left out, checkout stays in practice even if a Stripe key is present.",
       },
     ],
     steps: [
@@ -172,8 +172,8 @@ export const SERVICES: ServiceSpec[] = [
       },
       {
         name: "PRINTFUL_STORE_ID",
-        need: "optional",
-        what: "Only if your token covers more than one Printful store.",
+        need: "needed",
+        what: "The Printful store orders are sent to. Live mode refuses to start without it.",
       },
       {
         name: "STUDIO_MARKUP",
@@ -182,8 +182,8 @@ export const SERVICES: ServiceSpec[] = [
       },
       {
         name: "POD_MODE",
-        need: "optional",
-        what: "Leave it out. Set it to sandbox only to force practice mode.",
+        need: "needed",
+        what: "Set it to sandbox or live. A Printful key does not choose the mode.",
       },
     ],
     steps: [

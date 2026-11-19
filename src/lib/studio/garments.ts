@@ -53,9 +53,14 @@ export type {
 } from "../garments/index.ts";
 export {
   aopFieldsFor,
+  activePrinter,
   canOrderProduct,
   canonicalTemplateId,
+  catalogIdFor,
+  catalogLookupId,
   isAopProduct,
+  isPlacementBound,
+  resolveTemplateId,
   materialLine,
   panelExportPlan,
   parseStoredGarment,

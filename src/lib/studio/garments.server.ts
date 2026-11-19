@@ -65,15 +65,17 @@ async function hydrate(row: SetRow): Promise<GarmentSetRecord> {
       title: string;
       slug: string;
       product_id: string;
+      template_id: string | null;
       product_type: string;
       status: string;
       garment_json: string | null;
       user_id: string;
-    }>`select id, title, slug, product_id, product_type, status, garment_json, user_id from designs where id = ${id}`;
+    }>`select id, title, slug, product_id, template_id, product_type, status, garment_json, user_id from designs where id = ${id}`;
     const piece = found[0];
     if (!piece || piece.user_id !== row.user_id) throw new Error("A piece of this set is missing.");
     const stored = parseStoredGarment(piece.garment_json);
-    const templateId = stored?.templateId ?? canonicalTemplateId(piece.product_id);
+    const templateId =
+      canonicalTemplateId(piece.template_id ?? "") ?? stored?.templateId ?? null;
     if (!templateId || !getTemplate(templateId)) {
       throw new Error("That garment template is not in the studio.");
     }
@@ -154,10 +156,9 @@ export async function createMatchedSet(
   }
   const partnerTemplate = setPartner(sourceTemplate);
   const providerId = maker();
-  const sourceProductId = productForTemplate(providerId, sourceTemplate);
   const partnerProductId = partnerTemplate ? productForTemplate(providerId, partnerTemplate) : null;
   const partnerVariantId = partnerTemplate ? variantForPrinter(providerId, partnerTemplate) : null;
-  if (sourceProductId !== source.productId) {
+  if (source.provider !== providerId) {
     throw new Error("This piece was made on a different printer.");
   }
   if (!partnerTemplate || !partnerProductId || !partnerVariantId) {

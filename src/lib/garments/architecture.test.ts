@@ -136,6 +136,28 @@ describe("garment module boundaries", () => {
     assert.deepEqual(hits, []);
   });
 
+  it("keeps Printful catalog ids inside the printer binding", () => {
+    const catalogId = /(['"`])(388|400|801)\1|catalogProductId\s*[:=]\s*(388|400|801)\b/;
+    const allowed = new Set(["lib/pod/aop-printful.ts", "lib/pod/garment-map.ts"]);
+    const hits: string[] = [];
+    for (const file of walk(srcRoot)) {
+      const rel = relSrc(file);
+      if (/\.test\./.test(rel) || rel.startsWith("test/") || allowed.has(rel)) continue;
+      const text = stripComments(readFileSync(file, "utf8"));
+      if (catalogId.test(text)) hits.push(rel);
+    }
+    assert.deepEqual(hits, []);
+  });
+
+  it("does not build sandbox variant ids from color display names", () => {
+    const text = stripComments(readFileSync(join(srcRoot, "lib/pod/sandbox.ts"), "utf8"));
+    const start = text.indexOf("function variantsFor");
+    const end = text.indexOf("function toProduct");
+    const body = text.slice(start, end);
+    assert.doesNotMatch(body, /color\.name\.toLowerCase|size\.name\.toLowerCase/);
+    assert.match(body, /sandboxVariantId\(blank\.id, color\.code, size\.code\)/);
+  });
+
   it("keeps the garment domain free of the printer and the studio", () => {
     const offenders: string[] = [];
     for (const file of walk(join(srcRoot, "lib", "garments"))) {

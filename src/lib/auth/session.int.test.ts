@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { handleAuthPopupRequest } from "./popup.server.ts";
-import { auth, SESSION_TOKEN_COOKIE } from "./server.ts";
+import { auth, authConfigured, grokOAuthButtonsVisible, SESSION_TOKEN_COOKIE } from "./server.ts";
 import { UnauthorizedError, getSessionUser, requireUserId } from "./verify.server.ts";
 import { truncateAll } from "../../test/db.ts";
 import { setRequest } from "../../test/request.ts";
@@ -100,6 +100,21 @@ describe("who is calling", () => {
     const again = await signUp("ada@example.com");
     expect(again.status).toBeGreaterThanOrEqual(400);
     expect(again.token).toBe("");
+  });
+
+  it("signs in with email on a public host that has no Google or X keys", async () => {
+    expect(authConfigured).toBe(true);
+    const ada = await signUp("public@example.com");
+    expect(ada.status).toBe(200);
+    setRequest({ url: "https://streetroyalty.example/login" });
+    expect(grokOAuthButtonsVisible()).toBe(false);
+    expect(await requireUserId(ada.token)).toBe(ada.userId);
+    const signedIn = await auth.api.signInEmail({
+      body: { email: "public@example.com", password: "correct horse battery" },
+      headers: new Headers({ origin: ORIGIN }),
+      asResponse: true,
+    });
+    expect(signedIn.status).toBe(200);
   });
 
   it("refuses the wrong password and accepts the right one", async () => {

@@ -16,6 +16,7 @@ import {
   variantsForTemplate,
   type PrinterId,
 } from "../pod/garment-map.ts";
+import type { PodMode } from "../pod/types.ts";
 
 export type { PrinterId };
 export { productForTemplate, templateForProduct, variantsForTemplate, aopFieldsFor };
@@ -24,9 +25,79 @@ export { productForTemplate, templateForProduct, variantsForTemplate, aopFieldsF
  * Template id for a stored or catalog id. Accepts a template id, a sandbox
  * product id, or a Printful catalog id. Unknown ids return null.
  */
+export function activePrinter(mode: PodMode): PrinterId {
+  return mode === "live" ? "printful" : "sandbox";
+}
+
 export function canonicalTemplateId(id: string): string | null {
   if (getTemplate(id)) return id;
-  return templateForProduct("sandbox", id) ?? templateForProduct("printful", id);
+  const mapped = templateForProduct("sandbox", id) ?? templateForProduct("printful", id);
+  return mapped && getTemplate(mapped) ? mapped : null;
+}
+
+/**
+ * Template id for a stored product id, including placement blanks. All-over
+ * catalog numbers map back to the template. An id we have never named returns
+ * null so a raw Printful catalog id can still be looked up on its own.
+ */
+export function resolveTemplateId(id: string): string | null {
+  if (!id) return null;
+  if (getTemplate(id) || isSandboxPlacementProduct(id)) return id;
+  const sandbox = templateForProduct("sandbox", id);
+  if (sandbox && (getTemplate(sandbox) || isSandboxPlacementProduct(sandbox))) return sandbox;
+  const live = templateForProduct("printful", id);
+  if (live && getTemplate(live)) return live;
+  return null;
+}
+
+/**
+ * Printer catalog id for a template. Our garments return null until that
+ * printer is bound. An id that is not one of ours is returned as-is so a
+ * live catalog product we have not named can still be ordered.
+ */
+export function catalogIdFor(
+  provider: PrinterId,
+  id: string,
+  storedCatalogId?: string | null,
+): string | null {
+  const templateId = resolveTemplateId(id);
+  if (templateId) return productForTemplate(provider, templateId);
+  const stored = storedCatalogId?.trim();
+  if (stored && !resolveTemplateId(stored)) return stored;
+  if (id && !resolveTemplateId(id)) return id;
+  return null;
+}
+
+/**
+ * Catalog id to fetch. All-over pieces whose Printful variant ids are still
+ * unknown are not fetched: the saved row is enough to show the piece, and a
+ * call would 404 or invent a product.
+ */
+export function catalogLookupId(
+  provider: PrinterId,
+  id: string,
+  storedCatalogId?: string | null,
+): string | null {
+  const catalogId = catalogIdFor(provider, id, storedCatalogId);
+  if (!catalogId) return null;
+  const templateId = resolveTemplateId(id);
+  if (provider === "printful" && templateId && getTemplate(templateId)) {
+    const variants = variantsForTemplate("printful", templateId);
+    if (!variants || variants.length === 0) return null;
+  }
+  return catalogId;
+}
+
+/** A placement blank can be ordered only when this printer has a real binding. */
+export function isPlacementBound(provider: PrinterId, templateId: string): boolean {
+  if (!isSandboxPlacementProduct(templateId)) return false;
+  const productId = productForTemplate(provider, templateId);
+  if (!productId) return false;
+  if (provider === "printful") {
+    const variants = variantsForTemplate(provider, templateId);
+    return Boolean(variants && variants.length > 0);
+  }
+  return true;
 }
 
 export function isAopProduct(productId: string): boolean {
@@ -39,9 +110,9 @@ export function isAopProduct(productId: string): boolean {
  * recognize is refused. An unknown id used to fall through as orderable,
  * which let a Printful all-over catalog id skip the gate.
  */
-export function canOrderProduct(productId: string): boolean {
-  const templateId = canonicalTemplateId(productId);
-  if (templateId) {
+export function canOrderProduct(productId: string, provider: PrinterId = "sandbox"): boolean {
+  const templateId = resolveTemplateId(productId) ?? canonicalTemplateId(productId);
+  if (templateId && getTemplate(templateId)) {
     const template = getTemplate(templateId);
     const catalogProductId = printfulFactsForTemplate(templateId)?.catalogProductId;
     if (!template || catalogProductId == null) return false;
@@ -50,7 +121,7 @@ export function canOrderProduct(productId: string): boolean {
       template.panels.map((item) => item.id),
     );
   }
-  if (isSandboxPlacementProduct(productId)) return true;
+  if (templateId && isSandboxPlacementProduct(templateId)) return isPlacementBound(provider, templateId);
   return false;
 }
 

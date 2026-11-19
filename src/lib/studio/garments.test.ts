@@ -88,7 +88,10 @@ describe("all-over garments", () => {
   it("saves and switches colorways without dropping the others", () => {
     let garment = defaultGarment("aop-joggers");
     garment = addColorway(garment, "Night mint");
-    garment = updateActive(garment, "night-mint");
+    assert.match(garment.activeColorwayId, /^[0-9a-f-]{36}$/);
+    assert.equal(garment.colorways.at(-1)?.name, "Night mint");
+    garment = updateActive(garment, garment.activeColorwayId);
+    const addedId = garment.activeColorwayId;
     const current = garment.colorways.find((item) => item.id === garment.activeColorwayId);
     assert.ok(current);
     garment = {
@@ -102,11 +105,17 @@ describe("all-over garments", () => {
       garment.colorways.find((item) => item.id === "lilac-white")?.colors.body,
       "#c4a6e0",
     );
-    garment = removeColorway(garment, "night-mint");
+    garment = removeColorway(garment, addedId);
     assert.equal(
-      garment.colorways.some((item) => item.id === "night-mint"),
+      garment.colorways.some((item) => item.id === addedId),
       false,
     );
+    let again = defaultGarment("aop-hoodie");
+    again = addColorway(again, "Night mint");
+    again = addColorway(again, "Night mint");
+    const fresh = again.colorways.slice(HOUSE_COLORWAYS.length).map((item) => item.id);
+    assert.equal(new Set(fresh).size, 2);
+    assert.equal(fresh.some((id) => id.startsWith("night-mint")), false);
     assert.throws(
       () =>
         removeColorway(
