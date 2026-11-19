@@ -29,15 +29,25 @@ function memory(day: string): Memory {
   return fresh;
 }
 
-function visitorBucket(day: string): string {
+/** A signed-in account. Blank is not an account, so the address cap still applies. */
+function accountId(userId?: string): string | null {
+  const id = userId?.trim();
+  return id ? id : null;
+}
+
+function visitorBucket(day: string, userId?: string): string {
+  // The day is part of the hash, so the same person cannot be followed from one day to the next.
+  const salt = process.env.BETTER_AUTH_SECRET?.trim() || "street-royalty";
+  const account = accountId(userId);
+  if (account) {
+    return `u:${createHash("sha256").update(`${salt}|${day}|user|${account}`).digest("hex").slice(0, 24)}`;
+  }
   let address = "unknown";
   try {
     address = clientAddress(getRequest().headers);
   } catch {
     address = "unknown";
   }
-  // The day is part of the hash, so the same visitor cannot be followed from one day to the next.
-  const salt = process.env.BETTER_AUTH_SECRET?.trim() || "street-royalty";
   return `v:${createHash("sha256").update(`${salt}|${day}|${address}`).digest("hex").slice(0, 24)}`;
 }
 
@@ -73,17 +83,22 @@ async function sweep(day: string) {
 }
 
 /** Records one generation. A refusal means the request must not be sent to xAI. */
-export async function spend(kind: AiKind): Promise<SpendVerdict> {
-  return count(kind, readLimits(process.env)[kind]);
+export async function spend(kind: AiKind, userId?: string): Promise<SpendVerdict> {
+  return count(kind, readLimits(process.env)[kind], userId);
 }
 
-/** The same daily counting for anything else worth bounding, such as starting a checkout. */
+/**
+ * The same daily counting for anything else worth bounding, such as starting a checkout.
+ * Pass the verified account when the caller is signed in so a new address does not
+ * open a fresh allowance. With no account the address is the bucket, as before.
+ */
 export async function count(
   kind: string,
   cap: { visitor: number; global: number },
+  userId?: string,
 ): Promise<SpendVerdict> {
   const day = usageDay(new Date());
-  const bucket = visitorBucket(day);
+  const bucket = visitorBucket(day, userId);
   try {
     const visitor = await bump(day, bucket, kind);
     const first = judgeSpend({ visitor, global: null }, cap);
@@ -107,7 +122,7 @@ export type Admission = "ok" | "limit" | "unavailable";
  * been checked, so a malformed request cannot use up the day's allowance.
  * With no key nothing is counted, because nothing will be spent.
  */
-export async function admit(kind: AiKind): Promise<Admission> {
+export async function admit(kind: AiKind, userId?: string): Promise<Admission> {
   if (!process.env.XAI_API_KEY?.trim()) return "unavailable";
-  return (await spend(kind)).ok ? "ok" : "limit";
+  return (await spend(kind, userId)).ok ? "ok" : "limit";
 }

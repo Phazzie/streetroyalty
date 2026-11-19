@@ -105,6 +105,25 @@ describe("starting checkout", () => {
     expect(await orderCount()).toBe(0);
   });
 
+  it("refuses a live Printful draft while payments are sandboxed, before creating anything", async () => {
+    await seedCart("ada");
+    process.env.POD_MODE = "live";
+    process.env.PRINTFUL_API_KEY = "pf_test_x";
+    process.env.PAYMENTS_MODE = "sandbox";
+    await expect(startCheckout("ada", STANDARD)).rejects.toThrow(/Sandbox payment/);
+    expect(await orderCount()).toBe(0);
+    expect(seenTo("api.printful.com")).toEqual([]);
+    expect(seenTo("api.stripe.com")).toEqual([]);
+  });
+
+  it("refuses a live printer when payments were never switched on", async () => {
+    await seedCart("ada");
+    process.env.PRINTFUL_API_KEY = "pf_test_x";
+    await expect(startCheckout("ada", STANDARD)).rejects.toThrow(/Sandbox payment/);
+    expect(await orderCount()).toBe(0);
+    expect(seenTo("api.printful.com")).toEqual([]);
+  });
+
   it("refuses to take live payments while printing is sandboxed, before creating anything", async () => {
     await seedCart("ada");
     process.env.PAYMENTS_MODE = "live";

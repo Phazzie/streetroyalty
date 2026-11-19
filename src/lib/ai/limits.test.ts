@@ -3,6 +3,13 @@ import { describe, it } from "vitest";
 import { DEFAULT_LIMITS, clientAddress, judgeSpend, readLimits, usageDay } from "./limits.ts";
 
 describe("generation limits", () => {
+  it("caps one account at 10 images, 2 videos and 40 texts, and the site at 150, 20 and 1500", () => {
+    assert.deepEqual(DEFAULT_LIMITS, {
+      image: { visitor: 10, global: 150 },
+      video: { visitor: 2, global: 20 },
+      text: { visitor: 40, global: 1500 },
+    });
+  });
   it("uses the defaults when nothing is set", () => {
     assert.deepEqual(readLimits({}), DEFAULT_LIMITS);
   });

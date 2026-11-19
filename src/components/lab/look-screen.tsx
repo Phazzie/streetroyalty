@@ -5,6 +5,8 @@ import { Composer } from "@/components/lab/mic";
 import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
 import { cn } from "@/lib/cn";
+import { usePaidAiAccess } from "@/components/ai/use-paid-ai";
+import { isUnauthorized } from "@/lib/ai/access";
 import { critiqueOutfit, nameLook } from "@/lib/ai/api";
 import { localCritique, localLookName } from "@/lib/ai/local";
 import { fallbackName, renderDropCard, shareDropCard } from "@/lib/lab/drop-card";
@@ -27,6 +29,7 @@ export function LookScreen() {
   const flight = useRef(createSingleFlight());
   const cardFlight = useRef(createSingleFlight());
   const setStatus = useLab((state) => state.setStatus);
+  const { signedOut } = usePaidAiAccess();
 
   return (
     <Shell>
@@ -74,16 +77,16 @@ export function LookScreen() {
           </Button>
           <Button
             variant="ghost"
-            disabled={!draft || asking}
+            disabled={!draft || asking || signedOut}
             onClick={() => {
-              if (!draft) return;
+              if (!draft || signedOut) return;
               void flight.current(async () => {
                 setAsking(true);
                 try {
                   const result = await nameLook({ data: { spoken: draft.spoken } });
                   setLookName(result.name);
-                } catch {
-                  setLookName(localLookName(draft.spoken));
+                } catch (reason) {
+                  if (!isUnauthorized(reason)) setLookName(localLookName(draft.spoken));
                 } finally {
                   setAsking(false);
                 }
@@ -94,15 +97,15 @@ export function LookScreen() {
           </Button>
           <Button
             variant="ghost"
-            disabled={!draft || asking}
+            disabled={!draft || asking || signedOut}
             onClick={() => {
-              if (!draft) return;
+              if (!draft || signedOut) return;
               void flight.current(async () => {
                 setAsking(true);
                 try {
                   setCrown(await critiqueOutfit({ data: { spoken: draft.spoken } }));
-                } catch {
-                  setCrown({ ...localCritique(draft.spoken), source: "local" });
+                } catch (reason) {
+                  if (!isUnauthorized(reason)) setCrown({ ...localCritique(draft.spoken), source: "local" });
                 } finally {
                   setAsking(false);
                 }

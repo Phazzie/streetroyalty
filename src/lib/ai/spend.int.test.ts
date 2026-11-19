@@ -77,9 +77,49 @@ describe("the gate in front of a paid call", () => {
     expect((await spend("video")).ok).toBe(false);
   });
 
-  it("falls back to the defaults when a cap is set to nonsense", async () => {
+  it("falls back to the default of two videos when the cap is nonsense", async () => {
     process.env.AI_VISITOR_VIDEO = "lots";
-    expect(await spendTimes(6, "video")).toEqual([true, true, true, true, true, false]);
+    expect(await spendTimes(3, "video")).toEqual([true, true, false]);
+  });
+
+  it("stops exactly at each default allowance and lets the last one through", async () => {
+    expect(await spendTimes(3, "video")).toEqual([true, true, false]);
+    expect(await spendTimes(11, "image")).toEqual([
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+    ]);
+    const texts = await spendTimes(41, "text");
+    expect(texts.filter(Boolean)).toHaveLength(40);
+    expect(texts[40]).toBe(false);
+  });
+
+  it("counts a signed-in account once, whichever address they use", async () => {
+    process.env.AI_VISITOR_IMAGE = "1";
+    asVisitor("203.0.113.7");
+    expect((await spend("image", "ada")).ok).toBe(true);
+    asVisitor("198.51.100.9");
+    expect(await spend("image", "ada")).toEqual({ ok: false, reason: "visitor" });
+    expect((await spend("image", "bo")).ok).toBe(true);
+    asVisitor("203.0.113.7");
+    expect((await spend("image", "   ")).ok).toBe(true);
+    expect(await spend("image", "")).toEqual({ ok: false, reason: "visitor" });
+  });
+
+  it("still stops the whole site when separate accounts are each under their cap", async () => {
+    process.env.AI_VISITOR_IMAGE = "5";
+    process.env.AI_DAILY_IMAGE = "2";
+    expect((await spend("image", "ada")).ok).toBe(true);
+    expect((await spend("image", "bo")).ok).toBe(true);
+    expect(await spend("image", "cy")).toEqual({ ok: false, reason: "global" });
   });
 
   it("admits exactly the cap when fifty requests arrive at once", async () => {
@@ -124,6 +164,16 @@ describe("the gate in front of a paid call", () => {
 });
 
 describe("what the counters store", () => {
+  it("keeps a one-day hash of an account, never the account id", async () => {
+    await spend("image", "ada-user-id");
+    const rows = await usage();
+    expect(rows.map((row) => row.bucket).sort()).toEqual([
+      "global",
+      expect.stringMatching(/^u:[0-9a-f]{24}$/),
+    ]);
+    expect(JSON.stringify(rows)).not.toContain("ada-user-id");
+  });
+
   it("keeps a one-day hash, never the visitor's address", async () => {
     await spend("image");
     const rows = await usage();
@@ -174,6 +224,17 @@ describe("a text call to xAI", () => {
       temperature: 0.4,
       messages: [{ role: "user", content: "Rate this outfit" }],
     });
+  });
+
+  it("charges a signed-in text call to that account, not the address", async () => {
+    chat();
+    process.env.AI_VISITOR_TEXT = "1";
+    asVisitor("203.0.113.7");
+    expect(await guardedText("one", 20, "ada")).toBeTruthy();
+    asVisitor("198.51.100.9");
+    expect(await guardedText("two", 20, "ada")).toBeNull();
+    expect(await guardedText("three", 20, "bo")).toBeTruthy();
+    expect(seenTo("api.x.ai")).toHaveLength(2);
   });
 
   it("is not sent at all once the visitor is over the cap", async () => {

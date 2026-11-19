@@ -1,6 +1,9 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { SignInCall } from "@/components/ai/sign-in-call";
+import { usePaidAiAccess } from "@/components/ai/use-paid-ai";
 import { Button } from "@/components/ui/button";
+import { isUnauthorized } from "@/lib/ai/access";
 import { FittingMirror, type CurtainState } from "@/components/tryon/mirror";
 import { generateLook } from "@/lib/lab-api";
 import { tryOnStatus } from "@/lib/tryon/api";
@@ -55,6 +58,9 @@ export function TryOn({
   const [exact, setExact] = useState(true);
   const [fail, setFail] = useState<TryOnFail | null>(null);
   const flight = useRef(createSingleFlight());
+  const { signedOut } = usePaidAiAccess();
+  const [forcedSignIn, setForcedSignIn] = useState(false);
+  const showSignIn = signedOut || forcedSignIn;
   /** Counts fittings, so a picture that lands after the visitor moved to another piece is dropped. */
   const fitting = useRef(0);
   const askRef = useRef<HTMLDivElement>(null);
@@ -99,6 +105,7 @@ export function TryOn({
   }, [step]);
 
   function wear() {
+    if (showSignIn) return;
     void flight.current(async () => {
       const mine = fitting.current;
       const moved = () => mine !== fitting.current;
@@ -134,8 +141,13 @@ export function TryOn({
         setYours(who.yours);
         setExact(request.clothingImages.length > 0);
         setStep("shown");
-      } catch {
+      } catch (reason) {
         if (moved()) return;
+        if (isUnauthorized(reason)) {
+          setForcedSignIn(true);
+          setStep("idle");
+          return;
+        }
         setFail("offline");
         setStep("idle");
       }
@@ -178,7 +190,11 @@ export function TryOn({
             See it on you
           </h2>
 
-          {closed ? (
+          {showSignIn && !closed ? (
+            <SignInCall>
+              Sign in to see this piece on you. It uses the studio's daily allowance.
+            </SignInCall>
+          ) : closed ? (
             <>
               <p className="max-w-prose text-fg">{failSentence("off")}</p>
               <p className="max-w-prose text-sm text-muted">

@@ -4,6 +4,7 @@ import {
   CLAIM_HOLD_MS,
   HOLDABLE,
   IN_PROGRESS,
+  assertFulfillmentAllowed,
   assertLivePaymentHasPrinter,
   fulfillPaidOrder,
   processPrintfulWebhook,
@@ -32,6 +33,8 @@ export async function startCheckout(
   const recipient: Recipient = parseRecipient(input.recipient);
   const config = readStudioConfig();
   assertLivePaymentHasPrinter(config.podMode, config.paymentsMode);
+  // A live draft bills the print wallet once it is confirmed. Sandbox payment must not open one.
+  assertFulfillmentAllowed(config.podMode, config.paymentsMode);
   const { provider, lines } = await priceCart(userId);
   if (config.podMode === "live" && lines.some((line) => !isPublicHttpUrl(line.fileUrl))) {
     throw new Error("Set APP_PUBLIC_URL so Printful can download print files.");

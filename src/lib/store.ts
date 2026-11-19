@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { isUnauthorized } from "@/lib/ai/access";
 import { copy } from "@/lib/copy";
 import { idbGet, idbSet } from "@/lib/idb";
 import { compressDataUrl } from "@/lib/images";
@@ -110,6 +111,16 @@ function sameScreen(stage: View, next: View): View {
   return useLab.getState().view === stage ? next : useLab.getState().view;
 }
 
+/** A signed-out refusal is a prompt, not a missed build. */
+function refuseSignIn(error: unknown, my: number): boolean {
+  if (!isUnauthorized(error)) return false;
+  if (alive(my)) {
+    noteStatus(copy.signInToDraw, copy.signInToDraw);
+    finish(my);
+  }
+  return true;
+}
+
 function failLine(result: { ok: boolean; kind?: string } | null): string {
   if (result && !result.ok && result.kind === "limit") return copy.limit;
   return result && !result.ok && result.kind === "unavailable" ? copy.cantBuild : copy.missed;
@@ -213,6 +224,7 @@ async function buildPieces(drafts: PieceDraft[], transcript: string, thenWear: b
     try {
       result = await generatePiece({ data: { spoken: draft.spoken, category: draft.category } });
     } catch (error) {
+      if (refuseSignIn(error, my)) return;
       console.error(error);
       result = null;
     }
@@ -300,6 +312,7 @@ async function buildLook(my = begin(), again = false) {
       },
     });
   } catch (error) {
+    if (refuseSignIn(error, my)) return;
     console.error(error);
     result = null;
   }
@@ -360,6 +373,7 @@ async function tweakLook(change: string, my = begin(), again = false) {
       },
     });
   } catch (error) {
+    if (refuseSignIn(error, my)) return;
     console.error(error);
     result = null;
   }
@@ -423,6 +437,7 @@ async function walk(my = begin(), again = false) {
       },
     });
   } catch (error) {
+    if (refuseSignIn(error, my)) return;
     console.error(error);
     started = null;
   }
@@ -454,6 +469,7 @@ async function walk(my = begin(), again = false) {
     try {
       polled = await pollRunway({ data: { requestId: started.requestId } });
     } catch (error) {
+      if (refuseSignIn(error, my)) return;
       console.error(error);
       polled = null;
     }
@@ -513,6 +529,7 @@ async function rebuildOne(id: string) {
   try {
     result = await generatePiece({ data: { spoken: piece.spoken, category: piece.category } });
   } catch (error) {
+    if (refuseSignIn(error, my)) return;
     console.error(error);
     result = null;
   }

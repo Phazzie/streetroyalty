@@ -8,9 +8,9 @@ export type AiKind = "text" | "image" | "video";
 export type AiLimits = Record<AiKind, { visitor: number; global: number }>;
 
 export const DEFAULT_LIMITS: AiLimits = {
-  text: { visitor: 80, global: 4000 },
-  image: { visitor: 30, global: 600 },
-  video: { visitor: 5, global: 60 },
+  text: { visitor: 40, global: 1500 },
+  image: { visitor: 10, global: 150 },
+  video: { visitor: 2, global: 20 },
 };
 
 type LimitEnv = Record<string, string | undefined>;

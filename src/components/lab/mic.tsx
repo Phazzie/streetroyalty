@@ -1,5 +1,7 @@
 import { Mic, Square } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { SignInCall } from "@/components/ai/sign-in-call";
+import { usePaidAiAccess } from "@/components/ai/use-paid-ai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Status } from "@/components/lab/chrome";
@@ -39,6 +41,7 @@ export function Composer({
   const [pending, setPending] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const stopRef = useRef<(() => void) | null>(null);
+  const { signedOut } = usePaidAiAccess();
 
   useEffect(() => {
     return () => stopRef.current?.();
@@ -69,6 +72,7 @@ export function Composer({
   }
 
   function stage(text: string) {
+    if (signedOut) return;
     const cleaned = text.trim();
     if (!cleaned || useLab.getState().busy) return;
     setDraft("");
@@ -120,6 +124,14 @@ export function Composer({
 
   const micLabel = busy ? copy.stop : listening ? copy.listening : copy.talk;
   const ask = pending ? confirmFor(pending, view) : null;
+
+  if (signedOut) {
+    return (
+      <SignInCall>
+        Sign in to build a piece, put it on, or send it down the runway.
+      </SignInCall>
+    );
+  }
 
   if (ask && pending) {
     return (

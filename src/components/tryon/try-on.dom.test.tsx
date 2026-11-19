@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   tryOnFaces: vi.fn(),
   mockupReference: vi.fn(),
   lab: { ready: true, refs: [] as { id: string; dataUrl: string }[] },
+  session: { user: { id: "ada" } as { id: string } | null, isPending: false },
 }));
 
 vi.mock("@/lib/lab-api", () => ({ generateLook: mocks.generateLook }));
@@ -29,6 +30,9 @@ vi.mock("@/lib/tryon/faces", () => ({
 vi.mock("@/lib/tryon/reference", () => ({ mockupReference: mocks.mockupReference }));
 vi.mock("@/lib/store", () => ({
   useLab: <T,>(pick: (state: typeof mocks.lab) => T) => pick(mocks.lab),
+}));
+vi.mock("@/lib/auth/use-current-user", () => ({
+  useCurrentUserState: () => mocks.session,
 }));
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ to, children, className }: { to: string; children: ReactNode; className?: string }) => (
@@ -61,6 +65,7 @@ async function sayYes() {
 
 beforeEach(() => {
   mocks.lab = { ready: true, refs: [] };
+  mocks.session = { user: { id: "ada" }, isPending: false };
   mocks.tryOnStatus.mockResolvedValue({ on: true, perDay: 30 });
   mocks.tryOnFaces.mockResolvedValue({ images: [FACE], yours: false });
   mocks.mockupReference.mockResolvedValue(MOCKUP);
@@ -73,6 +78,16 @@ afterEach(() => {
 });
 
 describe("the fitting room", () => {
+  it("asks a signed-out visitor to sign in and spends nothing", async () => {
+    mocks.session = { user: null, isPending: false };
+    await room();
+
+    expect(await screen.findByRole("link", { name: "Sign in" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Sign in" }).getAttribute("href")).toBe("/login");
+    expect(screen.queryByRole("button", { name: /See it on/ })).toBeNull();
+    expect(mocks.generateLook).not.toHaveBeenCalled();
+  });
+
   it("says it is switched off when there is no key, and offers nothing to tap", async () => {
     mocks.tryOnStatus.mockResolvedValue({ on: false, perDay: 30 });
     await room();
@@ -88,7 +103,7 @@ describe("the fitting room", () => {
     fireEvent.click(await screen.findByRole("button", { name: "See it on the house model" }));
     expect(
       await screen.findByText(
-        "This makes one generated picture, and pictures cost money. Each visitor gets 30 generated pictures a day.",
+        "This makes one generated picture, and pictures cost money. Each account gets 30 generated pictures a day.",
       ),
     ).toBeTruthy();
     expect(mocks.generateLook).not.toHaveBeenCalled();

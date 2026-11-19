@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import { SignInCall } from "@/components/ai/sign-in-call";
+import { usePaidAiAccess } from "@/components/ai/use-paid-ai";
 import { Button } from "@/components/ui/button";
 import { Header, Shell, TextButton } from "@/components/lab/chrome";
+import { isUnauthorized } from "@/lib/ai/access";
 import { pickCrowd } from "@/lib/ai/api";
 import { localCrowd } from "@/lib/ai/local";
 import { copy } from "@/lib/copy";
@@ -28,6 +31,7 @@ export function RunwayScreen() {
   const [broken, setBroken] = useState(false);
   const [picking, setPicking] = useState(false);
   const flight = useRef(createSingleFlight());
+  const { signedOut } = usePaidAiAccess();
   const videoUrl = draft?.videoUrl;
 
   useEffect(() => {
@@ -139,17 +143,19 @@ export function RunwayScreen() {
             })}
           </div>
         </div>
+        {signedOut ? <SignInCall /> : null}
         <Button
           variant="ghost"
-          disabled={picking || !draft}
+          disabled={picking || !draft || signedOut}
           onClick={() => {
+            if (signedOut) return;
             void flight.current(async () => {
               setPicking(true);
               try {
                 const result = await pickCrowd({ data: { spoken: draft?.spoken ?? "" } });
                 setReaction(result.crowd);
-              } catch {
-                setReaction(localCrowd());
+              } catch (reason) {
+                if (!isUnauthorized(reason)) setReaction(localCrowd());
               } finally {
                 setPicking(false);
               }

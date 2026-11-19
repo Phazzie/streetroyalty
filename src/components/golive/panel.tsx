@@ -791,7 +791,7 @@ export function GoLivePanel({ view }: { view: PanelView }) {
                 <thead>
                   <tr>
                     <th scope="col">Kind</th>
-                    <th scope="col">Each visitor</th>
+                    <th scope="col">Each account</th>
                     <th scope="col">Everyone</th>
                   </tr>
                 </thead>

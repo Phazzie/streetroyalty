@@ -230,6 +230,11 @@ export const beginCheckout = createServerFn({ method: "POST" })
     shippingMethod: String(input?.shippingMethod ?? ""),
   }))
   .handler(async ({ data, context }) => {
+    const { readStudioConfig } = await import("./shared.server.ts");
+    const { assertCheckoutStartAllowed } = await import("./checkout-limit.ts");
+    // Each live start opens a Printful draft, so one account cannot do it without end.
+    const config = readStudioConfig();
+    await assertCheckoutStartAllowed(config.podMode, config.paymentsMode, context.userId);
     const { startCheckout } = await import("./repo.server.ts");
     return startCheckout(context.userId, data);
   });

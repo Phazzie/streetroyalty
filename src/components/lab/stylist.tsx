@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
+import { usePaidAiAccess } from "@/components/ai/use-paid-ai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { isUnauthorized } from "@/lib/ai/access";
 import { planOutfit } from "@/lib/ai/api";
 import { localPlan, type OutfitPlan } from "@/lib/ai/stylist";
 import { useLab } from "@/lib/store";
@@ -19,8 +21,10 @@ export function Stylist() {
   const [thinking, setThinking] = useState(false);
   const flight = useRef(createSingleFlight());
   const latest = useRef("");
+  const { signedOut } = usePaidAiAccess();
 
   function ask() {
+    if (signedOut) return;
     const words = occasion.trim();
     if (!words) return;
     latest.current = words;
@@ -30,13 +34,16 @@ export function Stylist() {
         const answer = await planOutfit({ data: { occasion: words } });
         // The occasion may have been retyped while the stylist was thinking.
         if (latest.current === words) setPlan(answer);
-      } catch {
+      } catch (reason) {
+        if (isUnauthorized(reason)) return;
         if (latest.current === words) setPlan({ ...localPlan(words), source: "local" });
       } finally {
         setThinking(false);
       }
     });
   }
+
+  if (signedOut) return null;
 
   if (!open) {
     return (

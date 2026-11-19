@@ -238,7 +238,7 @@ describe("failures", () => {
 describe("askSentence", () => {
   it("says it costs money before anything is made", () => {
     expect(askSentence(30, true)).toBe(
-      "This makes one generated picture, and pictures cost money. Each visitor gets 30 generated pictures a day.",
+      "This makes one generated picture, and pictures cost money. Each account gets 30 generated pictures a day.",
     );
   });
 

@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { authMiddleware } from "@/lib/auth/middleware";
 import { isCategory } from "@/lib/split-pieces";
 import { SCENES, type Reaction, type Scene } from "@/lib/types";
 
@@ -7,9 +8,9 @@ type Fail = { ok: false; kind: "unavailable" | "missed" | "limit" };
 const MISSED: Fail = { ok: false, kind: "missed" };
 
 /** Counts one paid call. Returns the refusal to send back, or null to go ahead. */
-async function refuse(kind: "image" | "video"): Promise<Fail | null> {
+async function refuse(kind: "image" | "video", userId: string): Promise<Fail | null> {
   const { admit } = await import("./ai/guard.server.ts");
-  const verdict = await admit(kind);
+  const verdict = await admit(kind, userId);
   return verdict === "ok" ? null : { ok: false, kind: verdict };
 }
 
@@ -37,20 +38,22 @@ function isReaction(value: unknown): value is Reaction {
 }
 
 export const generatePiece = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
   .validator((input: { spoken?: string; category?: string }) => ({
     spoken: String(input?.spoken ?? "").trim().slice(0, 800),
     category: String(input?.category ?? ""),
   }))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     // A request that could never produce a picture is turned away before it is counted.
     if (!data.spoken || !isCategory(data.category)) return MISSED;
-    const refusal = await refuse("image");
+    const refusal = await refuse("image", context.userId);
     if (refusal) return refusal;
     const { runPiece } = await import("./imagine.server.ts");
     return runPiece(data);
   });
 
 export const generateLook = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
   .validator(
     (input: {
       mode?: string;
@@ -68,16 +71,17 @@ export const generateLook = createServerFn({ method: "POST" })
       lookImage: asDataImage(input?.lookImage),
     }),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     if (!data.spoken) return MISSED;
     if (data.mode === "tweak" ? !data.lookImage : data.characterImages.length === 0) return MISSED;
-    const refusal = await refuse("image");
+    const refusal = await refuse("image", context.userId);
     if (refusal) return refusal;
     const { runLook } = await import("./imagine.server.ts");
     return runLook(data);
   });
 
 export const startRunway = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
   .validator((input: { lookImage?: unknown; faceImage?: unknown; spoken?: string; reaction?: string; scene?: string }) => ({
     lookImage: asDataImage(input?.lookImage),
     faceImage: asDataImage(input?.faceImage),
@@ -85,17 +89,18 @@ export const startRunway = createServerFn({ method: "POST" })
     reaction: (isReaction(input?.reaction) ? input.reaction : "both") satisfies Reaction,
     scene: (SCENES.find((scene) => scene === input?.scene) ?? "runway") satisfies Scene,
   }))
-  .handler(async ({ data }): Promise<
+  .handler(async ({ data, context }): Promise<
     { ok: true; requestId: string; prompt: string } | Fail
   > => {
     if (!data.lookImage) return MISSED;
-    const refusal = await refuse("video");
+    const refusal = await refuse("video", context.userId);
     if (refusal) return refusal;
     const { runStart } = await import("./imagine.server.ts");
     return runStart(data);
   });
 
 export const pollRunway = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
   .validator((input: { requestId?: string }) => ({
     requestId: String(input?.requestId ?? ""),
   }))

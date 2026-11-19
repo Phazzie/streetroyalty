@@ -26,7 +26,9 @@ import {
   publishPiece,
   savePiece,
 } from "@/lib/studio/api";
+import { isUnauthorized } from "@/lib/ai/access";
 import { suggestLines } from "@/lib/ai/api";
+import { usePaidAiAccess } from "@/components/ai/use-paid-ai";
 import { createSingleFlight } from "@/lib/ui/single-flight";
 import { designVisualKey } from "@/lib/studio/design-key";
 import {
@@ -92,6 +94,7 @@ function setPieces(garment: GarmentDesign, productName?: string) {
 
 export function Editor({ designId }: { designId: string }) {
   const navigate = useNavigate();
+  const { signedOut } = usePaidAiAccess();
   const areaRef = useRef<HTMLDivElement>(null);
   const [catalog, setCatalog] = useState<CatalogCard[]>([]);
   const [product, setProduct] = useState<CatalogProduct | null>(null);
@@ -830,12 +833,18 @@ export function Editor({ designId }: { designId: string }) {
                     className="w-full"
                     disabled={busy}
                     onClick={() => {
+                      if (signedOut) {
+                        setNote(copy.signInToDraw);
+                        return;
+                      }
                       void suggestLines({ data: { seed: `${title} ${active.text}` } })
                         .then((result) => {
                           setLines(result.lines);
                           setNote(result.source === "grok" ? "Lines from the crown." : "Lines from the house, no key needed.");
                         })
-                        .catch((error) => setNote(errorText(error)));
+                        .catch((error) =>
+                          setNote(isUnauthorized(error) ? copy.signInToDraw : errorText(error)),
+                        );
                     }}
                   >
                     {copy.writeLine}

@@ -5,6 +5,9 @@ import { Input } from "@/components/ui/input";
 import { MakerLine } from "@/components/rack/maker-line";
 import { RackCard } from "@/components/rack/rack-card";
 import { StudioShell } from "@/components/studio/shell";
+import { SignInCall } from "@/components/ai/sign-in-call";
+import { usePaidAiAccess } from "@/components/ai/use-paid-ai";
+import { isUnauthorized } from "@/lib/ai/access";
 import { filterByTerms, searchTerms } from "@/lib/ai/local";
 import { vibeTerms } from "@/lib/ai/api";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -32,6 +35,7 @@ function RackPage() {
   const navigate = useNavigate();
   const sort = sortOf(Route.useSearch().sort);
   const { user, isPending } = useCurrentUserState();
+  const { signedOut } = usePaidAiAccess();
   const [pieces, setPieces] = useState<RackPiece[] | null>(null);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
@@ -98,13 +102,20 @@ function RackPage() {
         onSubmit={(event) => {
           event.preventDefault();
           void flight.current(async () => {
+            if (signedOut) {
+              setTerms(searchTerms(query));
+              setSource("local");
+              return;
+            }
             try {
               const result = await vibeTerms({ data: { query } });
               setTerms(result.terms);
               setSource(result.source);
-            } catch {
-              setTerms(searchTerms(query));
-              setSource("local");
+            } catch (reason) {
+              if (!isUnauthorized(reason)) {
+                setTerms(searchTerms(query));
+                setSource("local");
+              }
             }
           });
         }}
@@ -136,6 +147,11 @@ function RackPage() {
           Surprise me
         </Button>
       </form>
+      {signedOut ? (
+        <div className="mb-4">
+          <SignInCall>Sign in and the crown reads the search. The words you typed still match.</SignInCall>
+        </div>
+      ) : null}
       <div role="group" aria-label="Sort the rack" className="mb-2 flex flex-wrap gap-2">
         {SORTS.map((item) => (
           <button
