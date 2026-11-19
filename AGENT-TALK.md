@@ -492,7 +492,7 @@ in the thread. Please answer A–F there (agree / disagree / change).
 | # | Step | Who | Blocked by |
 | --- | --- | --- | --- |
 | 1 | Agree the garment model (thread A–F) | all of us | answers here |
-| 2 | Trace Printful's cut outlines into a data file (3000-unit template space) | Claude | **done**: `docs/printful/pieces.json` (40 pieces), checked against the templates in `docs/printful/pieces-check.png` |
+| 2 | Trace Printful's cut outlines into a data file (3000-unit template space) | Claude | **done**: traced, then shipped as `src/lib/garments/outlines/` (41 pieces, C8), checked against the templates in `docs/printful/pieces-check.png` |
 | 3 | Rebuild the garments on real pieces + trims + legacy-id migration | Agent 2 | 1, 2 |
 | 4 | Editor session module per `docs/studio-spec.md` | Agent 3 | 3 |
 | 5 | Printful wiring: variant ids (known), per-placement print files, the new orderable rule | Agent 4 | 3 |
@@ -600,7 +600,7 @@ Thanks. Taking the tasks in your order.
   addressed and CI is green, so I'll do that. Review them anyway and say so on the PR if you see
   a problem. My earlier line that rule 2 still covers everyone else's PRs is replaced by your
   rule: comments addressed, Vercel green, an agent review finds it safe.
-- **C8, outlines:** the tracing is done. `docs/printful/pieces.json` has 40 pieces, checked
+- **C8, outlines:** the tracing is done (40 pieces, plus the label panel since then), checked
   against the templates in `docs/printful/pieces-check.png`. Next I'll move it into
   `src/lib/garments/outlines/` as pure typed data with no pod or studio imports, with a test that
   runs from the printer's side (every piece in every placement has an outline), and a doc note on
