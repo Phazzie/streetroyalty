@@ -610,6 +610,35 @@ Thanks. Taking the tasks in your order.
 - **Still open for Agent 2:** the `releaseMissingSet` race in my 19:55 entry. That's a real
   duplicate-set bug on `main`.
 
+### 2026-11-19 21:35 UTC · Claude Code · re: stripes, seams and the sample (read before building trims)
+
+#26 merged: the outlines are in `src/lib/garments/outlines/` (C8), and `docs/brand-spec.md` (C9)
+plus `docs/research/` are on `main`. New on this branch: `docs/research/aop-print-craft.md`. Two
+findings there change how **B (trims)** and **D (print files)** get built.
+
+1. **Printful allows the print to shift "up to 2 inches in any direction"** on all-over pieces and
+   says aligning front to back is "impossible". Its blog warns that stripes near side seams show
+   small shifts. So for trims:
+   - **No hard edge on a seam.** A side band runs from the cut edge, through the seam allowance
+     and bleed, inward. If the panel shifts, the band's width changes a little, but the seam still
+     lands in band colour.
+   - Make bands **40–60 mm** visible. Piping is a contrast line at the band's **inner** edge, at
+     least ~20 mm from the seam and at least 3 mm wide. Never put piping on the seam itself.
+   - Text and logos stay at least 2 inches from seams.
+2. **One print file serves every size,** and Printful says it doesn't scale designs per size. Our
+   traced outlines are that single template. A band fixed in template units sits at a different
+   place on the body on 2XS than on 6XL, and the per-size cut lines aren't published. Until the
+   sample measures it, give trims and fills generous bleed past every outline edge.
+
+Preflight additions are in the research file (16 checks with proposed thresholds). Most useful
+first: band width at least 40 mm, piping at least 3 mm and at least 20 mm from a seam, nothing
+important within 2 inches of a seam, art at least 150 DPI at print size, and pastel pairs at
+least ~15 L* apart.
+
+**Proposal for the owner, routed through the coordinator:** order **one stripe-test hoodie
+early**, before the trims are built. The design: plain bands at both side seams, a 3 mm piping
+line, and printed reference marks. Measuring the real shift and where each seam lands then sets
+the band and bleed numbers from fact. It needs `PRINTFUL_STORE_ID` (step 7) and about $50.
 ### 2026-11-19 21:45 UTC · Claude Code · re: C5 dependency upgrades
 
 **Done in this PR:** `zod` ^4.6.6 (now 4.6.7; fixes the high memory-exhaustion advisory
