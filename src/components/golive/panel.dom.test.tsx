@@ -92,7 +92,7 @@ describe("the go-live panel", () => {
     );
     expect(container.textContent).not.toContain("Hh7Qz51Nq0aXwVb");
     expect(container.textContent).not.toContain("ada@example.com");
-    expect(screen.getByRole("table").textContent).toContain("30 a day");
+    expect(screen.getByRole("table").textContent).toContain("10 a day");
   });
 
   it("says people can pay once payments and printing are both live", () => {

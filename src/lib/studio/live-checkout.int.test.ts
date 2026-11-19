@@ -164,6 +164,22 @@ describe("live checkout", () => {
     expect([...printful.orders.values()].map((draft) => draft.status)).toEqual(["canceled"]);
   });
 
+  it("opens one Printful draft and one Stripe session when two tabs start together", async () => {
+    await cartWithTee();
+    stripeCheckout();
+    const [first, second] = await Promise.all([
+      startCheckout("ada", STANDARD),
+      startCheckout("ada", STANDARD),
+    ]);
+    expect(second).toEqual(first);
+    expect(printful.orders.size).toBe(1);
+    expect(seenTo("api.stripe.com").filter((call) => call.method === "POST")).toHaveLength(1);
+    const again = await startCheckout("ada", STANDARD);
+    expect(again).toEqual(first);
+    expect(printful.orders.size).toBe(1);
+    expect(seenTo("api.stripe.com").filter((call) => call.method === "POST")).toHaveLength(1);
+  });
+
   it("refuses to check out from an address Printful cannot fetch the file from", async () => {
     await cartWithTee();
     process.env.APP_PUBLIC_URL = "http://192.168.1.20:8080";

@@ -1,5 +1,7 @@
 import { Mic, Square } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { SignInCall } from "@/components/ai/sign-in-call";
+import { useAiPrompt } from "@/components/ai/use-paid-ai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Status } from "@/components/lab/chrome";
@@ -39,6 +41,7 @@ export function Composer({
   const [pending, setPending] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const stopRef = useRef<(() => void) | null>(null);
+  const ai = useAiPrompt();
 
   useEffect(() => {
     return () => stopRef.current?.();
@@ -69,6 +72,7 @@ export function Composer({
   }
 
   function stage(text: string) {
+    if (ai.blocked || status === copy.signInToDraw) return;
     const cleaned = text.trim();
     if (!cleaned || useLab.getState().busy) return;
     setDraft("");
@@ -100,6 +104,7 @@ export function Composer({
   }
 
   function onMic() {
+    if (ai.pending) return;
     if (busy) {
       stopGeneration();
       stopListen();
@@ -120,6 +125,14 @@ export function Composer({
 
   const micLabel = busy ? copy.stop : listening ? copy.listening : copy.talk;
   const ask = pending ? confirmFor(pending, view) : null;
+
+  if (ai.showSignIn || status === copy.signInToDraw) {
+    return (
+      <SignInCall>
+        Sign in to build a piece, put it on, or send it down the runway.
+      </SignInCall>
+    );
+  }
 
   if (ask && pending) {
     return (
@@ -161,10 +174,10 @@ export function Composer({
           placeholder={placeholder}
           aria-label={placeholder}
           autoComplete="off"
-          disabled={busy}
+          disabled={busy || ai.pending}
           className="min-w-0 flex-1"
         />
-        <Button type="submit" variant="ghost" className="min-w-16" disabled={busy || draft.trim().length === 0}>
+        <Button type="submit" variant="ghost" className="min-w-16" disabled={busy || ai.pending || draft.trim().length === 0}>
           {copy.go}
         </Button>
         <button

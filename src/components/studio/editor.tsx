@@ -27,6 +27,8 @@ import {
   savePiece,
 } from "@/lib/studio/api";
 import { suggestLines } from "@/lib/ai/api";
+import { SignInCall } from "@/components/ai/sign-in-call";
+import { useAiPrompt } from "@/components/ai/use-paid-ai";
 import { createSingleFlight } from "@/lib/ui/single-flight";
 import { designVisualKey } from "@/lib/studio/design-key";
 import {
@@ -92,6 +94,7 @@ function setPieces(garment: GarmentDesign, productName?: string) {
 
 export function Editor({ designId }: { designId: string }) {
   const navigate = useNavigate();
+  const ai = useAiPrompt();
   const areaRef = useRef<HTMLDivElement>(null);
   const [catalog, setCatalog] = useState<CatalogCard[]>([]);
   const [product, setProduct] = useState<CatalogProduct | null>(null);
@@ -828,18 +831,23 @@ export function Editor({ designId }: { designId: string }) {
                   <Button
                     variant="ghost"
                     className="w-full"
-                    disabled={busy}
+                    disabled={busy || ai.blocked}
                     onClick={() => {
+                      if (ai.blocked) return;
                       void suggestLines({ data: { seed: `${title} ${active.text}` } })
                         .then((result) => {
                           setLines(result.lines);
                           setNote(result.source === "grok" ? "Lines from the crown." : "Lines from the house, no key needed.");
                         })
-                        .catch((error) => setNote(errorText(error)));
+                        .catch((error) => {
+                          if (ai.refused(error)) setNote(copy.signInToDraw);
+                          else setNote(errorText(error));
+                        });
                     }}
                   >
                     {copy.writeLine}
                   </Button>
+                  {ai.showSignIn ? <SignInCall /> : null}
                   {lines.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {lines.map((line) => (

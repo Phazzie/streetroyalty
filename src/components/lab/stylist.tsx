@@ -1,4 +1,6 @@
 import { useRef, useState } from "react";
+import { SignInCall } from "@/components/ai/sign-in-call";
+import { useAiPrompt } from "@/components/ai/use-paid-ai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { planOutfit } from "@/lib/ai/api";
@@ -19,8 +21,10 @@ export function Stylist() {
   const [thinking, setThinking] = useState(false);
   const flight = useRef(createSingleFlight());
   const latest = useRef("");
+  const ai = useAiPrompt();
 
   function ask() {
+    if (ai.blocked) return;
     const words = occasion.trim();
     if (!words) return;
     latest.current = words;
@@ -30,13 +34,17 @@ export function Stylist() {
         const answer = await planOutfit({ data: { occasion: words } });
         // The occasion may have been retyped while the stylist was thinking.
         if (latest.current === words) setPlan(answer);
-      } catch {
+      } catch (reason) {
+        if (ai.refused(reason)) return;
         if (latest.current === words) setPlan({ ...localPlan(words), source: "local" });
       } finally {
         setThinking(false);
       }
     });
   }
+
+  if (ai.signedOut) return null;
+  if (ai.showSignIn) return <SignInCall />;
 
   if (!open) {
     return (
@@ -70,7 +78,7 @@ export function Stylist() {
           type="submit"
           variant="ghost"
           className="min-w-20"
-          disabled={thinking || occasion.trim().length === 0}
+          disabled={thinking || ai.blocked || occasion.trim().length === 0}
         >
           {thinking ? "..." : "Plan"}
         </Button>

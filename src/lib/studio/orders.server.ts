@@ -4,6 +4,7 @@ import {
   CLAIM_HOLD_MS,
   HOLDABLE,
   IN_PROGRESS,
+  assertFulfillmentAllowed,
   assertLivePaymentHasPrinter,
   fulfillPaidOrder,
   processPrintfulWebhook,
@@ -23,6 +24,9 @@ import { isPublicHttpUrl, parseRecipient } from "./validate.ts";
 import { isStudioAdmin } from "./admin.ts";
 import type { OrderSummary } from "./models.ts";
 import { priceCart } from "./cart.server.ts";
+import { assertCheckoutStartAllowed } from "./checkout-limit.ts";
+import { claimCheckout, releaseCheckout, waitForReplay } from "./checkout-claim.ts";
+import { checkoutAttemptKey } from "./checkout-key.ts";
 import { origin, readStudioConfig, sumCents } from "./shared.server.ts";
 
 export async function startCheckout(
@@ -32,6 +36,8 @@ export async function startCheckout(
   const recipient: Recipient = parseRecipient(input.recipient);
   const config = readStudioConfig();
   assertLivePaymentHasPrinter(config.podMode, config.paymentsMode);
+  // A live draft bills the print wallet once it is confirmed. Sandbox payment must not open one.
+  assertFulfillmentAllowed(config.podMode, config.paymentsMode);
   const { provider, lines } = await priceCart(userId);
   if (config.podMode === "live" && lines.some((line) => !isPublicHttpUrl(line.fileUrl))) {
     throw new Error("Set APP_PUBLIC_URL so Printful can download print files.");
@@ -49,9 +55,20 @@ export async function startCheckout(
   if (!rate) throw new Error("Pick a shipping method from the quote.");
   const subtotalCents = sumCents(lines);
   const totalCents = subtotalCents + rate.rateCents;
+  const idempotencyKey = checkoutAttemptKey(userId, lines, rate.id, recipient);
   const orderId = crypto.randomUUID();
+  const claim = await claimCheckout(userId, idempotencyKey, orderId);
+  if (!claim.owner) {
+    const replay = claim.replay ?? (await waitForReplay(userId, idempotencyKey));
+    if (!replay) throw new Error("Checkout did not start.");
+    return replay.mode === "stripe"
+      ? { mode: "stripe" as const, orderId: replay.orderId, url: replay.url, totalCents: replay.totalCents }
+      : { mode: "sandbox" as const, orderId: replay.orderId, totalCents: replay.totalCents };
+  }
   let draftId: string | null = null;
   try {
+    // Count only the request that owns the slot, after the cart has a price and before a draft.
+    await assertCheckoutStartAllowed(config.podMode, config.paymentsMode, userId);
     const draft = await provider.createDraftOrder({
       externalId: orderId,
       recipient,
@@ -87,11 +104,12 @@ export async function startCheckout(
       insert into orders (
         id, user_id, status, currency, subtotal_cents, shipping_cents, total_cents, shipping_method,
         recipient_json, items_json, provider, provider_order_id, provider_status, payment_provider,
-        payment_status, sandbox
+        payment_status, sandbox, idempotency_key
       ) values (
         ${orderId}, ${userId}, 'awaiting_payment', 'USD', ${subtotalCents}, ${rate.rateCents}, ${totalCents}, ${rate.id},
         ${JSON.stringify(recipient)}, ${itemsJson}, ${provider.id}, ${draft.id}, 'draft',
-        ${config.paymentsMode === "live" ? "stripe" : "sandbox"}, 'unpaid', ${config.podMode === "sandbox"}
+        ${config.paymentsMode === "live" ? "stripe" : "sandbox"}, 'unpaid', ${config.podMode === "sandbox"},
+        ${idempotencyKey}
       )
     `;
     if (config.paymentsMode === "sandbox") {
@@ -118,9 +136,10 @@ export async function startCheckout(
       },
       { secretKey: secret },
     );
-    await sql`update orders set payment_session_id = ${session.id}, updated_at = now() where id = ${orderId} and user_id = ${userId}`;
+    await sql`update orders set payment_session_id = ${session.id}, checkout_url = ${session.url}, updated_at = now() where id = ${orderId} and user_id = ${userId}`;
     return { mode: "stripe" as const, orderId, url: session.url, totalCents };
   } catch (error) {
+    await releaseCheckout(userId, idempotencyKey, orderId).catch(() => undefined);
     if (draftId) await provider.cancelOrder(draftId).catch(() => undefined);
     const sql = await getSql();
     await sql`update orders set status = 'canceled', updated_at = now() where id = ${orderId} and user_id = ${userId}`;

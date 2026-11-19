@@ -16,6 +16,8 @@ import { ScanStrip } from "@/components/rack/scan-strip";
 import { TryOn } from "@/components/rack/try-on";
 import { Note, StudioShell } from "@/components/studio/shell";
 import { formatMoney } from "@/lib/pod/money";
+import { SignInCall } from "@/components/ai/sign-in-call";
+import { useAiPrompt } from "@/components/ai/use-paid-ai";
 import { printNote } from "@/lib/ai/api";
 import { localPrintNote } from "@/lib/ai/local";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -33,6 +35,7 @@ function ProductPage() {
   const { slug } = Route.useParams();
   const navigate = useNavigate();
   const { user, isPending } = useCurrentUserState();
+  const ai = useAiPrompt();
   const [piece, setPiece] = useState<Piece | null>(null);
   const [shop, setShop] = useState<Shop | null>(null);
   const [variantId, setVariantId] = useState("");
@@ -153,26 +156,33 @@ function ProductPage() {
                   </button>
                 ))}
               </div>
-              <Button
-                variant="ghost"
-                className="mt-4 w-full"
-                disabled={adding}
-                onClick={() => {
-                  if (!piece) return;
-                  void flight.current(async () => {
-                    try {
-                      const result = await printNote({
-                        data: { placement: piece.placement, product: piece.productName },
-                      });
-                      setAdvice(result.note);
-                    } catch {
-                      setAdvice(localPrintNote(piece.placement, piece.productName));
-                    }
-                  });
-                }}
-              >
-                Will this print?
-              </Button>
+              {ai.showSignIn ? (
+                <div className="mt-4">
+                  <SignInCall>Sign in for a print note from the crown.</SignInCall>
+                </div>
+              ) : (
+                <Button
+                  variant="ghost"
+                  className="mt-4 w-full"
+                  disabled={adding || ai.blocked}
+                  onClick={() => {
+                    if (!piece || ai.blocked) return;
+                    void flight.current(async () => {
+                      try {
+                        const result = await printNote({
+                          data: { placement: piece.placement, product: piece.productName },
+                        });
+                        setAdvice(result.note);
+                      } catch (reason) {
+                        if (ai.refused(reason)) return;
+                        setAdvice(localPrintNote(piece.placement, piece.productName));
+                      }
+                    });
+                  }}
+                >
+                  Will this print?
+                </Button>
+              )}
               {advice ? <p className="mt-3 text-sm text-muted">{advice}</p> : null}
               {piece.construction !== "aop" || canOrderProduct(piece.productId) ? (
                 <Button

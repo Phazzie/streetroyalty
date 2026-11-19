@@ -49,6 +49,7 @@ export const copy = {
   clipGone: "That clip's gone. Run it again.",
   cantBuild: "Can't build right now. Say it again in a minute.",
   limit: "The lab hit today's limit. It opens again tomorrow.",
+  signInToDraw: "Sign in to draw. It uses the studio's daily allowance.",
   boardForPieces: "Say that on the board. This is the walk.",
   noWalk: "Nothing to walk in.",
   openCamera: "Open the camera",

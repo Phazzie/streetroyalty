@@ -196,7 +196,9 @@ describe("switchboard", () => {
   it("reports the daily caps the app will enforce, and a zero as partly", () => {
     const defaults = switchboard({ XAI_API_KEY: "k" });
     expect(service(defaults, "pictures").lamp).toBe("on");
-    expect(defaults.caps.image).toEqual({ visitor: 30, global: 600 });
+    expect(defaults.caps.image).toEqual({ visitor: 10, global: 150 });
+    expect(defaults.caps.video).toEqual({ visitor: 2, global: 20 });
+    expect(defaults.caps.text).toEqual({ visitor: 40, global: 1500 });
     const zeroed = switchboard({ XAI_API_KEY: "k", AI_DAILY_VIDEO: "0", AI_VISITOR_IMAGE: "12" });
     expect(zeroed.caps.video.global).toBe(0);
     expect(zeroed.caps.image.visitor).toBe(12);

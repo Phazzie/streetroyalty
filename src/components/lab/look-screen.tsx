@@ -5,6 +5,8 @@ import { Composer } from "@/components/lab/mic";
 import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
 import { cn } from "@/lib/cn";
+import { SignInCall } from "@/components/ai/sign-in-call";
+import { useAiPrompt } from "@/components/ai/use-paid-ai";
 import { critiqueOutfit, nameLook } from "@/lib/ai/api";
 import { localCritique, localLookName } from "@/lib/ai/local";
 import { fallbackName, renderDropCard, shareDropCard } from "@/lib/lab/drop-card";
@@ -27,6 +29,7 @@ export function LookScreen() {
   const flight = useRef(createSingleFlight());
   const cardFlight = useRef(createSingleFlight());
   const setStatus = useLab((state) => state.setStatus);
+  const ai = useAiPrompt();
 
   return (
     <Shell>
@@ -65,25 +68,26 @@ export function LookScreen() {
       </div>
       <div className="safe-bottom shrink-0 border-t border-line px-4 pt-3">
         <Composer placeholder={copy.changeHint} suggestions={draft ? EXAMPLES : []} />
+        {ai.showSignIn ? <SignInCall /> : null}
         <div className="mt-2 grid grid-cols-2 gap-2">
           <Button variant="ghost" disabled={!draft || busy} onClick={saveDraft}>
             {copy.saveThis}
           </Button>
-          <Button disabled={!draft || busy} onClick={requestRunway}>
+          <Button disabled={!draft || busy || ai.blocked} onClick={requestRunway}>
             {copy.runway}
           </Button>
           <Button
             variant="ghost"
-            disabled={!draft || asking}
+            disabled={!draft || asking || ai.blocked}
             onClick={() => {
-              if (!draft) return;
+              if (!draft || ai.blocked) return;
               void flight.current(async () => {
                 setAsking(true);
                 try {
                   const result = await nameLook({ data: { spoken: draft.spoken } });
                   setLookName(result.name);
-                } catch {
-                  setLookName(localLookName(draft.spoken));
+                } catch (reason) {
+                  if (!ai.refused(reason)) setLookName(localLookName(draft.spoken));
                 } finally {
                   setAsking(false);
                 }
@@ -94,15 +98,15 @@ export function LookScreen() {
           </Button>
           <Button
             variant="ghost"
-            disabled={!draft || asking}
+            disabled={!draft || asking || ai.blocked}
             onClick={() => {
-              if (!draft) return;
+              if (!draft || ai.blocked) return;
               void flight.current(async () => {
                 setAsking(true);
                 try {
                   setCrown(await critiqueOutfit({ data: { spoken: draft.spoken } }));
-                } catch {
-                  setCrown({ ...localCritique(draft.spoken), source: "local" });
+                } catch (reason) {
+                  if (!ai.refused(reason)) setCrown({ ...localCritique(draft.spoken), source: "local" });
                 } finally {
                   setAsking(false);
                 }

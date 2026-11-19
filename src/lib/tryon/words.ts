@@ -114,7 +114,7 @@ export function failSentence(kind: TryOnFail): string {
 export function askSentence(perDay: number | null, exact: boolean): string {
   const allowance =
     perDay && perDay > 0
-      ? ` Each visitor gets ${perDay} generated ${perDay === 1 ? "picture" : "pictures"} a day.`
+      ? ` Each account gets ${perDay} generated ${perDay === 1 ? "picture" : "pictures"} a day.`
       : "";
   const loose = exact
     ? ""

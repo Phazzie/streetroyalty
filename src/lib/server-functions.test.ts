@@ -22,19 +22,6 @@ const OPEN: Record<string, string> = {
   getStoreProduct: "public shop",
   startStoreCheckout: "guest checkout on Fourthwall, capped per visitor",
   getProductPhoto: "public product photo",
-  // The lab and the crown: open to visitors, bounded by the daily AI caps.
-  critiqueOutfit: "AI text, capped",
-  suggestLines: "AI text, capped",
-  nameLook: "AI text, capped",
-  printNote: "AI text, capped",
-  pickCrowd: "AI text, capped",
-  vibeTerms: "AI text, capped",
-  planOutfit: "AI text, capped",
-  generateArt: "AI image, capped",
-  generatePiece: "AI image, capped",
-  generateLook: "AI image, capped",
-  startRunway: "AI video, capped",
-  pollRunway: "reads a run the visitor started",
   getConnectorReadiness: "template plumbing; reports readiness only",
   // Street scans: a stranger who scans a tag is not signed in.
   countTagScan: "counts one scan of a public piece; same-site only, capped per piece per day",
@@ -101,6 +88,40 @@ describe("server functions", () => {
   it("has no open-list entry for a function that no longer exists", () => {
     const names = new Set(all.map((fn) => fn.name));
     expect(Object.keys(OPEN).filter((name) => !names.has(name))).toEqual([]);
+  });
+
+  it("refuses a signed-out caller on every route that spends on xAI", () => {
+    const paid = [
+      "generateArt",
+      "generatePiece",
+      "generateLook",
+      "startRunway",
+      "pollRunway",
+      "critiqueOutfit",
+      "suggestLines",
+      "nameLook",
+      "printNote",
+      "pickCrowd",
+      "vibeTerms",
+      "planOutfit",
+    ];
+    const byName = new Map(all.map((fn) => [fn.name, fn]));
+    const open = paid.filter((name) => !byName.get(name)?.requiresUser);
+    expect(open).toEqual([]);
+    expect(paid.filter((name) => name in OPEN)).toEqual([]);
+  });
+
+  it("charges those calls to the signed-in account, not an address the client picked", () => {
+    const art = readFileSync("src/lib/ai/art.ts", "utf8");
+    expect(art).toContain('admit("image", context.userId)');
+    const lab = readFileSync("src/lib/lab-api.ts", "utf8");
+    expect(lab).toContain("admit(kind, userId)");
+    expect(lab).toContain('refuse("image", context.userId)');
+    expect(lab).toContain('refuse("video", context.userId)');
+    const api = readFileSync("src/lib/ai/api.ts", "utf8");
+    const calls = api.match(/guardedText\(/g) ?? [];
+    expect(calls.length).toBeGreaterThanOrEqual(7);
+    expect((api.match(/context\.userId/g) ?? []).length).toBeGreaterThanOrEqual(calls.length);
   });
 
   it("never take the user id from the client", () => {

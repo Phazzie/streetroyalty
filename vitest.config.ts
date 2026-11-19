@@ -75,7 +75,8 @@ export default defineConfig({
           pool: "forks",
           fileParallelism: !process.env.DATABASE_URL?.trim(),
           testTimeout: 20_000,
-          hookTimeout: 30_000,
+          // Truncate plus seed can sit behind a cold in-memory database. 60s keeps that hook from flaking.
+          hookTimeout: 60_000,
         },
       },
       {
