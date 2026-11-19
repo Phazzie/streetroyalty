@@ -1,8 +1,10 @@
 /**
- * A live studio checkout opens a Printful draft, the same kind of paid side
- * effect as a live Fourthwall cart. Sandbox starts stay local and are not counted.
+ * A live studio checkout opens a Printful draft. Sandbox starts stay local and are not counted.
  * The numbers match the shop: 40 starts for one account, 5000 for the site, per day.
+ * The shop counts kind "checkout". The studio uses its own kind so one counter cannot fill the other.
  */
+
+export const STUDIO_CHECKOUT_KIND = "studio-checkout";
 
 export const CHECKOUT_START_CAP = { visitor: 40, global: 5000 };
 
@@ -23,24 +25,6 @@ export async function assertCheckoutStartAllowed(
 ): Promise<void> {
   if (!metersLiveCheckout(podMode, paymentsMode)) return;
   const { count } = await import("../ai/guard.server.ts");
-  const verdict = await count("checkout", CHECKOUT_START_CAP, userId);
+  const verdict = await count(STUDIO_CHECKOUT_KIND, CHECKOUT_START_CAP, userId);
   if (!verdict.ok) throw new Error(CHECKOUT_LIMIT_MESSAGE);
-}
-
-/**
- * A live start is counted only after the address parses and the cart can be priced.
- * A bad address or an empty cart throws here and does not use up a start.
- */
-export async function gateLiveCheckout(
-  userId: string,
-  recipient: unknown,
-  podMode: "live" | "sandbox",
-  paymentsMode: "live" | "sandbox",
-): Promise<void> {
-  if (!metersLiveCheckout(podMode, paymentsMode)) return;
-  const { parseRecipient } = await import("./validate.ts");
-  const { priceCart } = await import("./cart.server.ts");
-  parseRecipient(recipient);
-  await priceCart(userId);
-  await assertCheckoutStartAllowed(podMode, paymentsMode, userId);
 }

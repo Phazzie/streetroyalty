@@ -24,6 +24,7 @@ import { isPublicHttpUrl, parseRecipient } from "./validate.ts";
 import { isStudioAdmin } from "./admin.ts";
 import type { OrderSummary } from "./models.ts";
 import { priceCart } from "./cart.server.ts";
+import { assertCheckoutStartAllowed } from "./checkout-limit.ts";
 import { origin, readStudioConfig, sumCents } from "./shared.server.ts";
 
 export async function startCheckout(
@@ -39,6 +40,8 @@ export async function startCheckout(
   if (config.podMode === "live" && lines.some((line) => !isPublicHttpUrl(line.fileUrl))) {
     throw new Error("Set APP_PUBLIC_URL so Printful can download print files.");
   }
+  // Count a live start once the cart has a price, and before the printer is asked for rates or a draft.
+  await assertCheckoutStartAllowed(config.podMode, config.paymentsMode, userId);
   const rates = await provider.shippingRates({
     recipient,
     currency: "USD",

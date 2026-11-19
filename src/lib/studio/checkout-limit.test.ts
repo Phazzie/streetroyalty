@@ -19,23 +19,24 @@ describe("studio checkout metering", () => {
     expect(metersLiveCheckout("sandbox", "sandbox")).toBe(false);
   });
 
-  it("beginCheckout checks the cap before it creates an order", () => {
-    const text = readFileSync("src/lib/studio/api.ts", "utf8");
-    const start = text.indexOf("export const beginCheckout");
-    const next = text.indexOf("export const", start + 1);
-    const body = text.slice(start, next === -1 ? undefined : next);
-    const gate = body.indexOf("await gateLiveCheckout(");
-    const create = body.indexOf("startCheckout(");
-    expect(gate).toBeGreaterThan(-1);
-    expect(create).toBeGreaterThan(gate);
-    expect(body).toContain("context.userId");
-    const helper = readFileSync("src/lib/studio/checkout-limit.ts", "utf8");
-    const ready = helper.indexOf("export async function gateLiveCheckout");
-    const parseAt = helper.indexOf("parseRecipient(recipient)", ready);
-    const priceAt = helper.indexOf("priceCart(userId)", ready);
-    const countAt = helper.indexOf("assertCheckoutStartAllowed(", ready);
-    expect(parseAt).toBeGreaterThan(ready);
-    expect(priceAt).toBeGreaterThan(parseAt);
-    expect(countAt).toBeGreaterThan(priceAt);
+  it("counts a studio start on its own kind, after one price and before the printer", () => {
+    const orders = readFileSync("src/lib/studio/orders.server.ts", "utf8");
+    const from = orders.indexOf("export async function startCheckout");
+    const to = orders.indexOf("export function dbStore");
+    const body = orders.slice(from, to);
+    const price = body.indexOf("await priceCart(");
+    const meter = body.indexOf("await assertCheckoutStartAllowed(");
+    const rates = body.indexOf("shippingRates(");
+    const draft = body.indexOf("createDraftOrder(");
+    expect(price).toBeGreaterThan(-1);
+    expect(meter).toBeGreaterThan(price);
+    expect(rates).toBeGreaterThan(meter);
+    expect(draft).toBeGreaterThan(meter);
+    expect(body.match(/priceCart\(/g)).toHaveLength(1);
+    const shop = readFileSync("src/lib/storefront/api.ts", "utf8");
+    expect(shop).toContain('count("checkout"');
+    expect(readFileSync("src/lib/studio/checkout-limit.ts", "utf8")).toContain(
+      'count(STUDIO_CHECKOUT_KIND',
+    );
   });
 });

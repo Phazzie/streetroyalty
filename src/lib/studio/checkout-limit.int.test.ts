@@ -2,11 +2,12 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { getSql } from "../db.ts";
 import { asVisitor } from "../../test/request.ts";
 import { truncateAll } from "../../test/db.ts";
+import { count } from "../ai/guard.server.ts";
 import { RECIPIENT, seedCart, seedUser } from "../../test/seed.ts";
+import { startCheckout } from "./orders.server.ts";
 import {
   CHECKOUT_LIMIT_MESSAGE,
   assertCheckoutStartAllowed,
-  gateLiveCheckout,
 } from "./checkout-limit.ts";
 
 /**
@@ -45,18 +46,31 @@ describe("the studio checkout cap", () => {
   });
 
   it("does not count a live start until the address and the cart are real", async () => {
+    process.env.POD_MODE = "live";
+    process.env.PAYMENTS_MODE = "live";
+    process.env.PRINTFUL_API_KEY = "pf_test";
+    process.env.STRIPE_SECRET_KEY = "sk_test";
     await expect(
-      gateLiveCheckout("ada", { ...RECIPIENT, name: "" }, "live", "live"),
+      startCheckout("ada", { recipient: { ...RECIPIENT, name: "" }, shippingMethod: "STANDARD" }),
     ).rejects.toThrow(/name/);
     expect(await usageCount()).toBe(0);
 
     await seedUser("ada");
-    await expect(gateLiveCheckout("ada", RECIPIENT, "live", "live")).rejects.toThrow(/empty/);
+    await expect(
+      startCheckout("ada", { recipient: RECIPIENT, shippingMethod: "STANDARD" }),
+    ).rejects.toThrow(/empty/);
     expect(await usageCount()).toBe(0);
+  });
 
-    await seedCart("bo");
-    await gateLiveCheckout("bo", RECIPIENT, "live", "live");
-    expect(await usageCount()).toBeGreaterThan(0);
+  it("starts a studio checkout after the shop has used its own site cap", async () => {
+    const shop = { visitor: 40, global: 1 };
+    expect((await count("checkout", shop)).ok).toBe(true);
+    asVisitor("198.51.100.20");
+    expect(await count("checkout", shop)).toEqual({ ok: false, reason: "global" });
+    await expect(assertCheckoutStartAllowed("live", "live", "ada")).resolves.toBeUndefined();
+    await seedCart("ada");
+    const started = await startCheckout("ada", { recipient: RECIPIENT, shippingMethod: "STANDARD" });
+    expect(started.orderId).toEqual(expect.any(String));
   });
 
   it("does not count a start that cannot open a paid draft", async () => {
