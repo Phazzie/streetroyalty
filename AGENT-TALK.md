@@ -775,3 +775,11 @@ Steps 1 and 2 can run in parallel on separate lanes. Step 3 waits for the sample
 - The better-auth plan, waiting on who owns the broker's allowlist.
 - #29 should stay unmerged as above.
 - #12 and #15 look superseded, for the owner to close.
+
+### 2026-11-20 08:10 UTC · Grok Bot's cloud agent · `cursor/remove-fourthwall-6083`
+
+Owner-approved cleanup. Fourthwall is out of the product. Fulfillment stays Printful and payment stays Stripe. The studio cart (`src/lib/studio/cart.server.ts`) is the only cart.
+
+Removed the Fourthwall client, the preview drop, the browser bag, the `/shop` routes, and the unused `src/lib/multiplayer` template. Nav and bag icons go to `/rack` and `/cart`. The home page now says the sets are printed two-tone.
+
+**For the owner:** nothing blocking.

@@ -2,17 +2,14 @@ import { useEffect, useState, type ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Link } from "@tanstack/react-router";
 import { Menu, ShoppingBag, UserRound, X } from "lucide-react";
-import { BagDrawer } from "@/components/site/bag-drawer";
 import { cn } from "@/lib/cn";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import { bagCount, useBag } from "@/lib/storefront/bag";
 
 /** `wide` links only fit the bar on a laptop. The phone menu always shows every one. */
 const NAV = [
-  { to: "/shop", label: "Shop", wide: false },
+  { to: "/rack", label: "The Rack", wide: false },
   { to: "/lab", label: "Outfit Lab", wide: false },
   { to: "/studio", label: "Studio", wide: false },
-  { to: "/rack", label: "The Rack", wide: false },
   { to: "/battles", label: "Battles", wide: true },
   { to: "/episodes", label: "The Show", wide: true },
 ] as const;
@@ -49,32 +46,15 @@ export function Wordmark({ className }: { className?: string }) {
   );
 }
 
-function BagButton() {
-  const lines = useBag((state) => state.lines);
-  const setOpen = useBag((state) => state.setOpen);
-  const hydrate = useBag((state) => state.hydrate);
-  const count = bagCount(lines);
-
-  useEffect(() => {
-    hydrate();
-  }, [hydrate]);
-
+function CartLink() {
   return (
-    <button
-      type="button"
-      onClick={() => setOpen(true)}
-      className="relative grid h-11 w-11 place-items-center rounded-full text-fg transition-colors duration-150 hover:bg-fg/10"
-      aria-label={
-        count > 0 ? `Open the bag, ${count} ${count === 1 ? "piece" : "pieces"}` : "Open the bag"
-      }
+    <Link
+      to="/cart"
+      className="grid h-11 w-11 place-items-center rounded-full text-fg transition-colors duration-150 hover:bg-fg/10"
+      aria-label="Cart"
     >
       <ShoppingBag className="h-5 w-5" strokeWidth={2} />
-      {count > 0 ? (
-        <span className="absolute top-1 right-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1 font-display text-xs leading-none text-accent-fg">
-          {count}
-        </span>
-      ) : null}
-    </button>
+    </Link>
   );
 }
 
@@ -208,7 +188,7 @@ export function SiteHeader({ overlay = false }: { overlay?: boolean }) {
         </nav>
         <div className="ml-auto flex items-center">
           <AccountLink />
-          <BagButton />
+          <CartLink />
           <MobileMenu />
         </div>
       </div>
@@ -225,10 +205,10 @@ export function SiteFooter() {
           <p className="mt-4 max-w-xs text-muted">Crown never came off. Just dressing it.</p>
         </div>
         <FooterColumn
-          title="Shop"
+          title="Wear"
           links={[
-            { to: "/shop", label: "The drop" },
             { to: "/rack", label: "The rack" },
+            { to: "/cart", label: "Cart" },
             { to: "/battles", label: "Battles" },
             { to: "/orders", label: "Orders" },
           ]}
@@ -276,8 +256,8 @@ function FooterColumn({
   title: string;
   links: {
     to:
-      | "/shop"
       | "/rack"
+      | "/cart"
       | "/orders"
       | "/lab"
       | "/studio"
@@ -337,7 +317,6 @@ export function SiteShell({
         {children}
       </main>
       <SiteFooter />
-      <BagDrawer />
     </div>
   );
 }

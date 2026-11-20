@@ -17,7 +17,7 @@ import {
 import { mergeEpisodeCast, parseSavedCast, SAVED_CAST_KEY } from "@/lib/episodes/saved-cast";
 import { isMissing, resolveRefs } from "@/lib/episodes/sheet";
 import { refKey, type Episode } from "@/lib/episodes/types";
-import type { StoreProduct } from "@/lib/storefront/types";
+import type { SheetProduct } from "@/lib/episodes/sheet";
 import { shopList } from "@/lib/studio/api";
 import type { DesignSummary } from "@/lib/studio/models";
 
@@ -29,7 +29,7 @@ export function EpisodeView({
   lampOn,
 }: {
   episode: Episode;
-  products: StoreProduct[];
+  products: SheetProduct[];
   lampOn: boolean;
 }) {
   const [time, setTime] = useState(0);

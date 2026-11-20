@@ -4,8 +4,6 @@ import { expect, test } from "./fixtures";
 /** Every page a visitor can land on, and the heading that proves it rendered. */
 const ROUTES: [path: string, heading: string][] = [
   ["/", "Crown never"],
-  ["/shop", "The drop"],
-  ["/shop/lilac-set-hoodie", "The Lilac Hoodie"],
   ["/lab", "Street Royalty"],
   ["/studio", "Build the piece"],
   ["/rack", "The rack"],
@@ -71,7 +69,7 @@ test.describe("with JavaScript off", () => {
   test.use({ javaScriptEnabled: false });
 
   for (const [path, heading] of ROUTES.filter(([route]) =>
-    ["/", "/shop", "/shop/lilac-set-hoodie"].includes(route),
+    route === "/",
   )) {
     test(`${path} still shows its content`, async ({ page }) => {
       await page.goto(path);

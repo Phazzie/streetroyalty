@@ -12,17 +12,15 @@ import { WardrobeBuilder } from "@/components/episodes/wardrobe-builder";
 import { SiteShell } from "@/components/site/shell";
 import { EPISODES, onAir } from "@/lib/episodes/data";
 import { episodePieces, formatRunningTime, formatTimecode } from "@/lib/episodes/helpers";
+import { LABEL_PIECES } from "@/lib/episodes/label-pieces";
 import type { Episode } from "@/lib/episodes/types";
-import { getStorefront } from "@/lib/storefront/api";
 
 export const Route = createFileRoute("/episodes/")({
-  loader: () => getStorefront(),
   head: () => ({ meta: [{ title: "Episodes · Street Royalty" }] }),
   component: EpisodesPage,
 });
 
 function EpisodesPage() {
-  const catalog = Route.useLoaderData();
   const lit = onAir();
   const out = EPISODES.filter((episode) => episode.status === "out").length;
 
@@ -84,7 +82,7 @@ function EpisodesPage() {
             shot.
           </p>
           <div className="mt-10">
-            <WardrobeBuilder products={catalog.products} demo={catalog.source === "demo"} />
+            <WardrobeBuilder products={LABEL_PIECES} />
           </div>
         </div>
       </section>

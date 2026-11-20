@@ -3,7 +3,6 @@ import { assertLivePaymentHasPrinter } from "../pod/order-flow.ts";
 import { readPaymentsMode, readPodMode } from "../pod/index.ts";
 import { printSigningSecret } from "../pod/print-access.ts";
 import type { PodMode } from "../pod/types.ts";
-import { checkoutHost } from "../storefront/fourthwall.ts";
 import { SERVICES, serviceSpec, type ServiceId } from "./services.ts";
 
 /**
@@ -12,7 +11,7 @@ import { SERVICES, serviceSpec, type ServiceId } from "./services.ts";
  * Pure: it takes the environment as an argument and returns plain data. It
  * decides with the same functions the app itself runs on (readPodMode,
  * readPaymentsMode, printSigningSecret, assertLivePaymentHasPrinter,
- * checkoutHost, readLimits), so the board cannot say live while checkout says
+ * readLimits), so the board cannot say live while checkout says
  * sandbox.
  *
  * It reports the NAMES of settings and whether each one is present. It never
@@ -270,22 +269,6 @@ function readPictures(env: Env, caps: AiLimits): Reading {
   };
 }
 
-function readDrop(env: Env): Reading {
-  if (!has(env, "FOURTHWALL_STOREFRONT_TOKEN"))
-    return { lamp: "off", now: serviceSpec("drop").without };
-  const override = env.FOURTHWALL_CHECKOUT_DOMAIN?.trim();
-  if (override && checkoutHost(null, override) === null) {
-    return {
-      lamp: "partly",
-      now: "The shop shows your real pieces, but FOURTHWALL_CHECKOUT_DOMAIN is not a web address the site can use, so checkout stops.",
-    };
-  }
-  return {
-    lamp: "on",
-    now: "The shop reads your real pieces from Fourthwall, which takes the payment, prints and ships.",
-  };
-}
-
 export function switchboard(env: Env): Switchboard {
   const caps = readLimits(env);
   let podMode: PodMode | "unset" = "unset";
@@ -303,7 +286,6 @@ export function switchboard(env: Env): Switchboard {
     payments: readPayments(env, database.lamp === "on"),
     printing: readPrinting(env),
     pictures: readPictures(env, caps),
-    drop: readDrop(env),
   };
   const services = SERVICES.map((spec) => build(spec.id, env, readings[spec.id]));
   const canPay =

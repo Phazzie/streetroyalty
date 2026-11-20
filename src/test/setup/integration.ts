@@ -33,8 +33,6 @@ const AMBIENT = [
   "APP_PUBLIC_URL",
   "STUDIO_MARKUP",
   "STUDIO_ADMIN_EMAILS",
-  "FOURTHWALL_STOREFRONT_TOKEN",
-  "FOURTHWALL_CHECKOUT_DOMAIN",
   "BETTER_AUTH_SECRET",
   "BETTER_AUTH_URL",
   "AI_VISITOR_IMAGE",
@@ -47,9 +45,6 @@ const AMBIENT = [
 
 /** Module-level caches the app keeps on globalThis so they survive hot reloads. */
 const CACHES = [
-  "__srStorefront__",
-  "__srStorefrontDown__",
-  "__srProductPhotos__",
   "__srAiUsage__",
   "__srSandboxOrders",
   "__srSandboxSeq",

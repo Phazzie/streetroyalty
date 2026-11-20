@@ -429,37 +429,6 @@
   }
 }
 
-.product-card .product-alt {
-  opacity: 0;
-  transition: opacity 320ms ease;
-}
-
-.product-card:hover .product-alt,
-.product-card:focus-visible .product-alt {
-  opacity: 1;
-}
-
-.product-card .product-main {
-  transition: transform 700ms var(--ease-out-expo);
-}
-
-.product-card:hover .product-main {
-  transform: scale(1.035);
-}
-
-.drawer-in {
-  animation: drawer-in 420ms var(--ease-out-expo) both;
-}
-
-@keyframes drawer-in {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: none;
-  }
-}
-
 .scrim-in {
   animation: scrim-in 240ms ease-out both;
 }
@@ -500,18 +469,8 @@ input[type="range"] {
 
   .hero-line > span,
   .hero-fade,
-  .drawer-in,
   .scrim-in {
     animation: none;
-  }
-
-  .product-card .product-main,
-  .product-card .product-alt {
-    transition: none;
-  }
-
-  .product-card:hover .product-main {
-    transform: none;
   }
 
   .mic-live::after,

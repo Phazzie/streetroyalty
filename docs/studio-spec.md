@@ -342,4 +342,4 @@ in `docs/printful-aop-data.md`.
 ## 8. What this spec does not cover
 
 Storage of the files (see `docs/print-files-plan.md`, task C6), the cart and order
-interface across Fourthwall, Stripe and Printful (task C7), and pricing.
+interface across Stripe and Printful (task C7), and pricing.

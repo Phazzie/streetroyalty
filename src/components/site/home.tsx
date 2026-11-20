@@ -2,10 +2,8 @@ import { useEffect, useRef } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { Hero } from "@/components/site/hero";
-import { ProductCard } from "@/components/site/product-card";
 import { Reveal } from "@/components/site/reveal";
 import { SiteShell } from "@/components/site/shell";
-import type { StoreCatalog } from "@/lib/storefront/types";
 
 const TAPE = [
   "Two sets",
@@ -36,15 +34,15 @@ const LAB_STEPS = [
 const PROCESS = [
   {
     image: "/brand/detail-sketch.webp",
-    alt: "Sketchbook with hoodie and jogger drawings beside lilac, mint, cream and orange fabric swatches",
+    alt: "Sketchbook with hoodie and jogger drawings beside lilac, mint and cream fabric swatches",
     title: "Blocked",
-    body: "Each set is one colour held by two others. Lilac with cream and orange. Mint with peach and blue.",
+    body: "Each set is one colour held by another. Lilac with cream. Mint with peach.",
   },
   {
     image: "/brand/detail-piping.webp",
-    alt: "Close view of orange piping being stitched between lilac fleece and a cream panel",
-    title: "Piped",
-    body: "A thin line of piping traces every panel, so the block reads from across the street.",
+    alt: "Close view of lilac and cream printed as two-tone fleece",
+    title: "Printed",
+    body: "The two-tone is printed on the fabric. Nothing is sewn on as panels or piping.",
   },
   {
     image: "/brand/detail-label.webp",
@@ -169,30 +167,7 @@ function SectionHead({
   );
 }
 
-function TextLink({
-  to,
-  children,
-}: {
-  to: "/shop" | "/lab" | "/studio" | "/rack";
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      to={to}
-      className="group inline-flex min-h-11 items-center gap-2 self-start font-display text-sm tracking-wider text-fg uppercase md:self-auto"
-    >
-      <span className="border-b-2 border-fg pb-0.5">{children}</span>
-      <ArrowRight
-        className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1"
-        strokeWidth={3}
-      />
-    </Link>
-  );
-}
-
-export function HomePage({ catalog }: { catalog: StoreCatalog }) {
-  const featured = catalog.products.filter((product) => !product.soldOut).slice(0, 4);
-
+export function HomePage() {
   return (
     <SiteShell overlayHeader>
       <Hero />
@@ -214,26 +189,6 @@ export function HomePage({ catalog }: { catalog: StoreCatalog }) {
           ))}
         </div>
       </div>
-
-      {featured.length > 0 ? (
-        <section className="paper">
-          <div className="mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
-            <SectionHead
-              eyebrow={catalog.source === "demo" ? "Preview drop" : "In the shop now"}
-              title="The drop"
-            >
-              <TextLink to="/shop">See everything</TextLink>
-            </SectionHead>
-            <ul className="mt-10 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
-              {featured.map((product, index) => (
-                <Reveal as="li" key={product.id} delay={index * 80}>
-                  <ProductCard product={product} />
-                </Reveal>
-              ))}
-            </ul>
-          </div>
-        </section>
-      ) : null}
 
       <section className="night relative overflow-hidden">
         <div className="mx-auto grid w-full max-w-7xl gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:gap-16 lg:py-28">

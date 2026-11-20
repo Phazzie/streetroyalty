@@ -103,7 +103,7 @@ export const ENTRIES: Entry[] = [
     id: "colourway",
     short: "A colourway",
     name: "One set of colours",
-    body: "One design in one set of colours. A hoodie in lilac with cream panels is one colourway. The same hoodie in mint with peach panels is another. Same shape, different mood.",
+    body: "One design in one set of colours. A hoodie in lilac and cream is one colourway. The same hoodie in mint and peach is another. Same shape, different mood.",
     drawing: "Three tees of the same shape in three different colours.",
     group: "word",
   },

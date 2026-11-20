@@ -4,14 +4,13 @@ import { EpisodesStyle, OnAirLamp, TestCard } from "@/components/episodes/channe
 import { EpisodeView } from "@/components/episodes/episode-view";
 import { SiteShell } from "@/components/site/shell";
 import { findEpisode, onAir } from "@/lib/episodes/data";
-import { getStorefront } from "@/lib/storefront/api";
+import { LABEL_PIECES } from "@/lib/episodes/label-pieces";
 
 export const Route = createFileRoute("/episodes/$slug")({
-  loader: async ({ params }) => {
+  loader: ({ params }) => {
     const episode = findEpisode(params.slug);
     if (!episode) throw notFound();
-    const catalog = await getStorefront();
-    return { episode, products: catalog.products };
+    return { episode };
   },
   head: ({ loaderData }) => ({
     meta: [
@@ -27,11 +26,11 @@ export const Route = createFileRoute("/episodes/$slug")({
 });
 
 function EpisodePage() {
-  const { episode, products } = Route.useLoaderData();
+  const { episode } = Route.useLoaderData();
   return (
     <SiteShell theme="night">
       <EpisodesStyle />
-      <EpisodeView episode={episode} products={products} lampOn={onAir()} />
+      <EpisodeView episode={episode} products={LABEL_PIECES} lampOn={onAir()} />
     </SiteShell>
   );
 }

@@ -1,20 +1,11 @@
 # Street Royalty
 
-Street Royalty is a streetwear site with four parts: a home page, a shop, an outfit lab, and a design studio.
+Street Royalty is a streetwear site with a home page, an outfit lab, a design studio, and a rack.
 
-- **Home** (`/`) — the drop, the lab, and the studio in one scroll. The opening carousel is drawn in WebGL and falls back to plain photos when WebGL or motion is off.
-- **Shop** (`/shop`) — the official drop. It reads products from a Fourthwall shop and hands the bag to Fourthwall's checkout. With no Fourthwall token it shows a preview drop that cannot be bought.
+- **Home** (`/`) — the sets, the lab, and the studio in one scroll. The opening carousel is drawn in WebGL and falls back to plain photos when WebGL or motion is off.
 - **Outfit Lab** (`/lab`) — lock a face, build pieces by voice, put them on, and walk the look.
 - **Studio** (`/studio`) — turn a design into a real garment: pick a blank, place art and type, preview a mockup, publish it, and check out. Published customs sit on **the rack** (`/rack`).
-
-## Shop
-
-The shop has two modes. Which one runs depends on one variable.
-
-- **Preview drop.** With `FOURTHWALL_STOREFRONT_TOKEN` unset, the shop shows eight built-in pieces from `src/lib/storefront/demo.ts`. Every page says it is a preview, and Checkout explains that nothing can be bought yet.
-- **Fourthwall.** With the token set, products, collections, prices, sizes, and stock come from the [Fourthwall Storefront API](https://docs.fourthwall.com/storefront/overview). Checkout creates a Fourthwall cart and sends the shopper to Fourthwall's hosted checkout. Fourthwall takes the payment, prints, and ships.
-
-The bag lives in the browser. A shop piece can be sent to the lab with **Try it on in the lab**, which puts its photo on the board as a piece to wear.
+- **Cart** (`/cart`) — the only cart. Stripe takes the payment. Printful prints and ships.
 
 ## Outfit Lab
 
@@ -29,10 +20,10 @@ The bag lives in the browser. A shop piece can be sent to the lab with **Try it 
 - **Print it as** — any picture layer can be cut out, turned into one ink, or rebuilt as a halftone. **Original** undoes it. An uploaded PNG keeps its transparency.
 - **On a person** — **See it worn** shows the piece on you if your face is locked in the lab, and on the house model if it is not. It is a generated picture, not a print proof.
 - **Rack search** (`/rack`) — type a product word, or **Find** to turn a vibe into catalog words.
-- **Crown** — on a look, **Ask the crown** critiques the outfit and **Name it** titles it. On the runway, **Crown picks the crowd**. On a shop piece, **Will this print?** gives placement advice. **Surprise me** opens a random piece on the rack. All of the crown buttons use Grok when `XAI_API_KEY` is set and a local answer when it is not.
+- **Crown** — on a look, **Ask the crown** critiques the outfit and **Name it** titles it. On the runway, **Crown picks the crowd**. On a rack piece, **Will this print?** gives placement advice. **Surprise me** opens a random piece on the rack. All of the crown buttons use Grok when `XAI_API_KEY` is set and a local answer when it is not.
 - **Board** — rebuild one piece after a confirm. Dropped pieces and saved looks can be undone for a few seconds. Tickets from each build sit on the hub.
 - **Gallery** — your saved pieces, grouped by collection.
-- **Rack** (`/rack`) — published customs, size picker, add to cart. An old `/shop/<slug>` link to a custom is forwarded here.
+- **Rack** (`/rack`) — published customs, size picker, add to cart. The header bag icon opens `/cart`.
 - **Checkout** — shipping quote, then payment. The print order is created as a draft and confirmed only after payment.
 - **Orders** — status, tracking when the printer sends it.
 
@@ -71,8 +62,6 @@ Copy `.env.example` to the host’s secret store. Do not commit real keys. This 
 | `STUDIO_ADMIN_EMAILS`                                     | Webhook setup        | Comma-separated sign-in emails allowed to press **Connect webhooks**. Empty means nobody can.                                                                                                                                                                |
 | `DATABASE_URL`                                            | Deploy               | Postgres connection. Injected on deploy. Unset in local preview.                                                                                                                                                                                             |
 | `XAI_API_KEY`                                             | AI                   | Server-only key for image, video, the crown critic, the stylist, print art, print lines, rack search, and pull-request review. When it is missing, the text features use a built-in fallback, pictures and video say they are unavailable, and review skips. |
-| `FOURTHWALL_STOREFRONT_TOKEN`                             | Live shop            | Public storefront token from the Fourthwall dashboard, under Settings, For developers. Unset means the preview drop.                                                                                                                                         |
-| `FOURTHWALL_CHECKOUT_DOMAIN`                              | No                   | Host for Fourthwall checkout, for example `your-shop.fourthwall.com`. Defaults to the domain the Storefront API reports for the shop.                                                                                                                        |
 | `BETTER_AUTH_URL`                                         | Hosting outside Grok | The site's public https origin. Sign-in refuses requests from any other origin.                                                                                                                                                                              |
 | `BETTER_AUTH_SECRET`                                      | Hosting outside Grok | Long random string that signs sessions. Without it every server instance invents its own and sign-ins do not stick.                                                                                                                                          |
 | `AI_VISITOR_IMAGE`, `AI_VISITOR_VIDEO`, `AI_VISITOR_TEXT` | No                   | Most generations one visitor gets per day. Defaults 30, 5, 80.                                                                                                                                                                                               |
@@ -88,7 +77,7 @@ The build writes Vercel's output format, so a Vercel project linked to this repo
 
 1. **A database.** Without `DATABASE_URL` the app runs on an in-memory database inside each server instance, so accounts, designs, carts, orders, and the spending counters do not last. Add a Postgres store from the Vercel project's Storage tab and it sets `DATABASE_URL`. Migrations run during the build.
 2. **Sign-in.** Set `BETTER_AUTH_URL` to the production origin and `BETTER_AUTH_SECRET` to a long random string. Email and password sign-in then works. The Google and X buttons go through Grok's sign-in broker and only work when the app is published through Grok.
-3. **Keys.** `XAI_API_KEY` for the lab and the studio's art tools, and `FOURTHWALL_STOREFRONT_TOKEN` for the real shop.
+3. **Keys.** `XAI_API_KEY` for the lab and the studio's art tools. Stripe and Printful, in the table above, for a real sale.
 
 ## Accounts to create
 
@@ -140,18 +129,18 @@ Tests are found by file name, so a new one runs without being registered anywher
 - `*.browser.test.ts` runs in Chromium, for code that draws on a canvas.
 - `*.live.test.ts` calls the real services and only runs with `LIVE=1`.
 
-Shared pieces live in `src/test/`: the database and request helpers, a stand-in printer, mocked Stripe, Printful, Fourthwall and xAI, and two suites that are run against more than one thing.
+Shared pieces live in `src/test/`: the database and request helpers, a stand-in printer, mocked Stripe, Printful and xAI, and two suites that are run against more than one thing.
 
 - `contracts/order-store.contract.ts` is every rule an order store has to keep. It runs against the in-memory store the unit tests use and the SQL store production uses, so the two cannot drift.
 - `contracts/order-lifecycle.model.ts` invents random sequences of payments, replays, printer notices and outages for one order and checks after every step that nothing printed without matching money, no status went backwards, and a charged order always says so.
 
-`e2e/` holds the browser journeys. `E2E_BASE_URL` points them at a deployment instead of the local preview. The journeys that create accounts and orders are skipped there unless `E2E_ALLOW_WRITES=1` is also set, which is only for a disposable deployment in sandbox. They stop on their own if the shop does not show its sandbox badge.
+`e2e/` holds the browser journeys. `E2E_BASE_URL` points them at a deployment instead of the local preview. The journeys that create accounts and orders are skipped there unless `E2E_ALLOW_WRITES=1` is also set, which is only for a disposable deployment in sandbox. They stop on their own if the studio does not show its Sandbox tag.
 
 Coverage floors are in `vitest.config.ts`: 90% of lines and 85% of branches on printing, payments, the studio's server code and the AI caps, and 50% overall.
 
 Origin runs the checks through Depot. `.depot/workflows/ci.yml` has four jobs: `verify` (`npm run ci`), `postgres` (the integration tests on Postgres 16), `e2e` (Chromium), and the Grok review. Connect the Depot app from the Origin codebase Apps page, then put `XAI_API_KEY` in Depot if you want the review job. That job skips when the key is missing. It comments on the Origin pull request when `PR_NUMBER` is set and the Origin CLI is signed in, and otherwise leaves the review in the log.
 
-`.depot/workflows/live.yml` runs the live checks and mutation testing nightly and on demand, never on a pull request. It reads `XAI_API_KEY`, `FOURTHWALL_STOREFRONT_TOKEN`, `STRIPE_TEST_SECRET_KEY`, `PRINTFUL_API_KEY` and `PRINTFUL_STORE_ID` from Depot's secrets and skips any service whose key is missing. Stripe is only ever called with a test key.
+`.depot/workflows/live.yml` runs the live checks and mutation testing nightly and on demand, never on a pull request. It reads `XAI_API_KEY`, `STRIPE_TEST_SECRET_KEY`, `PRINTFUL_API_KEY` and `PRINTFUL_STORE_ID` from Depot's secrets and skips any service whose key is missing. Stripe is only ever called with a test key.
 
 ## Develop
 

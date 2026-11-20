@@ -27,15 +27,12 @@ import { Route as PatternsRouteImport } from './routes/patterns'
 import { Route as RackRouteImport } from './routes/rack'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as SayRouteImport } from './routes/say'
-import { Route as ShopRouteImport } from './routes/shop'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as EpisodesIndexRouteImport } from './routes/episodes.index'
 import { Route as EpisodesSlugRouteImport } from './routes/episodes.$slug'
 import { Route as MHandleRouteImport } from './routes/m.$handle'
 import { Route as RackIndexRouteImport } from './routes/rack.index'
 import { Route as RackSlugRouteImport } from './routes/rack.$slug'
-import { Route as ShopIndexRouteImport } from './routes/shop.index'
-import { Route as ShopSlugRouteImport } from './routes/shop.$slug'
 import { Route as TagSlugRouteImport } from './routes/tag.$slug'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiDevSeedRouteImport } from './routes/api/dev/seed'
@@ -133,11 +130,6 @@ const SayRoute = SayRouteImport.update({
   path: '/say',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ShopRoute = ShopRouteImport.update({
-  id: '/shop',
-  path: '/shop',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const StudioRoute = StudioRouteImport.update({
   id: '/studio',
   path: '/studio',
@@ -167,16 +159,6 @@ const RackSlugRoute = RackSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
   getParentRoute: () => RackRoute,
-} as any)
-const ShopIndexRoute = ShopIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => ShopRoute,
-} as any)
-const ShopSlugRoute = ShopSlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
-  getParentRoute: () => ShopRoute,
 } as any)
 const TagSlugRoute = TagSlugRouteImport.update({
   id: '/tag/$slug',
@@ -228,16 +210,13 @@ export interface FileRoutesByFullPath {
   '/rack': typeof RackRouteWithChildren
   '/reports': typeof ReportsRoute
   '/say': typeof SayRoute
-  '/shop': typeof ShopRouteWithChildren
   '/studio': typeof StudioRoute
   '/episodes/$slug': typeof EpisodesSlugRoute
   '/m/$handle': typeof MHandleRoute
   '/rack/$slug': typeof RackSlugRoute
-  '/shop/$slug': typeof ShopSlugRoute
   '/tag/$slug': typeof TagSlugRoute
   '/episodes/': typeof EpisodesIndexRoute
   '/rack/': typeof RackIndexRoute
-  '/shop/': typeof ShopIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/dev/seed': typeof ApiDevSeedRoute
   '/api/print-files/$id': typeof ApiPrintFilesIdRoute
@@ -265,11 +244,9 @@ export interface FileRoutesByTo {
   '/episodes/$slug': typeof EpisodesSlugRoute
   '/m/$handle': typeof MHandleRoute
   '/rack/$slug': typeof RackSlugRoute
-  '/shop/$slug': typeof ShopSlugRoute
   '/tag/$slug': typeof TagSlugRoute
   '/episodes': typeof EpisodesIndexRoute
   '/rack': typeof RackIndexRoute
-  '/shop': typeof ShopIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/dev/seed': typeof ApiDevSeedRoute
   '/api/print-files/$id': typeof ApiPrintFilesIdRoute
@@ -296,16 +273,13 @@ export interface FileRoutesById {
   '/rack': typeof RackRouteWithChildren
   '/reports': typeof ReportsRoute
   '/say': typeof SayRoute
-  '/shop': typeof ShopRouteWithChildren
   '/studio': typeof StudioRoute
   '/episodes/$slug': typeof EpisodesSlugRoute
   '/m/$handle': typeof MHandleRoute
   '/rack/$slug': typeof RackSlugRoute
-  '/shop/$slug': typeof ShopSlugRoute
   '/tag/$slug': typeof TagSlugRoute
   '/episodes/': typeof EpisodesIndexRoute
   '/rack/': typeof RackIndexRoute
-  '/shop/': typeof ShopIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/dev/seed': typeof ApiDevSeedRoute
   '/api/print-files/$id': typeof ApiPrintFilesIdRoute
@@ -333,16 +307,13 @@ export interface FileRouteTypes {
     | '/rack'
     | '/reports'
     | '/say'
-    | '/shop'
     | '/studio'
     | '/episodes/$slug'
     | '/m/$handle'
     | '/rack/$slug'
-    | '/shop/$slug'
     | '/tag/$slug'
     | '/episodes/'
     | '/rack/'
-    | '/shop/'
     | '/api/auth/$'
     | '/api/dev/seed'
     | '/api/print-files/$id'
@@ -370,11 +341,9 @@ export interface FileRouteTypes {
     | '/episodes/$slug'
     | '/m/$handle'
     | '/rack/$slug'
-    | '/shop/$slug'
     | '/tag/$slug'
     | '/episodes'
     | '/rack'
-    | '/shop'
     | '/api/auth/$'
     | '/api/dev/seed'
     | '/api/print-files/$id'
@@ -400,16 +369,13 @@ export interface FileRouteTypes {
     | '/rack'
     | '/reports'
     | '/say'
-    | '/shop'
     | '/studio'
     | '/episodes/$slug'
     | '/m/$handle'
     | '/rack/$slug'
-    | '/shop/$slug'
     | '/tag/$slug'
     | '/episodes/'
     | '/rack/'
-    | '/shop/'
     | '/api/auth/$'
     | '/api/dev/seed'
     | '/api/print-files/$id'
@@ -436,7 +402,6 @@ export interface RootRouteChildren {
   RackRoute: typeof RackRouteWithChildren
   ReportsRoute: typeof ReportsRoute
   SayRoute: typeof SayRoute
-  ShopRoute: typeof ShopRouteWithChildren
   StudioRoute: typeof StudioRoute
   MHandleRoute: typeof MHandleRoute
   TagSlugRoute: typeof TagSlugRoute
@@ -575,13 +540,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SayRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/shop': {
-      id: '/shop'
-      path: '/shop'
-      fullPath: '/shop'
-      preLoaderRoute: typeof ShopRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/studio': {
       id: '/studio'
       path: '/studio'
@@ -623,20 +581,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/rack/$slug'
       preLoaderRoute: typeof RackSlugRouteImport
       parentRoute: typeof RackRoute
-    }
-    '/shop/': {
-      id: '/shop/'
-      path: '/'
-      fullPath: '/shop/'
-      preLoaderRoute: typeof ShopIndexRouteImport
-      parentRoute: typeof ShopRoute
-    }
-    '/shop/$slug': {
-      id: '/shop/$slug'
-      path: '/$slug'
-      fullPath: '/shop/$slug'
-      preLoaderRoute: typeof ShopSlugRouteImport
-      parentRoute: typeof ShopRoute
     }
     '/tag/$slug': {
       id: '/tag/$slug'
@@ -709,18 +653,6 @@ const RackRouteChildren: RackRouteChildren = {
 
 const RackRouteWithChildren = RackRoute._addFileChildren(RackRouteChildren)
 
-interface ShopRouteChildren {
-  ShopSlugRoute: typeof ShopSlugRoute
-  ShopIndexRoute: typeof ShopIndexRoute
-}
-
-const ShopRouteChildren: ShopRouteChildren = {
-  ShopSlugRoute: ShopSlugRoute,
-  ShopIndexRoute: ShopIndexRoute,
-}
-
-const ShopRouteWithChildren = ShopRoute._addFileChildren(ShopRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BattlesRoute: BattlesRoute,
@@ -740,7 +672,6 @@ const rootRouteChildren: RootRouteChildren = {
   RackRoute: RackRouteWithChildren,
   ReportsRoute: ReportsRoute,
   SayRoute: SayRoute,
-  ShopRoute: ShopRouteWithChildren,
   StudioRoute: StudioRoute,
   MHandleRoute: MHandleRoute,
   TagSlugRoute: TagSlugRoute,

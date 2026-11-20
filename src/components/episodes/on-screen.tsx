@@ -22,12 +22,12 @@ export function ShopIt({ piece, className }: { piece: SheetPiece; className?: st
       <ArrowUpRight className="h-4 w-4" strokeWidth={3} aria-hidden="true" />
     </>
   );
-  return piece.ref.kind === "shop" ? (
-    <Link to="/shop/$slug" params={{ slug: piece.ref.slug }} className={classes}>
+  return piece.ref.kind === "rack" ? (
+    <Link to="/rack/$slug" params={{ slug: piece.ref.slug }} className={classes}>
       {label}
     </Link>
   ) : (
-    <Link to="/rack/$slug" params={{ slug: piece.ref.slug }} className={classes}>
+    <Link to="/rack" className={classes}>
       {label}
     </Link>
   );
@@ -46,7 +46,7 @@ export function PieceRow({
     return (
       <li className="border-2 border-dashed border-line px-3 py-3 text-sm text-muted">
         A piece planned for this scene is not{" "}
-        {piece.ref.kind === "shop" ? "in the drop" : "on the rack"} right now.
+        {piece.ref.kind === "shop" ? "in the sets" : "on the rack"} right now.
       </li>
     );
   }

@@ -18,11 +18,6 @@ const OPEN: Record<string, string> = {
   makeMockup: "anyone can preview a mockup; it reads the user only if there is one",
   shopList: "the public rack",
   shopPiece: "a public rack page",
-  // Fourthwall storefront: a public shop.
-  getStorefront: "public shop",
-  getStoreProduct: "public shop",
-  startStoreCheckout: "guest checkout on Fourthwall, capped per visitor",
-  getProductPhoto: "public product photo",
   getConnectorReadiness: "template plumbing; reports readiness only",
   // Street scans: a stranger who scans a tag is not signed in.
   countTagScan: "counts one scan of a public piece; same-site only, capped per piece per day",

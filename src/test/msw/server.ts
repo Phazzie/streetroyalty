@@ -2,7 +2,7 @@ import { setupServer } from "msw/node";
 
 /**
  * One network for every integration test. A request with no handler fails the
- * test, so nothing here can reach Stripe, Printful, Fourthwall or xAI by accident.
+ * test, so nothing here can reach Stripe, Printful or xAI by accident.
  */
 export const server = setupServer();
 

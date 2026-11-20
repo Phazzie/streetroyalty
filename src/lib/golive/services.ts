@@ -6,7 +6,7 @@
  */
 
 export type ServiceId =
-  "admins" | "database" | "signin" | "payments" | "printing" | "pictures" | "drop";
+  "admins" | "database" | "signin" | "payments" | "printing" | "pictures";
 
 export type VariableSpec = {
   name: string;
@@ -243,31 +243,6 @@ export const SERVICES: ServiceSpec[] = [
       "Open API Keys, create a key and copy it straight away.",
       "In Vercel add it as XAI_API_KEY and redeploy.",
       "Each picture and video costs money. The daily caps keep a busy day from running up the bill. Zero turns a kind off.",
-    ],
-  },
-  {
-    id: "drop",
-    name: "The label's own drop",
-    unlocks: "The shop shows your real pieces and people buy them through Fourthwall.",
-    without: "The shop shows a labelled preview drop that cannot be bought.",
-    provider: { name: "Fourthwall", url: "https://fourthwall.com" },
-    variables: [
-      {
-        name: "FOURTHWALL_STOREFRONT_TOKEN",
-        need: "needed",
-        what: "Fourthwall's storefront token. It lets the site read your products.",
-      },
-      {
-        name: "FOURTHWALL_CHECKOUT_DOMAIN",
-        need: "optional",
-        what: "Only if checkout opens on the wrong address. It is your shop's own Fourthwall address.",
-      },
-    ],
-    steps: [
-      "In your Fourthwall dashboard open Settings, then For developers.",
-      "Under Storefront API create a token and copy it.",
-      "In Vercel add it as FOURTHWALL_STOREFRONT_TOKEN and redeploy.",
-      "Fourthwall takes the payment, prints and ships these pieces. The drop needs nothing else on this board.",
     ],
   },
 ];
