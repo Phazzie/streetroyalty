@@ -28,7 +28,7 @@ import {
   type SheetPiece,
 } from "@/lib/episodes/sheet";
 import { refKey } from "@/lib/episodes/types";
-import type { StoreProduct } from "@/lib/storefront/types";
+import type { SheetProduct } from "@/lib/episodes/sheet";
 import { shopList } from "@/lib/studio/api";
 import type { DesignSummary } from "@/lib/studio/models";
 
@@ -174,7 +174,7 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
  * away a reference board and a block of words that keep the outfit the same in
  * every shot. Nothing is sent anywhere: the cast is kept in this browser.
  */
-export function WardrobeBuilder({ products, demo }: { products: StoreProduct[]; demo: boolean }) {
+export function WardrobeBuilder({ products }: { products: SheetProduct[] }) {
   const [cast, setCast] = useState<SavedCast>(defaultCast);
   const [ready, setReady] = useState(false);
   const [rack, setRack] = useState<DesignSummary[] | null>(null);
@@ -353,10 +353,10 @@ export function WardrobeBuilder({ products, demo }: { products: StoreProduct[]; 
             </span>
           </p>
 
-          <h4 className="eyebrow mt-5">{demo ? "The drop (preview)" : "The drop"}</h4>
+          <h4 className="eyebrow mt-5">The sets</h4>
           {drop.length === 0 ? (
             <p className="mt-2 border-2 border-dashed border-line px-3 py-4 text-sm text-muted">
-              The drop is empty right now.
+              The sets are empty right now.
             </p>
           ) : (
             <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -377,7 +377,7 @@ export function WardrobeBuilder({ products, demo }: { products: StoreProduct[]; 
             <p className="mt-2 text-sm text-muted">Loading the rack.</p>
           ) : rackError ? (
             <p className="mt-2 border-2 border-dashed border-line px-3 py-4 text-sm text-muted">
-              The rack did not load. The drop above still works.
+              The rack did not load. The sets above still work.
             </p>
           ) : customs.length === 0 ? (
             <p className="mt-2 border-2 border-dashed border-line px-3 py-4 text-sm text-muted">
@@ -494,10 +494,8 @@ export function WardrobeBuilder({ products, demo }: { products: StoreProduct[]; 
             ) : null}
             <p className="mt-1 text-sm text-muted">
               The small swatches on the board are measured from each picture, so they are a guide.
-              The words below only use colours on record.
-              {demo
-                ? " Pictures of the preview drop are generated, not photos of finished garments."
-                : ""}
+              The words below only use colours on record. Pictures of the sets are generated, not
+              photos of finished garments.
             </p>
           </div>
 

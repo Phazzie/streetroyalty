@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { BagDrawer } from "@/components/site/bag-drawer";
 import { SiteFooter, SiteHeader } from "@/components/site/shell";
 import { SignedOut, UserButton } from "@/lib/auth/gates";
 import { getStudioConfig } from "@/lib/studio/api";
@@ -74,7 +73,6 @@ export function StudioShell({ current, children }: { current: string; children: 
         {children}
       </main>
       <SiteFooter />
-      <BagDrawer />
     </div>
   );
 }

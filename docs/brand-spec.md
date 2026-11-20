@@ -15,8 +15,8 @@ It rests on what exists today (`profiles`, `designs`, `collections`, `garment_se
 
 The full comparison with sources is in `docs/research/brand-platforms.md`.
 
-- **Copy Fourthwall:** one login can run several separate shops, each with its own catalog and
-  payouts.
+- **Several shops per login:** one login can run several separate shops, each with its own catalog
+  and payouts.
 - **Avoid:**
   - one store per account (Spring);
   - a store address that breaks when the store is renamed (Printify);
@@ -128,7 +128,7 @@ The structure doesn't change with the numbers:
   shows **base cost → platform cut → your payout** live, as every competitor does.
   `base_cost_snapshot` is stored on the order line, so a later Printful price change doesn't
   rewrite old orders.
-- **Payouts:** Stripe Connect, the norm in this market (Fourthwall, Printify). There's one
+- **Payouts:** Stripe Connect, the norm in this market (Printify). There's one
   connected account per payee (a user, not a brand). The ledger splits each order line between
   brand members by `revenue_share_bps`, and it all goes to the owner in v1.
   - **Owner:** cadence and minimum. Monthly with a $25 minimum is the market norm. We could

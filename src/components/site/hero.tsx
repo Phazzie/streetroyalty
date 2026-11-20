@@ -14,7 +14,7 @@ type Slide = {
   kicker: string;
   lines: string[];
   body: string;
-  cta: { label: string; to: "/shop" | "/lab" };
+  cta: { label: string; to: "/rack" | "/lab" };
   side: "left" | "right";
 };
 
@@ -27,8 +27,8 @@ const SLIDES: Slide[] = [
     alt: "The Lilac Set on a rain-slick crosswalk at night, coffee in hand",
     kicker: "The Lilac Set",
     lines: ["Crown never", "came off."],
-    body: "Lilac fleece, cream panels, orange piping. Hoodie and jogger, cut to be worn together.",
-    cta: { label: "Shop the drop", to: "/shop" },
+    body: "Lilac and cream, printed two-tone. Hoodie and jogger, cut to be worn together.",
+    cta: { label: "See the rack", to: "/rack" },
     side: "right",
   },
   {
@@ -39,8 +39,8 @@ const SLIDES: Slide[] = [
     alt: "The Mint Set, leaning on a black coupe under a street lamp",
     kicker: "The Mint Set",
     lines: ["Just", "dressing it."],
-    body: "Mint fleece with a peach stripe and blue piping. The second set, same block.",
-    cta: { label: "Shop the drop", to: "/shop" },
+    body: "Mint and peach, printed two-tone. The second set, same block.",
+    cta: { label: "See the rack", to: "/rack" },
     side: "left",
   },
   {
@@ -292,10 +292,10 @@ export function Hero() {
               <ArrowRight className="h-4 w-4" strokeWidth={3} />
             </Link>
             <Link
-              to={slide.cta.to === "/lab" ? "/shop" : "/lab"}
+              to={slide.cta.to === "/lab" ? "/rack" : "/lab"}
               className="inline-flex h-14 items-center border-2 border-fg/70 px-6 font-display text-sm tracking-wider text-fg uppercase transition-colors duration-150 hover:bg-fg/10"
             >
-              {slide.cta.to === "/lab" ? "Shop the drop" : "Try it on in the lab"}
+              {slide.cta.to === "/lab" ? "See the rack" : "Try it on in the lab"}
             </Link>
           </div>
         </div>

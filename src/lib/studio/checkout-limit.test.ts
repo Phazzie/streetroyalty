@@ -7,7 +7,7 @@ import {
 } from "./checkout-limit.ts";
 
 describe("studio checkout metering", () => {
-  it("uses the same cap and refusal as the shop", () => {
+  it("uses the checkout cap and the same refusal the cart shows", () => {
     expect(CHECKOUT_START_CAP).toEqual({ visitor: 40, global: 5000 });
     expect(CHECKOUT_LIMIT_MESSAGE).toBe("Too many checkouts started today. Try again tomorrow.");
   });
@@ -35,8 +35,6 @@ describe("studio checkout metering", () => {
     expect(meter).toBeGreaterThan(claim);
     expect(draft).toBeGreaterThan(meter);
     expect(body.match(/priceCart\(/g)).toHaveLength(1);
-    const shop = readFileSync("src/lib/storefront/api.ts", "utf8");
-    expect(shop).toContain('count("checkout"');
     expect(readFileSync("src/lib/studio/checkout-limit.ts", "utf8")).toContain(
       'count(STUDIO_CHECKOUT_KIND',
     );

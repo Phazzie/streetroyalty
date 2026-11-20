@@ -57,7 +57,6 @@ export default defineConfig({
           STRIPE_WEBHOOK_SECRET: "whsec_e2e",
           PRINTFUL_WEBHOOK_SECRET: "printful-e2e",
           XAI_API_KEY: "",
-          FOURTHWALL_STOREFRONT_TOKEN: "",
         },
       },
 });

@@ -102,8 +102,8 @@ export function Header({ title, action }: { title: string; action?: ReactNode })
           <Link to="/studio" className="text-accent">
             Studio
           </Link>
-          <Link to="/shop" className="text-ink">
-            Shop
+          <Link to="/rack" className="text-ink">
+            Rack
           </Link>
         </nav>
       </div>

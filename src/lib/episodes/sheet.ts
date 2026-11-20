@@ -1,6 +1,15 @@
 import type { DesignSummary } from "../studio/models.ts";
-import type { StoreProduct } from "../storefront/types.ts";
 import { refKey, type WardrobeRef } from "./types.ts";
+
+/** A label piece the wardrobe sheet can describe. Not a product for sale. */
+export type SheetProduct = {
+  slug: string;
+  name: string;
+  kind: string;
+  blurb: string;
+  images: { url: string }[];
+  colors: { name: string; swatch?: string }[];
+};
 
 /**
  * The wardrobe sheet: words that keep one outfit identical from shot to shot in an
@@ -88,7 +97,7 @@ const MAX_COLOR_NAME = 40;
 const MAX_GARMENT = 60;
 const MAX_QUOTE = 200;
 
-export function sheetPieceFromProduct(product: StoreProduct): SheetPiece {
+export function sheetPieceFromProduct(product: SheetProduct): SheetPiece {
   const color = product.colors[0];
   const known = KNOWN_BUILD[product.slug];
   const matches = Boolean(known && color && color.name.toLowerCase().includes(known.color));
@@ -106,7 +115,7 @@ export function sheetPieceFromProduct(product: StoreProduct): SheetPiece {
     piping: matches && known ? known.piping : null,
     quote: oneLine(product.blurb, MAX_QUOTE) || null,
     imageUrl: product.images[0]?.url ?? null,
-    href: `/shop/${product.slug}`,
+    href: "/rack",
   };
 }
 
@@ -142,7 +151,7 @@ export type MissingPiece = { ref: WardrobeRef; missing: true };
 /** Looks each ref up in what the site has right now. A piece that is gone stays in the list, marked missing. */
 export function resolveRefs(
   refs: WardrobeRef[],
-  have: { products: StoreProduct[]; rack: RackFields[] },
+  have: { products: SheetProduct[]; rack: RackFields[] },
 ): (SheetPiece | MissingPiece)[] {
   return refs.map((ref) => {
     if (ref.kind === "shop") {

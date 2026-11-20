@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { demoCatalog } from "../storefront/demo.ts";
+import { LABEL_PIECES } from "./label-pieces.ts";
 import { EPISODES, findEpisode, onAir, TEMPLATE_EPISODE } from "./data.ts";
 import {
   clampTime,
@@ -242,8 +242,8 @@ describe("the shipped episode list", () => {
     expect(cursor).toBe(TEMPLATE_EPISODE.durationSec);
   });
 
-  it("only wears pieces that are in the preview drop", () => {
-    const slugs = new Set(demoCatalog.products.map((product) => product.slug));
+  it("only wears pieces from the label's sets", () => {
+    const slugs = new Set(LABEL_PIECES.map((product) => product.slug));
     for (const ref of episodePieces(TEMPLATE_EPISODE)) {
       expect(ref.kind).toBe("shop");
       expect(slugs.has(ref.slug)).toBe(true);

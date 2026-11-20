@@ -17,8 +17,6 @@ const SECRETS: Env = {
   PRINT_FILE_SIGNING_SECRET: "Sg6Xq5d5d0b2fZwK",
   APP_PUBLIC_URL: "https://wqzj.kxvq.example",
   XAI_API_KEY: "xai-Lm5Zq77c0f4e2Xk",
-  FOURTHWALL_STOREFRONT_TOKEN: "ptkn_Rr1Zx3e8aQwKj",
-  FOURTHWALL_CHECKOUT_DOMAIN: "zzqk-xvjw.kqzx.example",
   STUDIO_ADMIN_EMAILS: "qzowner@jxwq.example, zkfriend@jxwq.example",
 };
 
@@ -42,7 +40,6 @@ describe("switchboard", () => {
       payments: "off",
       printing: "off",
       pictures: "off",
-      drop: "off",
     });
     expect(board.canPay).toBe(false);
     expect(board.next).toBe("admins");
@@ -79,7 +76,6 @@ describe("switchboard", () => {
       SECRETS,
       { ...SECRETS, POD_MODE: "sandbox", PAYMENTS_MODE: "sandbox" },
       { ...SECRETS, PRINT_FILE_SIGNING_SECRET: "", STRIPE_WEBHOOK_SECRET: undefined },
-      { ...SECRETS, FOURTHWALL_CHECKOUT_DOMAIN: "zq vv3 kxjw qqzv" },
       { ...SECRETS, DATABASE_URL: undefined },
     ];
     for (const env of fixtures) {
@@ -213,12 +209,6 @@ describe("switchboard", () => {
     expect(service(zeroed, "pictures").now).toMatch(/video is capped at zero/);
   });
 
-  it("reads the drop as partly when the checkout address is not one", () => {
-    const bad = switchboard({ FOURTHWALL_STOREFRONT_TOKEN: "t", FOURTHWALL_CHECKOUT_DOMAIN: "x" });
-    expect(service(bad, "drop").lamp).toBe("partly");
-    const fine = switchboard({ FOURTHWALL_STOREFRONT_TOKEN: "t" });
-    expect(service(fine, "drop").lamp).toBe("on");
-  });
 });
 
 describe("the checklist", () => {
@@ -230,7 +220,6 @@ describe("the checklist", () => {
       "payments",
       "printing",
       "pictures",
-      "drop",
     ]);
   });
 

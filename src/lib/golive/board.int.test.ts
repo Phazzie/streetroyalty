@@ -56,7 +56,6 @@ describe("readBoard", () => {
       "payments:off",
       "printing:off",
       "pictures:off",
-      "drop:off",
     ]);
     expect(view.board.next).toBe("database");
     expect(view.board.canPay).toBe(false);

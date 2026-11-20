@@ -1,7 +1,7 @@
 name: Live API checks
 
-# Real calls to xAI, Fourthwall, Stripe test mode and Printful, to catch any of
-# them changing shape. Never on a pull request. Each service is skipped when its
+# Real calls to xAI, Stripe test mode and Printful, to catch any of them
+# changing shape. Never on a pull request. Each service is skipped when its
 # key is not set. Cost per run: one 16-token xAI completion.
 on:
   workflow_dispatch:
@@ -21,7 +21,6 @@ jobs:
       - run: npm run test:live
         env:
           XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
-          FOURTHWALL_STOREFRONT_TOKEN: ${{ secrets.FOURTHWALL_STOREFRONT_TOKEN }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
           PRINTFUL_API_KEY: ${{ secrets.PRINTFUL_API_KEY }}
           PRINTFUL_STORE_ID: ${{ secrets.PRINTFUL_STORE_ID }}

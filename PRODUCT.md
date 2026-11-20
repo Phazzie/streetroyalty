@@ -39,11 +39,10 @@ who do not dress by anybody's rules. **(derived wording)**
 
 - **Studio.** The core of the product. Today it places art and type on a blank and prints
   through Printful, paid through Stripe.
-- **Shop.** The label's own drop. Products come from the owner's Fourthwall shop, which
-  takes payment, prints and ships.
+- **Rack.** Customs that people published from the studio. This is the shop. Stripe takes
+  payment and Printful prints and ships.
 - **Outfit Lab.** Lock a face, describe pieces by voice or text, put them on, walk the
   look, share a drop card.
-- **Rack.** Customs that people published from the studio.
 - Everything is made to order. There is no stock.
 - Pictures and video are generated with xAI and each one costs money, so paid actions ask
   first and every visitor has a daily allowance.
@@ -56,12 +55,10 @@ who do not dress by anybody's rules. **(derived wording)**
   trims) and which maker or makers produce it.
 - **Open decision.** Whether people get their own profile that others can follow. The
   owner raised it as a maybe.
-- With no Fourthwall token the shop shows a labelled preview drop that cannot be bought.
 - With no Printful or Stripe keys the studio runs in sandbox and says so.
 - Sign-in, saved designs, carts and orders need a database.
 - The "Created with Grok" badge and Grok's platform files stay in place (see `AGENTS.md`).
-- Vocabulary in use: the drop, the lab, the studio, the rack, the crown, a look, a piece,
-  the bag.
+- Vocabulary in use: the lab, the studio, the rack, the cart, the crown, a look, a piece.
 
 ## Brand Commitments
 
@@ -69,10 +66,9 @@ who do not dress by anybody's rules. **(derived wording)**
 - It has to be uniquely the founder's. **Open decision:** his taste has not been captured
   yet. He needs to be asked.
 - The colour-blocked sweatsuits in the site's pictures are the first pieces he wants made
-  for real: lilac with cream panels and orange piping, and mint with peach panels and
-  blue piping (`public/brand/prod-*-hoodie.webp`, `prod-*-jogger.webp`).
-- mkbhd.com is not a reference. Fourthwall came up while the owner was looking for good
-  print on demand, and is not binding.
+  for real: lilac with cream, and mint with peach (`public/brand/prod-*-hoodie.webp`,
+  `prod-*-jogger.webp`). The two-tone is printed. Printful does not sew panels or piping.
+- mkbhd.com is not a reference.
 
 ## Evidence on Hand
 

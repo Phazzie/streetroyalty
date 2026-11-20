@@ -77,7 +77,6 @@ describe("the go-live panel", () => {
       "sw-payments:partly",
       "sw-printing:off",
       "sw-pictures:off",
-      "sw-drop:off",
       "sw-test:off",
     ]);
     expect(screen.getByText("Nobody can pay yet.")).toBeTruthy();

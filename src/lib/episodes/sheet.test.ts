@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { demoCatalog } from "../storefront/demo.ts";
+import { LABEL_PIECES } from "./label-pieces.ts";
 import {
   buildWardrobeSheet,
   characterName,
@@ -12,7 +12,7 @@ import {
 } from "./sheet.ts";
 
 function product(slug: string) {
-  const found = demoCatalog.products.find((item) => item.slug === slug);
+  const found = LABEL_PIECES.find((item) => item.slug === slug);
   if (!found) throw new Error(`no ${slug}`);
   return found;
 }
@@ -36,7 +36,7 @@ describe("a piece from the drop", () => {
       name: "The Lilac Hoodie",
       garment: "hoodie",
       baseColor: { name: "Lilac", hex: "#b9a3ee" },
-      href: "/shop/lilac-set-hoodie",
+      href: "/rack",
     });
     expect(piece.panels).toMatch(/cream panels/i);
     expect(piece.piping).toMatch(/orange piping/i);
@@ -109,7 +109,7 @@ describe("resolveRefs", () => {
         { kind: "rack", slug: RACK.slug },
         { kind: "rack", slug: "gone" },
       ],
-      { products: demoCatalog.products, rack: [RACK] },
+      { products: LABEL_PIECES, rack: [RACK] },
     );
     expect(out.map(isMissing)).toEqual([false, true, false, true]);
   });

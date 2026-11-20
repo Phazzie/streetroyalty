@@ -2,8 +2,6 @@ import { afterAll, describe, expect, it } from "vitest";
 import { completeText } from "./ai/grok.server.ts";
 import { createCheckoutSession } from "./payments/stripe.ts";
 import { createPrintfulProvider } from "./pod/printful.ts";
-import { loadCatalog } from "./storefront/fourthwall.server.ts";
-import { FOURTHWALL_KEYS } from "../test/fixtures/fourthwall.ts";
 import { XAI_KEYS } from "../test/fixtures/xai.ts";
 
 /**
@@ -67,36 +65,6 @@ describe.skipIf(!env("XAI_API_KEY"))("xAI", () => {
       expect(await completeText("Reply with the single word: ok", 16)).toBeTruthy();
     },
   );
-});
-
-describe.skipIf(!env("FOURTHWALL_STOREFRONT_TOKEN"))("Fourthwall", () => {
-  const api = (path: string) =>
-    realFetch(
-      `https://storefront-api.fourthwall.com/v1${path}${path.includes("?") ? "&" : "?"}storefront_token=${env("FOURTHWALL_STOREFRONT_TOKEN")}`,
-    );
-
-  it("still describes the shop and its products the way the app reads them", async () => {
-    const shop = await api("/shop");
-    expect(shop.status).toBe(200);
-    hasKeys(await shop.json(), FOURTHWALL_KEYS.shop);
-
-    const page = (await (
-      await api("/collections/all/products?currency=USD&page=0&size=5")
-    ).json()) as {
-      results: { variants: unknown[] }[];
-    };
-    hasKeys(page, FOURTHWALL_KEYS.productPage);
-    const [product] = page.results;
-    if (!product) return; // an empty shop has nothing more to check
-    hasKeys(product, FOURTHWALL_KEYS.product);
-    hasKeys(product.variants[0], FOURTHWALL_KEYS.variant);
-  });
-
-  it("loads through the app's own client with no notice", async () => {
-    const catalog = await loadCatalog();
-    expect(catalog.source).toBe("fourthwall");
-    expect(catalog.notice).toBeUndefined();
-  });
 });
 
 // A live key would create a real, payable session. Only a test key is ever used here.

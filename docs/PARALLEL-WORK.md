@@ -8,7 +8,7 @@ Goal: get the clothing design studio (lilac two-tone AOP tracksuit first, then w
 
 | Lane | Owner | Branch / PR | Files it owns |
 | --- | --- | --- | --- |
-| Agent 1: safety fixes | Cursor cloud agent | **merged** #19, #24 | `src/lib/ai/*`, `src/lib/lab-api.ts`, checkout guards in `src/lib/studio/orders.server.ts`, `src/lib/storefront/api.ts` rate limit, `vitest.config.ts` |
+| Agent 1: safety fixes | Cursor cloud agent | **merged** #19, #24 | `src/lib/ai/*`, `src/lib/lab-api.ts`, checkout guards in `src/lib/studio/orders.server.ts`, `vitest.config.ts` |
 | Agent 2: garment foundation | Cursor cloud agent | **merged** #20, #23 | `src/lib/studio/garments*.ts`, `src/lib/pod/*` (types, sandbox, printful, aop-printful), garment ID fallbacks in `src/components/studio/editor.tsx` |
 | Agent 3: editor session module | Cursor cloud agent | **go** (thread settled 20:55 UTC): `editor.tsx` + `src/lib/studio/session*`, contract is `docs/studio-spec.md` | `src/components/studio/*`, new `src/lib/studio/session*` |
 | Agent 4: live Printful tracksuit | Cursor cloud agent | **go** (thread settled 20:55 UTC): `src/lib/pod/*`; data in `docs/printful-aop-data.md`, outlines in `src/lib/garments/outlines/` (C8) | `src/lib/pod/aop-printful.ts` data |
@@ -47,7 +47,7 @@ Upgrade `better-auth` past the `~1.6.30` pin to at least `1.7.26`, `zod` to at l
 Write `docs/print-files-plan.md`: move print files from base64 in Postgres (`print_files.data_base64`) to object storage (for example Vercel Blob), use expiring signed URLs instead of the current never-expiring HMAC plus a one-year cache, clean up old files, and raise the size cap enough for 150 DPI all-over panels. Include a migration plan. Build it after Agent 2 merges.
 
 ### C7. Later, once Agents 2 and 3 merge
-- The one-cart, one-order interface (Fourthwall and Stripe plus Printful as providers) before Stripe checkout.
+- The studio cart is the only cart. Stripe takes payment and Printful fulfills.
 - Fix the two social cycles (`activity-api` with `activity.server`, and `makers.server` with `rack.server`) before creator stores.
 - Split the look-lab store (`src/lib/store.ts`) so try-on and studio art tools don't depend on it.
 
