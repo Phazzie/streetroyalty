@@ -1,0 +1,99 @@
+name: Claude review
+
+# Claude reads every pull request and leaves a review: inline comments on the
+# lines that matter, plus one summary comment.
+#
+# It needs ONE of these repository secrets (Settings > Secrets and variables >
+# Actions). Until one is set, this job skips itself and stays green.
+#   CLAUDE_CODE_OAUTH_TOKEN  uses your Claude Pro/Max plan (run `claude setup-token`)
+#   ANTHROPIC_API_KEY        pay per use from console.anthropic.com
+#
+# Re-review on demand: comment "@claude review" on the pull request.
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+  issue_comment:
+    types: [created]
+
+# A new push cancels the review of the previous push, so only the latest commit
+# costs anything. Comments get their own group so chatter never cancels a review.
+concurrency:
+  group: claude-review-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.event.comment.id }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    # Pull requests that are not drafts, or an "@claude review" comment on a
+    # pull request from someone with write access to the repo.
+    if: >-
+      (github.event_name == 'pull_request' && !github.event.pull_request.draft) ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       contains(github.event.comment.body, '@claude review') &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    env:
+      HAS_CLAUDE_AUTH: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' || secrets.ANTHROPIC_API_KEY != '' }}
+      PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+    steps:
+      - name: Skip until a Claude secret is added
+        if: env.HAS_CLAUDE_AUTH != 'true'
+        run: |
+          echo "::notice title=Claude review skipped::Add CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY under Settings > Secrets and variables > Actions to turn on Claude reviews."
+
+      - name: Check out the pull request
+        if: env.HAS_CLAUDE_AUTH == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ env.PR_NUMBER }}/head
+          fetch-depth: 1
+
+      - name: Claude review
+        if: env.HAS_CLAUDE_AUTH == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          track_progress: ${{ github.event_name == 'pull_request' }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ env.PR_NUMBER }}
+
+            You are reviewing a pull request for Street Royalty, a live streetwear
+            shop (TanStack Start on Vercel, Stripe payments, Printful printing, xAI
+            image generation). Read CLAUDE.md, AGENTS.project.md and PRODUCT.md first
+            for the project rules.
+
+            Get the diff with `gh pr diff ${{ env.PR_NUMBER }}` and the description
+            with `gh pr view ${{ env.PR_NUMBER }}`. Read surrounding code when you need
+            it to judge a change.
+
+            Look for, in this order:
+            1. Bugs that would break the shop for a real customer: checkout, Stripe
+               webhooks, Printful orders, prices and totals, sign-in, carts.
+            2. Security: leaked secrets, missing auth checks on server functions,
+               trusting ids sent from the browser, unbounded paid xAI calls.
+            3. Things that fail on Vercel but pass locally: filesystem writes at
+               runtime, dev-only dependencies, hard-coded hosts or ports.
+            4. Breaks of the project rules (for example removing the Grok badge or
+               platform files, replacing the brand, pushing to main).
+            5. Missing tests for money paths.
+
+            Rules for your review:
+            - Only report real problems you can point to. No style nitpicks, no
+              praise padding. If the change is fine, say so in one line.
+            - Put each problem as an inline comment on the exact line, with the
+              concrete failure ("a $0 cart reaches Stripe and throws") and the fix.
+            - Then post one short summary comment with `gh pr comment`, written in
+              plain words the repo owner (not very technical) can follow. Start it
+              with a one-line verdict: "Looks good", "Needs small fixes" or "Do not
+              merge yet".
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Read,Glob,Grep"
