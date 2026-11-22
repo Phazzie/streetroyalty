@@ -1,0 +1,98 @@
+{
+  "_readme": "Seam kit settings. In build phase this file is LOCKED: changing it needs [kit-change] in the commit message plus a DRIFT-LOG entry. See METHODOLOGY.md.",
+  "maxLines": 200,
+  "maxSeams": 15,
+  "minSeamsHint": 3,
+  "unflippedWarnDays": 3,
+  "unflippedWarnCommits": 10,
+  "unflippedFail": false,
+  "foundationSeams": [
+    "config",
+    "auth",
+    "state"
+  ],
+  "codeDirs": [
+    "src",
+    "contracts",
+    "mocks",
+    "probes"
+  ],
+  "headerDirs": [
+    "src",
+    "contracts",
+    "mocks"
+  ],
+  "codeExtensions": [
+    ".ts",
+    ".tsx",
+    ".js",
+    ".jsx",
+    ".mjs",
+    ".cjs",
+    ".vue",
+    ".svelte"
+  ],
+  "configDir": "src/config",
+  "mocksDir": "mocks",
+  "fixturesDir": "probes/fixtures",
+  "contractsDir": "contracts",
+  "lockedPaths": [
+    "tests/",
+    "contracts/",
+    "probes/fixtures/"
+  ],
+  "kitPaths": [
+    ".seam/",
+    ".githooks/",
+    "scripts/seam/",
+    ".github/workflows/seam.yml",
+    ".claude/",
+    ".cursor/hooks.json",
+    ".cursor/hooks/",
+    "vitest.config.ts",
+    "tsconfig.json"
+  ],
+  "blueprintFiles": [
+    "blueprint/BLUEPRINT.md",
+    "blueprint/manifest.json"
+  ],
+  "driftLog": "blueprint/DRIFT-LOG.md",
+  "manifest": "blueprint/manifest.json",
+  "exploreAlwaysOn": [
+    "hardcoded-keys"
+  ],
+  "ignoreDirs": [
+    "node_modules",
+    ".git",
+    "dist",
+    "build",
+    "coverage",
+    ".next",
+    ".turbo",
+    ".vercel",
+    "prototype",
+    "docs",
+    "e2e",
+    "artifacts",
+    "attachments",
+    "screenshots",
+    ".grok",
+    "server",
+    "public"
+  ],
+  "secretScanSkip": [
+    "package-lock.json",
+    "yarn.lock",
+    "pnpm-lock.yaml",
+    "bun.lockb"
+  ],
+  "secretAllowlist": [],
+  "typecheckCmd": "npx tsc --noEmit -p tsconfig.json",
+  "testCmd": "npx vitest run",
+  "ciRunRealTests": false,
+  "minPseudocodeSteps": 3,
+  "skeletonExemptDirs": [
+    "contracts",
+    "mocks"
+  ]
+}

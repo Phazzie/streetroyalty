@@ -1,0 +1,550 @@
+{
+  "_readme": "The seam map, read by the hooks. Every code file in src/, contracts/, and mocks/ must be listed under exactly one seam. File lists for seams after storage are partial until plan/FEATURES.md is confirmed (see BLUEPRINT.md section 4). Status: blueprint/contract/tests are true|false; mockGreen/realGreen are a date (YYYY-MM-DD) or null.",
+  "app": "street-royalty",
+  "buildOrder": [
+    "config",
+    "auth",
+    "state",
+    "storage",
+    "catalog",
+    "printing",
+    "payments",
+    "ai",
+    "studio",
+    "orders",
+    "rack",
+    "admin",
+    "lab",
+    "site"
+  ],
+  "seams": [
+    {
+      "name": "config",
+      "description": "Every setting and secret, read and validated once in src/config/.",
+      "dependsOn": [],
+      "files": [
+        "src/config/index.ts",
+        "src/config/client.ts"
+      ],
+      "contract": "contracts/config.ts",
+      "mock": null,
+      "fixtures": [],
+      "tests": [
+        "tests/config.test.ts"
+      ],
+      "realTests": [],
+      "failureScreens": [
+        "Missing setting: server refuses to start and names it"
+      ],
+      "status": {
+        "blueprint": false,
+        "contract": false,
+        "tests": false,
+        "mockGreen": null,
+        "realGreen": null
+      }
+    },
+    {
+      "name": "auth",
+      "description": "Session, Grok gate identity, broker OAuth, email/password, admin role, server-function middleware.",
+      "dependsOn": [
+        "config",
+        "storage"
+      ],
+      "files": [
+        "src/auth/server.ts",
+        "src/auth/gate.server.ts",
+        "src/auth/middleware.ts",
+        "src/auth/admin.server.ts",
+        "src/auth/client.ts"
+      ],
+      "contract": "contracts/auth.ts",
+      "mock": "mocks/auth.mock.ts",
+      "fixtures": [
+        "probes/fixtures/auth.gate-jwks.json",
+        "probes/fixtures/auth.broker-userinfo.json"
+      ],
+      "tests": [
+        "tests/auth.test.ts"
+      ],
+      "realTests": [
+        "tests/real/auth.real.test.ts"
+      ],
+      "failureScreens": [
+        "auth-expired",
+        "timeout",
+        "rate-limited"
+      ],
+      "status": {
+        "blueprint": false,
+        "contract": false,
+        "tests": false,
+        "mockGreen": null,
+        "realGreen": null
+      }
+    },
+    {
+      "name": "state",
+      "description": "Client state: lab store, IndexedDB persistence, art hand-off between tools, local preferences.",
+      "dependsOn": [
+        "auth"
+      ],
+      "files": [
+        "src/state/lab-store.ts",
+        "src/state/lab-persist.ts",
+        "src/state/art-handoff.ts",
+        "src/state/local-prefs.ts"
+      ],
+      "contract": "contracts/state.ts",
+      "mock": null,
+      "fixtures": [],
+      "tests": [
+        "tests/state.test.ts"
+      ],
+      "realTests": [],
+      "failureScreens": [
+        "IndexedDB blocked"
+      ],
+      "status": {
+        "blueprint": false,
+        "contract": false,
+        "tests": false,
+        "mockGreen": null,
+        "realGreen": null
+      }
+    },
+    {
+      "name": "storage",
+      "description": "The one pg pool / PGlite fallback, migrations, row schemas, transactions. Shared Neon DB (plan/MIGRATION.md).",
+      "dependsOn": [
+        "config"
+      ],
+      "files": [
+        "src/storage/db.server.ts",
+        "src/storage/rows.ts"
+      ],
+      "contract": "contracts/storage.ts",
+      "mock": "mocks/storage.mock.ts",
+      "fixtures": [
+        "probes/fixtures/storage.schema.json"
+      ],
+      "tests": [
+        "tests/storage.test.ts"
+      ],
+      "realTests": [
+        "tests/real/storage.real.test.ts"
+      ],
+      "failureScreens": [
+        "timeout",
+        "upload-failed",
+        "rate-limited",
+        "database down"
+      ],
+      "status": {
+        "blueprint": false,
+        "contract": false,
+        "tests": false,
+        "mockGreen": null,
+        "realGreen": null
+      }
+    },
+    {
+      "name": "catalog",
+      "description": "Blanks, garments, panels, outlines, colourways, money math, prices.",
+      "dependsOn": [
+        "config",
+        "printing"
+      ],
+      "files": [
+        "src/catalog/blanks.ts",
+        "src/catalog/garments.ts",
+        "src/catalog/panels.ts",
+        "src/catalog/outlines.ts",
+        "src/catalog/colorways.ts",
+        "src/catalog/money.ts",
+        "src/catalog/catalog.server.ts"
+      ],
+      "contract": "contracts/catalog.ts",
+      "mock": null,
+      "fixtures": [],
+      "tests": [
+        "tests/catalog.test.ts"
+      ],
+      "realTests": [],
+      "failureScreens": [
+        "timeout",
+        "empty"
+      ],
+      "status": {
+        "blueprint": false,
+        "contract": false,
+        "tests": false,
+        "mockGreen": null,
+        "realGreen": null
+      }
+    },
+    {
+      "name": "printing",
+      "description": "Printer contract, Printful client, sandbox printer, print-file tokens, webhook signature.",
+      "dependsOn": [
+        "config"
+      ],
+      "files": [
+        "src/printing/printful.server.ts",
+        "src/printing/printful-errors.ts",
+        "src/printing/sandbox.server.ts",
+        "src/printing/print-token.server.ts",
+        "src/printing/signature.server.ts",
+        "src/printing/index.server.ts"
+      ],
+      "contract": "contracts/printing.ts",
+      "mock": "mocks/printing.mock.ts",
+      "fixtures": [
+        "probes/fixtures/printing.catalog-product.json",
+        "probes/fixtures/printing.variants.json",
+        "probes/fixtures/printing.prices.json",
+        "probes/fixtures/printing.shipping-rates.json",
+        "probes/fixtures/printing.mockup-task.json",
+        "probes/fixtures/printing.draft-order.json",
+        "probes/fixtures/printing.error-404.json",
+        "probes/fixtures/printing.error-429.json"
+      ],
+      "tests": [
+        "tests/printing.test.ts"
+      ],
+      "realTests": [
+        "tests/real/printing.real.test.ts"
+      ],
+      "failureScreens": [
+        "timeout",
+        "upload-failed",
+        "rate-limited"
+      ],
+      "status": {
+        "blueprint": false,
+        "contract": false,
+        "tests": false,
+        "mockGreen": null,
+        "realGreen": null
+      }
+    },
+    {
+      "name": "payments",
+      "description": "Stripe checkout sessions and webhook signatures; sandbox payments.",
+      "dependsOn": [
+        "config"
+      ],
+      "files": [
+        "src/payments/stripe.server.ts",
+        "src/payments/signature.server.ts",
+        "src/payments/sandbox.server.ts"
+      ],
+      "contract": "contracts/payments.ts",
+      "mock": "mocks/payments.mock.ts",
+      "fixtures": [
+        "probes/fixtures/payments.session-created.json",
+        "probes/fixtures/payments.session-retrieved.json",
+        "probes/fixtures/payments.event-completed.json"
+      ],
+      "tests": [
+        "tests/payments.test.ts"
+      ],
+      "realTests": [
+        "tests/real/payments.real.test.ts"
+      ],
+      "failureScreens": [
+        "timeout",
+        "declined"
+      ],
+      "status": {
+        "blueprint": false,
+        "contract": false,
+        "tests": false,
+        "mockGreen": null,
+        "realGreen": null
+      }
+    },
+    {
+      "name": "ai",
+      "description": "xAI images, video and chat; daily allowance and spend ledger.",
+      "dependsOn": [
+        "config",
+        "storage",
+        "auth"
+      ],
+      "files": [
+        "src/ai/images.server.ts",
+        "src/ai/video.server.ts",
+        "src/ai/text.server.ts",
+        "src/ai/allowance.server.ts",
+        "src/ai/visitor-key.server.ts",
+        "src/ai/api.ts"
+      ],
+      "contract": "contracts/ai.ts",
+      "mock": "mocks/ai.mock.ts",
+      "fixtures": [
+        "probes/fixtures/ai.image.json",
+        "probes/fixtures/ai.video-poll.json",
+        "probes/fixtures/ai.chat.json",
+        "probes/fixtures/ai.refused.json",
+        "probes/fixtures/ai.error-429.json"
+      ],
+      "tests": [
+        "tests/ai.test.ts"
+      ],
+      "realTests": [
+        "tests/real/ai.real.test.ts"
+      ],
+      "failureScreens": [
+        "timeout",
+        "rate-limited",
+        "auth-expired",
+        "empty",
+        "refused"
+      ],
+      "status": {
+        "blueprint": false,
+        "contract": false,
+        "tests": false,
+        "mockGreen": null,
+        "realGreen": null
+      }
+    },
+    {
+      "name": "studio",
+      "description": "Designs, collections, print files, mockups, sets; editor and gallery screens.",
+      "dependsOn": [
+        "catalog",
+        "printing",
+        "storage",
+        "auth",
+        "state"
+      ],
+      "files": [
+        "src/studio/designs.server.ts",
+        "src/studio/collections.server.ts",
+        "src/studio/print-files.server.ts",
+        "src/studio/mockups.server.ts",
+        "src/studio/sets.server.ts",
+        "src/studio/validate.ts",
+        "src/studio/api.ts",
+        "src/studio/print-file.ts",
+        "src/studio/gallery.tsx",
+        "src/studio/set-board.tsx"
+      ],
+      "contract": "contracts/studio.ts",
+      "mock": null,
+      "fixtures": [],
+      "tests": [
+        "tests/studio.test.ts"
+      ],
+      "realTests": [],
+      "failureScreens": [
+        "timeout",
+        "upload-failed",
+        "auth-expired",
+        "empty"
+      ],
+      "status": {
+        "blueprint": false,
+        "contract": false,
+        "tests": false,
+        "mockGreen": null,
+        "realGreen": null
+      }
+    },
+    {
+      "name": "orders",
+      "description": "Cart, shipping quote, checkout, order lifecycle, both webhooks, retry print.",
+      "dependsOn": [
+        "studio",
+        "printing",
+        "payments",
+        "storage",
+        "auth"
+      ],
+      "files": [
+        "src/orders/cart.server.ts",
+        "src/orders/lifecycle.ts",
+        "src/orders/order-store.server.ts",
+        "src/orders/checkout.server.ts",
+        "src/orders/checkout-claim.server.ts",
+        "src/orders/checkout-limit.server.ts",
+        "src/orders/webhooks.server.ts",
+        "src/orders/api.ts",
+        "src/orders/cart-page.tsx",
+        "src/orders/checkout-page.tsx",
+        "src/orders/orders-page.tsx"
+      ],
+      "contract": "contracts/orders.ts",
+      "mock": null,
+      "fixtures": [],
+      "tests": [
+        "tests/orders.test.ts"
+      ],
+      "realTests": [],
+      "failureScreens": [
+        "timeout",
+        "rate-limited",
+        "auth-expired",
+        "empty"
+      ],
+      "status": {
+        "blueprint": false,
+        "contract": false,
+        "tests": false,
+        "mockGreen": null,
+        "realGreen": null
+      }
+    },
+    {
+      "name": "rack",
+      "description": "Publish, feed, makers, profiles, crowns, follows, remix, lineage, tag scans, activity.",
+      "dependsOn": [
+        "studio",
+        "storage",
+        "auth",
+        "ai"
+      ],
+      "files": [
+        "src/rack/feed.server.ts",
+        "src/rack/makers.server.ts",
+        "src/rack/crowns.server.ts",
+        "src/rack/follows.server.ts",
+        "src/rack/remix.server.ts",
+        "src/rack/scans.server.ts",
+        "src/rack/activity.server.ts",
+        "src/rack/quota.server.ts",
+        "src/rack/api.ts"
+      ],
+      "contract": "contracts/rack.ts",
+      "mock": null,
+      "fixtures": [],
+      "tests": [
+        "tests/rack.test.ts"
+      ],
+      "realTests": [],
+      "failureScreens": [
+        "timeout",
+        "rate-limited",
+        "auth-expired",
+        "empty"
+      ],
+      "status": {
+        "blueprint": false,
+        "contract": false,
+        "tests": false,
+        "mockGreen": null,
+        "realGreen": null
+      }
+    },
+    {
+      "name": "admin",
+      "description": "Moderation reports, hidden pieces, go-live board, webhook registration.",
+      "dependsOn": [
+        "auth",
+        "storage",
+        "config",
+        "printing",
+        "payments"
+      ],
+      "files": [
+        "src/admin/reports.server.ts",
+        "src/admin/hidden.server.ts",
+        "src/admin/board.server.ts",
+        "src/admin/switchboard.ts",
+        "src/admin/webhooks.server.ts",
+        "src/admin/api.ts",
+        "src/admin/queue.tsx",
+        "src/admin/go-live.tsx"
+      ],
+      "contract": "contracts/admin.ts",
+      "mock": null,
+      "fixtures": [],
+      "tests": [
+        "tests/admin.test.ts"
+      ],
+      "realTests": [],
+      "failureScreens": [
+        "timeout",
+        "staff-only",
+        "empty"
+      ],
+      "status": {
+        "blueprint": false,
+        "contract": false,
+        "tests": false,
+        "mockGreen": null,
+        "realGreen": null
+      }
+    },
+    {
+      "name": "lab",
+      "description": "Outfit Lab screens, try-on, Say.",
+      "dependsOn": [
+        "ai",
+        "state",
+        "studio",
+        "catalog"
+      ],
+      "files": [
+        "src/lab/api.ts",
+        "src/lab/runway-owner.server.ts",
+        "src/lab/drop-card.ts"
+      ],
+      "contract": "contracts/lab.ts",
+      "mock": null,
+      "fixtures": [],
+      "tests": [
+        "tests/lab.test.ts"
+      ],
+      "realTests": [],
+      "failureScreens": [
+        "timeout",
+        "rate-limited",
+        "auth-expired",
+        "empty"
+      ],
+      "status": {
+        "blueprint": false,
+        "contract": false,
+        "tests": false,
+        "mockGreen": null,
+        "realGreen": null
+      }
+    },
+    {
+      "name": "site",
+      "description": "Shells, home and WebGL hero, hang tags, crown mark, error component, failure-line mapper.",
+      "dependsOn": [
+        "config"
+      ],
+      "files": [
+        "src/site/shell.tsx",
+        "src/site/studio-shell.tsx",
+        "src/site/home.tsx",
+        "src/site/hero.tsx",
+        "src/site/crown-mark.tsx",
+        "src/site/error-component.tsx",
+        "src/site/failure.tsx"
+      ],
+      "contract": null,
+      "mock": null,
+      "fixtures": [],
+      "tests": [
+        "tests/site.test.ts"
+      ],
+      "realTests": [],
+      "failureScreens": [
+        "crash"
+      ],
+      "status": {
+        "blueprint": false,
+        "contract": false,
+        "tests": false,
+        "mockGreen": null,
+        "realGreen": null
+      }
+    }
+  ]
+}
