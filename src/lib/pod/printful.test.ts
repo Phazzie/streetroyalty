@@ -412,3 +412,64 @@ describe("sandbox provider", () => {
     assert.equal(svg.includes("&lt;script&gt;"), true);
   });
 });
+
+describe("printful photo sets", () => {
+  it("sends every spot in one task and reads back each photo, asking again while pending", async () => {
+    let polls = 0;
+    const { fetchImpl, calls } = mockFetch((call) => {
+      if (call.method === "POST") return { json: { data: [{ id: 55, status: "pending" }] } };
+      polls += 1;
+      return {
+        json: {
+          data: [
+            {
+              id: 55,
+              status: "completed",
+              catalog_variant_mockups: [
+                {
+                  mockups: [
+                    { placement: "front", mockup_url: "https://cdn/front.jpg" },
+                    { placement: "back", mockup_url: "https://cdn/back.jpg" },
+                    { placement: "back" },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      };
+    });
+    const provider = createPrintfulProvider({ apiKey: "k", fetchImpl, mockupPoll: { attempts: 3, delayMs: 0 } });
+    const set = await provider.createPhotoSet({
+      productId: "586",
+      variantId: "4011",
+      technique: "dtg",
+      spots: [
+        { placement: "front", url: "https://shop/f.png", area: { placement: "front", widthIn: 12, heightIn: 16, dpi: 150 } },
+        { placement: "back", url: "https://shop/b.png" },
+      ],
+    });
+    assert.equal(polls, 1);
+    assert.equal(set.status, "completed");
+    assert.deepEqual(set.photos.map((photo) => photo.placement), ["front", "back"]);
+    const body = calls[0]?.body as { products: { catalog_variant_ids: number[]; placements: { layers: { position?: unknown }[] }[] }[] };
+    assert.deepEqual(body.products[0]?.catalog_variant_ids, [4011]);
+    assert.equal(body.products[0]?.placements.length, 2);
+    assert.ok(body.products[0]?.placements[0]?.layers[0]?.position);
+    assert.equal(body.products[0]?.placements[1]?.layers[0]?.position, undefined);
+  });
+
+  it("reports a failed task with Printful's reason and refuses an empty piece", async () => {
+    const { fetchImpl } = mockFetch(() => ({
+      json: { data: { id: 9, status: "failed", failure_reasons: [{ detail: "Bad file" }] } },
+    }));
+    const provider = createPrintfulProvider({ apiKey: "k", fetchImpl, mockupPoll: { attempts: 0, delayMs: 0 } });
+    const set = await provider.getPhotoSet("9");
+    assert.equal(set.status, "failed");
+    assert.equal(set.error, "Bad file");
+    await assert.rejects(
+      provider.createPhotoSet({ productId: "586", variantId: "1", technique: "dtg", spots: [] }),
+      /Put art/,
+    );
+  });
+});

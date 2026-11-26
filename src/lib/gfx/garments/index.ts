@@ -219,13 +219,17 @@ function layerMarkup(layer: DesignLayer, window: PrintWindow, fallbackInk: strin
     const ink = escapeXml(inkColor(layer.color, fallbackInk));
     const face = `font-family="${body ? BODY_STACK : DISPLAY_STACK}" font-weight="${body ? 400 : 900}"`;
     const fx = clampFx({ arc: layer.arc, outline: layer.outline, tracking: layer.tracking });
+    const sticker = (fontSize: number) =>
+      !fx.outline && /^#[0-9a-f]{6}$/i.test(String(layer.stroke ?? ""))
+        ? ` stroke="${escapeXml(String(layer.stroke))}" stroke-width="${f(Math.max(0.3, fontSize * 0.18))}" stroke-linejoin="round" paint-order="stroke"`
+        : "";
     const paint = (fontSize: number) =>
       fx.outline
         ? `fill="none" stroke="${ink}" stroke-width="${f(Math.max(0.3, fontSize * OUTLINE_EM))}" stroke-linejoin="round"`
-        : `fill="${ink}"`;
+        : `fill="${ink}"${sticker(fontSize)}`;
     if (isFlatText(fx)) {
       const length = Math.min(maxWidth, textEms(text, body) * size);
-      return `<text x="${f(cx)}" y="${f(cy)}" fill="${ink}" ${face} font-size="${f(size)}" text-anchor="middle" dominant-baseline="central" textLength="${f(Math.max(1, length))}" lengthAdjust="spacingAndGlyphs" transform="${turn}">${escapeXml(text)}</text>`;
+      return `<text x="${f(cx)}" y="${f(cy)}" fill="${ink}"${sticker(size)} ${face} font-size="${f(size)}" text-anchor="middle" dominant-baseline="central" textLength="${f(Math.max(1, length))}" lengthAdjust="spacingAndGlyphs" transform="${turn}">${escapeXml(text)}</text>`;
     }
     if (Math.abs(fx.arc) < 0.001) {
       // A straight line with spacing or an outline: the same widths and fit as the print file.
@@ -432,4 +436,57 @@ export function garmentMockupSvg(input: GarmentMockupInput): string {
 export function garmentFlatSvg(shape: string, colorHex: string): string {
   const resolved = resolveShape(shape);
   return toDataUrl(compose({ shape: resolved, view: "front", colorHex, layers: [], square: true }));
+}
+
+/**
+ * The bare garment the studio designs on, and where its print area sits in the picture.
+ * `box` is in shares of the picture (480 × 600): the area's centre, its width and height,
+ * and how far it is turned, in degrees. The studio lays its live canvas over that box.
+ */
+export function garmentStage(input: {
+  shape: string;
+  colorHex: string;
+  placement: string;
+  printArea?: { widthIn: number; heightIn: number };
+}): { src: string; box: { cx: number; cy: number; w: number; h: number; rot: number } } {
+  const shape = resolveShape(input?.shape);
+  const view = resolveView(shape, input?.placement);
+  const drawing = drawGarment(shape, view, input?.placement);
+  const window = fitWindow(drawing.window, input?.printArea);
+  const src = toDataUrl(
+    compose({
+      shape,
+      view,
+      placement: input?.placement,
+      colorHex: input?.colorHex,
+      layers: [],
+      square: false,
+      printArea: input?.printArea,
+    }),
+  );
+  let cx = window.x + window.w / 2;
+  let cy = window.y + window.h / 2;
+  let zoom = 1;
+  let rot = window.rot;
+  const camera = drawing.camera;
+  if (camera) {
+    const [ax, ay] = camera.at ?? [240, 296];
+    const turn = (camera.rot * Math.PI) / 180;
+    const dx = (cx - camera.x) * camera.zoom;
+    const dy = (cy - camera.y) * camera.zoom;
+    cx = ax + dx * Math.cos(turn) - dy * Math.sin(turn);
+    cy = ay + dx * Math.sin(turn) + dy * Math.cos(turn);
+    zoom = camera.zoom;
+    rot += camera.rot;
+  }
+  return {
+    src,
+    box: {
+      cx: cx / 480,
+      cy: cy / 600,
+      w: (window.w * zoom) / 480,
+      h: (window.h * zoom) / 600,
+      rot,
+    },
+  };
 }

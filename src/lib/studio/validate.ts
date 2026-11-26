@@ -1,7 +1,9 @@
 import type { DesignLayer, Recipient } from "../pod/types.ts";
 import { clampFx } from "./textfx.ts";
 
-export const STUDIO_FONTS = ["Archivo Black", "Outfit"] as const;
+import { FONT_NAMES } from "./fonts.ts";
+
+export const STUDIO_FONTS: readonly string[] = FONT_NAMES;
 
 export const MAX_LAYERS = 8;
 const MAX_LAYER_SRC = 1_400_000;
@@ -33,7 +35,7 @@ export function parseLayers(input: unknown): DesignLayer[] {
         throw new Error("That artwork is too heavy. Use a smaller file.");
       return { ...shared, type: "image" as const, src };
     }
-    const font = STUDIO_FONTS.includes(layer.font as (typeof STUDIO_FONTS)[number])
+    const font = STUDIO_FONTS.includes(String(layer.font))
       ? String(layer.font)
       : "Archivo Black";
     const color = /^#[0-9a-fA-F]{6}$/.test(String(layer.color ?? ""))
@@ -51,8 +53,10 @@ function textExtras(layer: Record<string, unknown>): {
   arc?: number;
   outline?: boolean;
   tracking?: number;
+  stroke?: string;
 } {
-  if (layer.arc == null && layer.tracking == null && layer.outline == null) return {};
+  const stroke = /^#[0-9a-fA-F]{6}$/.test(String(layer.stroke ?? "")) ? String(layer.stroke) : "";
+  if (layer.arc == null && layer.tracking == null && layer.outline == null) return stroke ? { stroke } : {};
   const fx = clampFx({
     arc: layer.arc == null ? 0 : Number(layer.arc),
     tracking: layer.tracking == null ? 0 : Number(layer.tracking),
@@ -62,6 +66,7 @@ function textExtras(layer: Record<string, unknown>): {
     ...(fx.arc !== 0 ? { arc: fx.arc } : {}),
     ...(fx.outline ? { outline: true } : {}),
     ...(fx.tracking !== 0 ? { tracking: fx.tracking } : {}),
+    ...(stroke && !fx.outline ? { stroke } : {}),
   };
 }
 
