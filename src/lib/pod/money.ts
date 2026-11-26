@@ -32,11 +32,18 @@ export function applyMarkup(wholesaleCents: number, markup: number): number {
   return Math.ceil(raw / 100) * 100;
 }
 
+/** "$35" for a whole-dollar price, "$40.95" otherwise. */
 export function formatMoney(cents: number, currency = "USD"): string {
-  const value = Number.isFinite(cents) ? cents : 0;
+  const value = Number.isFinite(cents) ? Math.round(cents) : 0;
+  const digits = value % 100 === 0 ? 0 : 2;
   try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(value / 100);
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    }).format(value / 100);
   } catch {
-    return `$${(value / 100).toFixed(2)}`;
+    return `$${(value / 100).toFixed(digits)}`;
   }
 }

@@ -43,7 +43,7 @@ function printerNow(): PrinterId {
 }
 
 /** Load the printer's product for a template id or an unmapped catalog id. */
-async function openCatalog(productId: string) {
+export async function openCatalog(productId: string) {
   const printer = printerNow();
   const templateId = resolveTemplateId(productId);
   const catalogId = templateId ? catalogIdFor(printer, templateId) : productId;

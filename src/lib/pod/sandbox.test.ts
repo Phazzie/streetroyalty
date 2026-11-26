@@ -427,7 +427,8 @@ describe("money", () => {
 
   it("formats for display, and survives a currency it does not know", () => {
     expect(formatMoney(6983)).toBe("$69.83");
-    expect(formatMoney(Number.NaN)).toBe("$0.00");
-    expect(formatMoney(500, "not-a-currency")).toBe("$5.00");
+    expect(formatMoney(Number.NaN)).toBe("$0");
+    expect(formatMoney(500, "not-a-currency")).toBe("$5");
+    expect(formatMoney(595, "not-a-currency")).toBe("$5.95");
   });
 });
