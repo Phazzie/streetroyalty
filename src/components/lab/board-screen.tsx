@@ -8,7 +8,7 @@ import { cn } from "@/lib/cn";
 import { useLab } from "@/lib/store";
 import { CATEGORIES } from "@/lib/types";
 
-const EXAMPLES = ["black hoodie", "wool trousers", "leather loafers"] as const;
+const EXAMPLES = ["black hoodie", "lavender hoodie", "black sweatpants"] as const;
 
 export function BoardScreen() {
   const setView = useLab((state) => state.setView);

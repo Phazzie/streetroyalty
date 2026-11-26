@@ -1,339 +1,158 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Pause, Play } from "lucide-react";
-import { cn } from "@/lib/cn";
-import { SlideStage } from "@/lib/gl/slides";
+import { ArrowRight } from "lucide-react";
+import { garmentMockupSvg } from "@/lib/gfx/garments";
+import { HOUSE_BLANKS, type HouseBlank } from "@/lib/pod/house-blanks";
+import type { DesignLayer } from "@/lib/pod/types";
 
-type Slide = {
-  id: string;
-  wide: string;
-  tall: string;
-  /** Subject position in the wide photo, 0..1 from the top left. */
-  focus: [number, number];
-  alt: string;
-  kicker: string;
-  lines: string[];
-  body: string;
-  cta: { label: string; to: "/rack" | "/lab" };
-  side: "left" | "right";
+/** How long each blank holds a colour before it moves to the next real one. */
+const TURN_MS = 2600;
+
+const INK_ON_DARK = "#d6ff3c";
+const INK_ON_LIGHT = "#17101f";
+
+function lightness(hex: string): number {
+  const n = Number.parseInt(hex.replace("#", ""), 16) || 0;
+  return ((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114;
+}
+
+/** The house mark, the way a maker would set it in the studio. */
+function mark(text: string, colorHex: string): DesignLayer[] {
+  return [
+    {
+      id: "mark",
+      type: "text",
+      text,
+      font: "Archivo Black",
+      color: lightness(colorHex) > 140 ? INK_ON_LIGHT : INK_ON_DARK,
+      x: 0.5,
+      y: 0.32,
+      scale: 1,
+      rotation: 0,
+    },
+  ];
+}
+
+const MARK: Record<HouseBlank["shape"], string> = {
+  tee: "CROWN",
+  hoodie: "DO BETTER",
+  crew: "ROYALTY",
+  joggers: "SR",
+  tote: "KING",
 };
 
-const SLIDES: Slide[] = [
-  {
-    id: "lilac",
-    wide: "/brand/hero-night-lilac.webp",
-    tall: "/brand/hero-night-lilac-tall.webp",
-    focus: [0.3, 0.5],
-    alt: "The Lilac Set on a rain-slick crosswalk at night, coffee in hand",
-    kicker: "The Lilac Set",
-    lines: ["Crown never", "came off."],
-    body: "Lilac and cream, printed two-tone. Hoodie and jogger, cut to be worn together.",
-    cta: { label: "See the rack", to: "/rack" },
-    side: "right",
-  },
-  {
-    id: "mint",
-    wide: "/brand/hero-night-mint.webp",
-    tall: "/brand/hero-night-mint-tall.webp",
-    focus: [0.715, 0.5],
-    alt: "The Mint Set, leaning on a black coupe under a street lamp",
-    kicker: "The Mint Set",
-    lines: ["Just", "dressing it."],
-    body: "Mint and peach, printed two-tone. The second set, same block.",
-    cta: { label: "See the rack", to: "/rack" },
-    side: "left",
-  },
-  {
-    id: "lab",
-    wide: "/brand/hero-throne.webp",
-    tall: "/brand/hero-throne-tall.webp",
-    focus: [0.5, 0.45],
-    alt: "The Lilac Set, seated on a concrete block under one spotlight",
-    kicker: "Outfit Lab",
-    lines: ["Your face.", "Our fits."],
-    body: "Lock your face with three photos, name the pieces, and watch yourself walk the runway.",
-    cta: { label: "Open the lab", to: "/lab" },
-    side: "left",
-  },
-];
+const SHORT: Record<string, string> = {
+  "tee-heavy": "Tee",
+  "hoodie-pullover": "Hoodie",
+  "crew-sweat": "Crewneck",
+  "longsleeve-block": "Long-sleeve",
+  "jogger-court": "Sweatpants",
+  "tote-corner": "Tote",
+};
 
-const HOLD_MS = 6500;
+function frontSpot(blank: HouseBlank): string {
+  return blank.placements[0]?.placement ?? "front";
+}
+
+/** One real blank, stepping through the colours Printful really stocks it in. */
+function Piece({ blank, step }: { blank: HouseBlank; step: number }) {
+  const color = blank.colors[step % blank.colors.length] ?? blank.colors[0];
+  const hex = color?.hex ?? "#111111";
+  const art = useMemo(
+    () =>
+      garmentMockupSvg({
+        shape: blank.shape,
+        colorHex: hex,
+        placement: frontSpot(blank),
+        layers: mark(MARK[blank.shape], hex),
+      }),
+    [blank, hex],
+  );
+  return (
+    <li className="min-w-0">
+      <Link
+        to="/studio"
+        className="group block border-2 border-line bg-surface transition-colors duration-150 hover:border-accent focus-visible:border-accent focus-visible:outline-none"
+      >
+        <img
+          src={art}
+          alt={`${blank.name} in ${color?.name ?? "black"}`}
+          width={400}
+          height={400}
+          className="aspect-square w-full object-cover"
+        />
+        <span className="block border-t-2 border-line px-2.5 py-2">
+          <span className="block truncate font-display text-xs tracking-wide uppercase">
+            {SHORT[blank.id] ?? blank.name}
+          </span>
+          <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
+            <span
+              className="inline-block h-2.5 w-2.5 shrink-0 border border-fg/40"
+              style={{ background: hex }}
+              aria-hidden="true"
+            />
+            <span className="truncate">
+              {color?.name} · {blank.colors.length} colours
+            </span>
+          </span>
+        </span>
+      </Link>
+    </li>
+  );
+}
 
 export function Hero() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const stageRef = useRef<SlideStage | null>(null);
-  const rootRef = useRef<HTMLElement>(null);
-  const [index, setIndex] = useState(0);
-  // The slide the WebGL stage is showing, or -1 while only the plain photos can be trusted.
-  const [stageSlide, setStageSlide] = useState(-1);
-  const [paused, setPaused] = useState(false);
-  const [reduced, setReduced] = useState(false);
-  // Unknown until the browser is asked, so a phone never loads the wide crops first.
-  const [tall, setTall] = useState<boolean | null>(null);
-  const indexRef = useRef(0);
-  const hover = useRef(false);
-  // True once every photo has either loaded into the stage or failed to.
-  const settled = useRef(false);
+  const [step, setStep] = useState(0);
 
   useEffect(() => {
-    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const shape = window.matchMedia("(max-aspect-ratio: 4/5)");
-    const sync = () => {
-      setReduced(motion.matches);
-      setTall(shape.matches);
-    };
-    sync();
-    motion.addEventListener("change", sync);
-    shape.addEventListener("change", sync);
-    return () => {
-      motion.removeEventListener("change", sync);
-      shape.removeEventListener("change", sync);
-    };
-  }, []);
-
-  // WebGL stage. The plain photos underneath stay as the fallback and the first paint.
-  // It is rebuilt when the screen flips between tall and wide, because each has its own crops.
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || reduced || tall === null) return;
-    const stage = new SlideStage(canvas, {
-      // A lost context leaves a stale frame on the canvas, so hand the hero back to the photos.
-      onLost: () => setStageSlide(-1),
-    });
-    if (!stage.ok) return;
-    stageRef.current = stage;
-    let alive = true;
-    const source = (slide: Slide) =>
-      tall
-        ? { src: slide.tall, focus: [0.5, 0.5] as [number, number] }
-        : { src: slide.wide, focus: slide.focus };
-
-    const onResize = () => stage.resize();
-    const onPointer = (event: PointerEvent) => {
-      if (event.pointerType !== "mouse") return;
-      stage.setPointer(
-        (event.clientX / window.innerWidth) * 2 - 1,
-        1 - (event.clientY / window.innerHeight) * 2,
-      );
-    };
-    const visible = new IntersectionObserver(([entry]) => {
-      if (entry?.isIntersecting && !document.hidden) stage.start();
-      else stage.stop();
-    });
-    const onVisibility = () => {
-      if (document.hidden) stage.stop();
-      else stage.start();
-    };
-
-    void (async () => {
-      // Load the slide on screen first, then the rest in order.
-      const order = [
-        indexRef.current,
-        ...SLIDES.map((_, at) => at).filter((at) => at !== indexRef.current),
-      ];
-      let started = false;
-      settled.current = false;
-      for (const at of order) {
-        const loaded = await stage.load(at, source(SLIDES[at]));
-        if (!alive || !stage.ok) return;
-        if (!loaded) continue;
-        if (!started) {
-          stage.resize();
-          stage.start();
-          visible.observe(canvas);
-          started = true;
-        }
-        // If the visitor is looking at this slide and the stage is not, catch the stage up.
-        if (at === indexRef.current && stage.showing() !== at) {
-          stage.cut(at);
-          setStageSlide(at);
-        }
-      }
-      settled.current = true;
-    })();
-
-    window.addEventListener("resize", onResize);
-    window.addEventListener("pointermove", onPointer, { passive: true });
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      alive = false;
-      visible.disconnect();
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("pointermove", onPointer);
-      document.removeEventListener("visibilitychange", onVisibility);
-      stage.destroy();
-      stageRef.current = null;
-      setStageSlide(-1);
-    };
-  }, [reduced, tall]);
-
-  const go = useCallback((next: number) => {
-    const target = (next + SLIDES.length) % SLIDES.length;
-    const stage = stageRef.current;
-    indexRef.current = target;
-    setIndex(target);
-    // A photo the stage has not loaded yet is shown by the plain image until the loader catches up.
-    setStageSlide(stage?.ok && stage.show(target) ? target : -1);
-  }, []);
-
-  useEffect(() => {
-    if (paused || reduced) return;
-    const timer = window.setInterval(() => {
-      if (hover.current || document.hidden) return;
-      const target = (indexRef.current + 1) % SLIDES.length;
-      const stage = stageRef.current;
-      // Wait a beat rather than advance to a photo the stage is still loading. A photo that
-      // failed to load is not waited for: the plain image shows that slide instead.
-      if (stage?.ok && !stage.has(target) && !settled.current) return;
-      go(target);
-    }, HOLD_MS);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = window.setInterval(() => setStep((now) => now + 1), TURN_MS);
     return () => window.clearInterval(timer);
-  }, [go, paused, reduced]);
-
-  const slide = SLIDES[index];
-  const stageShows = stageSlide === index;
+  }, []);
 
   return (
-    <section
-      ref={rootRef}
-      className="night relative isolate flex min-h-svh flex-col justify-end overflow-hidden"
-      aria-roledescription="carousel"
-      aria-label="The drop"
-      onPointerEnter={() => {
-        hover.current = true;
-      }}
-      onPointerLeave={() => {
-        hover.current = false;
-      }}
-      onFocusCapture={() => {
-        hover.current = true;
-      }}
-      onBlurCapture={() => {
-        hover.current = false;
-      }}
-    >
-      <div className="absolute inset-0 -z-10">
-        {SLIDES.map((item, at) => (
-          <picture key={item.id}>
-            <source media="(max-aspect-ratio: 4/5)" srcSet={item.tall} />
-            <img
-              src={item.wide}
-              alt={at === index ? item.alt : ""}
-              loading={at === 0 ? "eager" : "lazy"}
-              fetchPriority={at === 0 ? "high" : "auto"}
-              decoding="async"
-              className={cn(
-                "absolute inset-0 h-full w-full object-cover transition-opacity duration-700",
-                at === index ? "opacity-100" : "opacity-0",
-              )}
-              style={{ objectPosition: `${item.focus[0] * 100}% ${item.focus[1] * 100}%` }}
-            />
-          </picture>
-        ))}
-        <canvas
-          ref={canvasRef}
-          aria-hidden="true"
-          className={cn(
-            "absolute inset-0 h-full w-full transition-opacity duration-500",
-            stageShows ? "opacity-100" : "opacity-0",
-          )}
-        />
-        <div className="absolute inset-0 bg-linear-to-t from-night via-night/35 to-night/30" />
-        <div
-          className={cn(
-            "absolute inset-0 hidden transition-opacity duration-700 md:block",
-            slide.side === "right" ? "bg-linear-to-l" : "bg-linear-to-r",
-            "from-night/75 via-night/10 to-transparent",
-          )}
-        />
-      </div>
-
-      <div className="mx-auto w-full max-w-7xl px-4 pt-28 pb-8 sm:px-6 md:pb-12">
-        <div
-          key={slide.id}
-          className={cn(
-            "flex max-w-xl flex-col",
-            slide.side === "right" ? "md:ml-auto md:items-end md:text-right" : "",
-          )}
-        >
-          <p
-            className="eyebrow hero-fade text-accent"
-            style={{ "--line-delay": "80ms" } as CSSProperties}
-          >
-            {slide.kicker}
-          </p>
-          <h1 className="display mt-4 text-[clamp(3.6rem,13vw,9.5rem)] text-fg">
-            {slide.lines.map((line, at) => (
-              <span key={line} className="hero-line">
-                <span style={{ "--line-delay": `${140 + at * 110}ms` } as CSSProperties}>
-                  {line}
-                </span>
-              </span>
-            ))}
+    <section className="night relative isolate overflow-hidden border-b-2 border-ink">
+      <div
+        className="pointer-events-none absolute -top-40 -right-40 -z-10 h-[36rem] w-[36rem] rounded-full bg-lilac-soft/15 blur-3xl"
+        aria-hidden="true"
+      />
+      <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 pt-28 pb-14 sm:px-6 lg:grid-cols-[1fr_1.05fr] lg:items-center lg:gap-14 lg:pt-32 lg:pb-20">
+        <div>
+          <p className="eyebrow text-accent">Street Royalty · made to order</p>
+          <h1 className="display mt-4 text-[clamp(3.4rem,11vw,8rem)] text-fg">
+            Crown never
+            <br />
+            came off.
           </h1>
-          <p
-            className="hero-fade mt-5 max-w-md text-lg text-muted"
-            style={{ "--line-delay": "420ms" } as CSSProperties}
-          >
-            {slide.body}
+          <p className="mt-6 max-w-md text-lg text-muted">
+            Six real blanks, in the colours they really come in. Put your art on every spot they
+            print: front, back, sleeves, down the leg. Printful makes it after you pay.
           </p>
-          <div
-            className={cn(
-              "hero-fade mt-7 flex flex-wrap gap-3",
-              slide.side === "right" ? "md:justify-end" : "",
-            )}
-            style={{ "--line-delay": "520ms" } as CSSProperties}
-          >
+          <div className="mt-8 flex flex-wrap gap-3">
             <Link
-              to={slide.cta.to}
+              to="/studio"
               className="sticker-shadow inline-flex h-14 items-center gap-2 border-2 border-ink bg-accent px-6 font-display text-sm tracking-wider text-accent-fg uppercase transition-transform duration-150 active:scale-[0.98]"
             >
-              {slide.cta.label}
+              Make your piece
               <ArrowRight className="h-4 w-4" strokeWidth={3} />
             </Link>
             <Link
-              to={slide.cta.to === "/lab" ? "/rack" : "/lab"}
+              to="/rack"
               className="inline-flex h-14 items-center border-2 border-fg/70 px-6 font-display text-sm tracking-wider text-fg uppercase transition-colors duration-150 hover:bg-fg/10"
             >
-              {slide.cta.to === "/lab" ? "See the rack" : "Try it on in the lab"}
+              See the rack
             </Link>
           </div>
         </div>
-
-        <div className="mt-10 flex items-center gap-3">
-          <div className="flex flex-1 gap-2" role="group" aria-label="Slides">
-            {SLIDES.map((item, at) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => go(at)}
-                aria-label={`Show ${item.kicker}`}
-                aria-current={at === index ? "true" : undefined}
-                className="group flex h-11 flex-1 items-center sm:max-w-28"
-              >
-                <span className="relative block h-0.5 w-full overflow-hidden bg-fg/30">
-                  <span
-                    key={`${item.id}-${at === index ? index : "idle"}-${paused || reduced ? "held" : "run"}`}
-                    className={cn(
-                      "absolute inset-y-0 left-0 bg-accent",
-                      at === index ? (paused || reduced ? "w-full" : "hero-progress") : "w-0",
-                    )}
-                    style={{ animationDuration: `${HOLD_MS}ms` }}
-                  />
-                </span>
-              </button>
+        <div>
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label="The six blanks">
+            {HOUSE_BLANKS.map((blank, index) => (
+              <Piece key={blank.id} blank={blank} step={step + index} />
             ))}
-          </div>
-          {reduced ? null : (
-            <button
-              type="button"
-              onClick={() => setPaused((value) => !value)}
-              className="grid h-11 w-11 place-items-center rounded-full text-fg hover:bg-fg/10"
-              aria-label={paused ? "Play the slides" : "Pause the slides"}
-            >
-              {paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-            </button>
-          )}
+          </ul>
+          <p className="mt-3 text-xs text-subtle">
+            Drawings of the real blanks. Every colour shown is one Printful stocks.
+          </p>
         </div>
       </div>
     </section>

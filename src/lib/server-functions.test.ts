@@ -89,7 +89,6 @@ describe("server functions", () => {
   it("refuses a signed-out caller on every route that spends on xAI", () => {
     const paid = [
       "generateArt",
-      "generatePiece",
       "generateLook",
       "startRunway",
       "pollRunway",

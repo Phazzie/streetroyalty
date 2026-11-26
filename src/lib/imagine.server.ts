@@ -117,6 +117,10 @@ async function generateImage(
   return { ok: true, image, prompt: String(body.prompt ?? "") };
 }
 
+/**
+ * A made-up garment picture. No route calls it since the lab went to real blanks
+ * only (2026-11-26). Its tests still cover the shared image path.
+ */
 export async function runPiece(input: { spoken: string; category: string }): Promise<ImageResult> {
   if (!input.spoken || !isCategory(input.category)) return { ok: false, kind: "missed" };
   const prompt = piecePrompt(input.spoken, input.category);

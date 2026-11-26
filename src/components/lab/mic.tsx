@@ -18,7 +18,7 @@ function confirmFor(text: string, view: View): { prompt: string; yes: string } |
     const names = plan.pieces.map((piece) => piece.spoken).join(", ");
     return { prompt: `Build ${names}?`, yes: copy.buildIt };
   }
-  if (plan.kind === "tweak") return { prompt: `Change the look to ${text}?`, yes: copy.changeIt };
+  // Look tweaks are off while the lab only shows real pieces, so no prompt for them.
   if (plan.kind === "wear") return { prompt: "Put the selected pieces on you?", yes: copy.putOn };
   if (plan.kind === "runway") return { prompt: "Send this look down the runway?", yes: copy.runway };
   if (plan.kind === "again") return { prompt: "Build that again?", yes: copy.buildIt };
