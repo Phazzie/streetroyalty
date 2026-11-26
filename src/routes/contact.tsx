@@ -21,7 +21,7 @@ function ContactPage() {
         <p>
           <a
             href={`mailto:${email}`}
-            className="display break-all text-3xl no-underline hover:underline sm:text-4xl"
+            className="display break-all text-3xl normal-case no-underline hover:underline sm:text-4xl"
           >
             {email}
           </a>
