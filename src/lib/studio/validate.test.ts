@@ -75,7 +75,9 @@ describe("print file capability", () => {
   });
 
   it("rounds retail to integer cents", () => {
-    assert.equal(applyMarkup(1395, 2.2), 3069);
+    assert.equal(applyMarkup(1395, 2.2), 3100);
+    assert.equal(applyMarkup(1560, 2.2), 3500);
+    assert.equal(applyMarkup(1000, 2), 2000);
     assert.equal(Number.isInteger(applyMarkup(1, 2.2)), true);
   });
 });

@@ -185,7 +185,7 @@ describe("garment identity across printers", () => {
     // The sandbox cart line maps to Printful's black M of product 586.
     const cart = await listCart("bo");
     expect(cart).toHaveLength(1);
-    expect(cart[0]?.unitCents).toBe(3432);
+    expect(cart[0]?.unitCents).toBe(3500);
     expect(asked).toContain("586");
     await addToCart("bo", saved.id, "tee-heavy-black-l");
     expect(await listCart("bo")).toHaveLength(2);

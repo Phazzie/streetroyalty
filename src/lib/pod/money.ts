@@ -22,9 +22,14 @@ export function clampMarkup(markup: number): number {
   return Math.min(5, Math.max(1, markup));
 }
 
+/**
+ * Wholesale times the markup, rounded up to a whole dollar. A tag reads $35, not $34.32.
+ * Rounding up keeps the shop's cut at or above the markup it set.
+ */
 export function applyMarkup(wholesaleCents: number, markup: number): number {
   const factor = clampMarkup(markup);
-  return Math.max(0, Math.round(wholesaleCents * factor));
+  const raw = Math.max(0, Math.round(wholesaleCents * factor));
+  return Math.ceil(raw / 100) * 100;
 }
 
 export function formatMoney(cents: number, currency = "USD"): string {

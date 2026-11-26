@@ -96,7 +96,7 @@ describe("the sandbox catalog", () => {
 
   it("follows a different markup", async () => {
     const cheap = await createSandboxProvider(new Map(), 1).getProduct("tee-heavy");
-    expect(cheap.variants[0]?.retailCents).toBe(cheap.variants[0]?.wholesaleCents);
+    expect(cheap.variants[0]?.retailCents).toBe(Math.ceil((cheap.variants[0]?.wholesaleCents ?? 0) / 100) * 100);
   });
 
   it("labels all-over blanks as sublimation on polyester, not sewn cotton", async () => {

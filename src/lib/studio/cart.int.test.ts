@@ -11,7 +11,7 @@ import {
 import { truncateAll } from "../../test/db.ts";
 import { RECIPIENT, TEE, seedDesign, seedUser } from "../../test/seed.ts";
 
-const TEE_PRICE = 3432; // Printful wholesale 1560 (Comfort Colors 1717, M) at the default 2.2 markup, rounded the way the shop rounds
+const TEE_PRICE = 3500; // Printful wholesale 1560 (Comfort Colors 1717, M) at the default 2.2 markup, rounded the way the shop rounds
 
 async function onlyLine(userId: string) {
   const lines = await listCart(userId);
