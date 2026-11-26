@@ -110,11 +110,11 @@ describe("the sandbox catalog", () => {
     expect(hoodie.materialNote).toMatch(/sublimation/);
     expect(hoodie.materialNote).toMatch(/not sewn cotton/);
     expect(hoodie.description).toMatch(/388/);
+    // The Printful API confirms the joggers' and jacket's cloth too (docs/printful-aop-data.md).
     for (const id of ["aop-joggers", "aop-track-jacket"]) {
       const piece = await provider.getProduct(id);
-      expect(piece.materialNote).toMatch(/fabric is not confirmed/);
-      expect(piece.materialNote).not.toMatch(/sublimation|polyester|cotton/);
-      expect(piece.description).not.toMatch(/polyester|spandex/);
+      expect(piece.materialNote).toMatch(/recycled polyester and elastane/i);
+      expect(piece.materialNote).toMatch(/not sewn cotton/);
     }
   });
 

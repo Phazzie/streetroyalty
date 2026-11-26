@@ -4,6 +4,7 @@ import type { CatalogProduct } from "../pod/types.ts";
 import { isPrintfulPlacementProduct } from "../pod/garment-map.ts";
 import {
   AOP_ORDER_CLOSED,
+  AOP_TECHNIQUE,
   activePrinter,
   canOrderProduct,
   catalogIdFor,
@@ -67,7 +68,10 @@ export async function addToCart(
   const product = await getPodProvider().getProduct(catalogId);
   const variant = product.variants.find((item) => item.id === variantId);
   const saved = product.variants.find((item) => item.id === design.variant_id);
-  if (!variant || (saved?.colorCode && variant.colorCode && saved.colorCode !== variant.colorCode)) {
+  if (
+    !variant ||
+    (saved?.colorCode && variant.colorCode && saved.colorCode !== variant.colorCode)
+  ) {
     throw new Error("Pick a size in this color.");
   }
   const colorway = colorwayId
@@ -157,11 +161,7 @@ export async function listCart(userId: string): Promise<CartLine[]> {
   const products = new Map<string, CatalogProduct>();
   for (const row of rows) {
     try {
-      const catalogId = catalogLookupId(
-        printerNow(),
-        rowTemplate(row),
-        row.provider_catalog_id,
-      );
+      const catalogId = catalogLookupId(printerNow(), rowTemplate(row), row.provider_catalog_id);
       if (!catalogId) continue;
       let product = products.get(catalogId);
       if (!product) {
@@ -218,6 +218,9 @@ export async function priceCart(userId: string) {
     // way a size that is gone does, rather than charge for a colorway the order will not name.
     if (row.cart_colorway_id && !colorway)
       throw new Error(`${row.title} no longer comes in that colorway. Remove it and pick again.`);
+    const garment = isAopProduct(templateId) ? parseStoredGarment(row.garment_json) : null;
+    if (isAopProduct(templateId) && !garment)
+      throw new Error(`${row.title} lost its panels. Open it in the studio and save it again.`);
     lines.push({
       designId: row.id,
       title: row.title,
@@ -226,9 +229,13 @@ export async function priceCart(userId: string) {
       quantity: Number(row.quantity),
       unitCents: variant.retailCents,
       placement: row.placement,
-      technique: row.technique,
+      technique: garment ? AOP_TECHNIQUE : row.technique,
       fileUrl: fileUrl(row.print_file_id),
       printArea: area,
+      // An all-over line prints every placement. Checkout turns this into one file per placement.
+      aop: garment
+        ? { garment, colorwayId: colorway?.id ?? null, logoFileId: row.print_file_id }
+        : undefined,
       colorwayId: colorway?.id,
       colorwayName: colorway?.name,
       templateId,

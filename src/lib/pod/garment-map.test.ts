@@ -72,7 +72,8 @@ describe("garment template mapping", () => {
     assert.equal(normalizeVariantIds(null), null);
     assert.equal(normalizeVariantIds([]), null);
     assert.deepEqual(normalizeVariantIds([9001, "9002"]), ["9001", "9002"]);
-    assert.equal(variantsForTemplate("printful", "aop-hoodie"), null);
+    assert.equal(variantsForTemplate("printful", "aop-hoodie")?.includes("10871"), true);
+    assert.equal(templateForVariant("printful", "10871"), "aop-hoodie");
     assert.equal(templateForVariant("printful", "9001"), null);
     assert.deepEqual(variantsForTemplate("printful", "aop-hoodie", FIXTURE), ["9001", "9002"]);
     assert.equal(templateForVariant("printful", "9002", FIXTURE), "aop-hoodie");

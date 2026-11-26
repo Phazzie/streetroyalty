@@ -7,7 +7,7 @@
  * This file stays so the existing studio importers do not have to move in
  * the same change. New code should import the domain or the bridge directly.
  */
-export { AOP_DPI, AOP_ORDER_CLOSED } from "../pod/aop-printful.ts";
+export { AOP_DPI, AOP_ORDER_CLOSED, AOP_TECHNIQUE } from "../pod/aop-printful.ts";
 export {
   AOP_TEMPLATES,
   COLOR_ROLES,
@@ -28,6 +28,7 @@ export {
   parseColorways,
   parseGarment,
   removeColorway,
+  labelAnchor,
   renderGarmentSvg,
   resolveGarment,
   resolvePaint,
@@ -38,6 +39,10 @@ export {
   updateColorway,
   visiblePanels,
   withSharedColorways,
+  coverageProblems,
+  printPlacements,
+  renderPrintSheet,
+  renderPrintSheets,
 } from "../garments/index.ts";
 export type {
   AopPanel,
@@ -50,6 +55,7 @@ export type {
   PanelFace,
   PanelFill,
   SetPiece,
+  PrintSheet,
 } from "../garments/index.ts";
 export {
   aopFieldsFor,
@@ -62,7 +68,6 @@ export {
   isPlacementBound,
   resolveTemplateId,
   materialLine,
-  panelExportPlan,
   parseStoredGarment,
   printfulCard,
   productForTemplate,
@@ -71,4 +76,4 @@ export {
   variantIdFor,
   variantsForTemplate,
 } from "./garment-bridge.ts";
-export type { PanelExportPlan, PrintfulCard, PrinterId } from "./garment-bridge.ts";
+export type { PrintfulCard, PrinterId } from "./garment-bridge.ts";

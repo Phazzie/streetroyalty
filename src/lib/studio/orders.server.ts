@@ -24,6 +24,7 @@ import { isPublicHttpUrl, parseRecipient } from "./validate.ts";
 import { isStudioAdmin } from "./admin.ts";
 import type { OrderSummary } from "./models.ts";
 import { priceCart } from "./cart.server.ts";
+import { aopFileUrls, saveAopRecipe } from "./aop-print.server.ts";
 import { assertCheckoutStartAllowed } from "./checkout-limit.ts";
 import { claimCheckout, releaseCheckout, waitForReplay } from "./checkout-claim.ts";
 import { checkoutAttemptKey } from "./checkout-key.ts";
@@ -38,8 +39,28 @@ export async function startCheckout(
   assertLivePaymentHasPrinter(config.podMode, config.paymentsMode);
   // A live draft bills the print wallet once it is confirmed. Sandbox payment must not open one.
   assertFulfillmentAllowed(config.podMode, config.paymentsMode);
-  const { provider, lines } = await priceCart(userId);
-  if (config.podMode === "live" && lines.some((line) => !isPublicHttpUrl(line.fileUrl))) {
+  const { provider, lines: priced } = await priceCart(userId);
+  // An all-over line gets one print file per placement, rendered from a snapshot of the piece.
+  const lines = await Promise.all(
+    priced.map(async (line) => {
+      if (!line.aop) return { ...line, files: undefined };
+      const recipe = await saveAopRecipe(userId, {
+        templateId: line.templateId,
+        garment: line.aop.garment,
+        colorwayId: line.aop.colorwayId,
+        logoFileId: line.aop.logoFileId,
+      });
+      const files = aopFileUrls(recipe, line.templateId);
+      return { ...line, files, fileUrl: files[0]?.url ?? line.fileUrl };
+    }),
+  );
+  if (
+    config.podMode === "live" &&
+    lines.some(
+      (line) =>
+        !isPublicHttpUrl(line.fileUrl) || line.files?.some((file) => !isPublicHttpUrl(file.url)),
+    )
+  ) {
     throw new Error("Set APP_PUBLIC_URL so Printful can download print files.");
   }
   const rates = await provider.shippingRates({
@@ -62,7 +83,12 @@ export async function startCheckout(
     const replay = claim.replay ?? (await waitForReplay(userId, idempotencyKey));
     if (!replay) throw new Error("Checkout did not start.");
     return replay.mode === "stripe"
-      ? { mode: "stripe" as const, orderId: replay.orderId, url: replay.url, totalCents: replay.totalCents }
+      ? {
+          mode: "stripe" as const,
+          orderId: replay.orderId,
+          url: replay.url,
+          totalCents: replay.totalCents,
+        }
       : { mode: "sandbox" as const, orderId: replay.orderId, totalCents: replay.totalCents };
   }
   let draftId: string | null = null;
@@ -84,6 +110,7 @@ export async function startCheckout(
         technique: line.technique,
         fileUrl: line.fileUrl,
         printArea: line.printArea,
+        files: line.files,
       })),
     });
     draftId = draft.id;

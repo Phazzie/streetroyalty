@@ -14,7 +14,6 @@ import {
 import type { CollectionRecord, DesignRecord, DesignSummary, ShopPiece } from "./models.ts";
 import {
   activePrinter,
-  canOrderProduct,
   canonicalTemplateId,
   catalogIdFor,
   catalogLookupId,
@@ -168,7 +167,9 @@ export async function saveDesign(
   if (keptBecauseAop) {
     garmentJson =
       input.garment != null && isAopProduct(templateId)
-        ? JSON.stringify(garmentFor({ ...product, id: templateId, aopTemplateId: templateId }, input.garment))
+        ? JSON.stringify(
+            garmentFor({ ...product, id: templateId, aopTemplateId: templateId }, input.garment),
+          )
         : (existing?.garment_json ?? null);
   }
   if (existing) {
@@ -292,10 +293,10 @@ export async function publishDesign(userId: string, designId: string): Promise<D
   const config = readStudioConfig();
   const templateId = row.template_id ?? row.product_id;
   const printer = printerNow();
-  // An all-over piece can go on the rack in either mode. Live mode does not
-  // sync it to Printful until every panel has a real print file. One chest
-  // logo would not match the panels the maker drew.
-  const holdPrinter = isAopProduct(templateId) && !canOrderProduct(templateId, printer);
+  // An all-over piece goes on the rack in either mode but is not synced to a
+  // Printful store product: its orders go straight to the catalog with one
+  // print file per placement, rendered at checkout from the colorway bought.
+  const holdPrinter = isAopProduct(templateId);
   let providerProductId = row.provider_product_id ?? null;
   if (config.podMode === "live" && !holdPrinter) {
     if (resolveTemplateId(templateId) && !catalogIdFor(printer, templateId)) {
@@ -344,11 +345,7 @@ export async function getShopDesign(slug: string): Promise<ShopPiece> {
   const row = rows[0];
   if (!row) throw new Error("That piece is not on the rack.");
   const templateId = row.template_id ?? row.product_id;
-  const lookup = catalogLookupId(
-    printerNow(),
-    templateId,
-    row.provider_catalog_id,
-  );
+  const lookup = catalogLookupId(printerNow(), templateId, row.provider_catalog_id);
   let product: CatalogProduct | null = null;
   if (lookup) {
     try {

@@ -1,7 +1,7 @@
 import { activeColorway, defaultGarment } from "./colorways.ts";
 import { resolvePaint } from "./fill.ts";
 import { getTemplate, visiblePanels } from "./panels.ts";
-import { LABEL_MAX, type GarmentDesign, type Paint } from "./types.ts";
+import { LABEL_MAX, type AopPanel, type GarmentDesign, type Paint } from "./types.ts";
 
 export function resolveGarment(garment: GarmentDesign, face: "front" | "back" = "front") {
   const template = getTemplate(garment.templateId);
@@ -15,6 +15,29 @@ export function resolveGarment(garment: GarmentDesign, face: "front" | "back" = 
       panel: item,
       paint: resolvePaint(item, fills.get(item.id), colorway),
     })),
+  };
+}
+
+/**
+ * Where the logo text sits on the flat: centred on the visible logo panel.
+ * Null when the logo is on the other face.
+ */
+export function labelAnchor(
+  panels: readonly AopPanel[],
+  label = "",
+): { x: number; y: number; size: number } | null {
+  const mark = panels.find((item) => item.kind === "mark");
+  if (!mark) return null;
+  // Sized so the line fits about the logo box's width, the way it prints.
+  const chars = Math.max(1, Array.from(label).length);
+  const size = Math.max(
+    5,
+    Math.min(16, Math.round(mark.box.h * 0.5), Math.floor((mark.box.w * 1.8) / chars)),
+  );
+  return {
+    x: mark.box.x + mark.box.w / 2,
+    y: Math.round(mark.box.y + mark.box.h / 2 + size / 3),
+    size,
   };
 }
 
@@ -75,17 +98,25 @@ export function renderGarmentSvg(input: {
       return `<clipPath id="clip-${item.id}"><path d="${item.d}"/></clipPath><image href="${href}" x="${item.box.x}" y="${item.box.y}" width="${item.box.w}" height="${item.box.h}" clip-path="url(#clip-${item.id})" preserveAspectRatio="xMidYMid slice"/>`;
     })
     .join("");
+  const fills = new Map(garment.panels.map((item) => [item.id, item.fill]));
   const shapes = resolved.panels
     .map(({ panel: item, paint }) => {
       const attrs = paintAttrs(item.id, paint);
+      // A logo with no patch is where the layers print, not a printed box.
+      if (item.kind === "mark" && (fills.get(item.id)?.kind ?? "role") === "role") return "";
       return `<path data-panel="${item.id}" d="${item.d}" fill="${attrs.fill}" stroke="#141018" stroke-width="1.5"/>`;
     })
     .join("");
   // Cut the raw text, by whole characters, before escaping. Cutting after would split an entity.
   const labelText = input.label ? Array.from(input.label).slice(0, LABEL_MAX).join("") : "";
-  const label = labelText
-    ? `<text x="200" y="172" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="14" fill="${escapeXml(resolved.colorway.colors.mark)}" stroke="${escapeXml(resolved.colorway.colors.body)}" stroke-width="3" stroke-linejoin="round" paint-order="stroke">${escapeXml(labelText)}</text>`
-    : "";
+  const markAt = labelAnchor(
+    resolved.panels.map(({ panel }) => panel),
+    labelText,
+  );
+  const label =
+    labelText && markAt
+      ? `<text x="${markAt.x}" y="${markAt.y}" text-anchor="middle" font-family="Arial Black, sans-serif" font-size="${markAt.size}" fill="${escapeXml(resolved.colorway.colors.mark)}" stroke="${escapeXml(resolved.colorway.colors.body)}" stroke-width="3" stroke-linejoin="round" paint-order="stroke">${escapeXml(labelText)}</text>`
+      : "";
   const { template } = resolved;
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="${template.viewBox}">

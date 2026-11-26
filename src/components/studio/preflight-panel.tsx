@@ -14,6 +14,7 @@ export function PreflightPanel({
   override,
   onOverride,
   notPrintingYet,
+  scope,
 }: {
   checks: PrintCheck[];
   verdict: CheckLevel;
@@ -21,17 +22,21 @@ export function PreflightPanel({
   onOverride: (value: boolean) => void;
   /** Set when this piece cannot be ordered yet: the check then says so instead of promising a print. */
   notPrintingYet?: string;
+  /** Says what the checks look at, when that is not the whole piece. */
+  scope?: string;
 }) {
   return (
     <div>
       <p className="mb-2 text-sm text-muted">
         {notPrintingYet
           ? `These checks cover the chest logo only. ${notPrintingYet}`
-          : verdict === "pass"
-            ? "Clean. It prints the way it looks."
-            : verdict === "warn"
-              ? "It will print. Know what you are accepting."
-              : "Something here will not survive the press."}
+          : `${scope ? `${scope} ` : ""}${
+              verdict === "pass"
+                ? "Clean. It prints the way it looks."
+                : verdict === "warn"
+                  ? "It will print. Know what you are accepting."
+                  : "Something here will not survive the press."
+            }`}
       </p>
       <ul className="flex flex-col gap-2">
         {checks.map((check) => (

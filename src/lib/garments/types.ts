@@ -20,14 +20,44 @@ export type PanelFill =
 
 export type PanelFace = "front" | "back" | "both";
 
+/**
+ * What a studio panel is on the printed garment.
+ * - `piece`: it colours whole pieces the printer cuts out.
+ * - `trim`: a printed band drawn over pieces, like a side stripe or piping.
+ *   The printer sews no panels or piping, so the two-tone look is printed.
+ * - `mark`: the chest logo. The maker's layers print there.
+ */
+export type PanelKind = "piece" | "trim" | "mark";
+
+/**
+ * A printed band on one piece, in inches on the print file.
+ * `edge` runs along the piece's left or right side, starting `offsetIn` in
+ * from its outermost edge. `line` runs along a line in template units.
+ */
+export type TrimBand =
+  | { edge: "left" | "right"; offsetIn: number; widthIn: number }
+  | { line: readonly [number, number, number, number]; widthIn: number };
+
+/** Where a panel prints: a cut piece in a printer placement, whole, as a band, or a logo box. */
+export type PanelTarget = {
+  placement: string;
+  piece: string;
+  band?: TrimBand;
+  /** Logo box in template units, for a `mark` panel. */
+  box?: { x: number; y: number; w: number; h: number };
+};
+
 export type AopPanel = {
   id: string;
   title: string;
   role: ColorRole;
   face: PanelFace;
+  kind: PanelKind;
   d: string;
   /** Studio drawing box in viewBox units. Not a printer template size. */
   box: { x: number; y: number; w: number; h: number };
+  /** The printer pieces this panel prints on. */
+  targets: readonly PanelTarget[];
 };
 
 export type AopTemplate = {

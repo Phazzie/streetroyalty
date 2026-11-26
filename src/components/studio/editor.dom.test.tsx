@@ -123,9 +123,11 @@ async function openHoodie(firstHeading: string) {
   expect(await screen.findByRole("img", { name: "AOP Hoodie, front" })).toBeTruthy();
   const titles = screen.getAllByRole("button").map((button) => button.textContent ?? "");
   expect(titles).toContain("Hood");
-  expect(
-    screen.getAllByText(/Ordering opens once the printer's panel templates/).length,
-  ).toBeGreaterThan(0);
+  // All-over pieces print from real Printful pieces now, so ordering is open.
+  expect(screen.queryByText(/cannot be ordered yet/)).toBeNull();
+  expect(screen.getByText(/These checks cover your logo layers/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "See print sheets" }));
+  expect(await screen.findByRole("img", { name: "Hood print sheet" })).toBeTruthy();
   expect(screen.queryByText(/Print area/)).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "See the set" }));
   await waitFor(() => {

@@ -167,6 +167,12 @@ export type DraftOrderItem = {
   technique: string;
   fileUrl: string;
   printArea?: PrintArea;
+  /**
+   * One file per placement, for an all-over piece. When present the printer
+   * gets these instead of the single `placement` / `fileUrl` pair, and each
+   * file fills its whole placement.
+   */
+  files?: { placement: string; url: string }[];
 };
 
 export type DraftOrderRequest = {

@@ -237,19 +237,26 @@ export function createPrintfulProvider(options: PrintfulClientOptions): PodProvi
       quantity: item.quantity,
       retail_price: centsToDecimal(item.retailCents),
       name: item.name,
-      placements: [
-        {
-          placement: item.placement,
-          technique: item.technique,
-          layers: [
+      // An all-over line sends one file per placement. Each one fills its placement, so no position.
+      placements: item.files?.length
+        ? item.files.map((file) => ({
+            placement: file.placement,
+            technique: item.technique,
+            layers: [{ type: "file", url: file.url }],
+          }))
+        : [
             {
-              type: "file",
-              url: item.fileUrl,
-              position: layerPosition(item.printArea),
+              placement: item.placement,
+              technique: item.technique,
+              layers: [
+                {
+                  type: "file",
+                  url: item.fileUrl,
+                  position: layerPosition(item.printArea),
+                },
+              ],
             },
           ],
-        },
-      ],
     };
   }
 

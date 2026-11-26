@@ -5,8 +5,8 @@
 import { parseGarment } from "../garments/colorways.ts";
 import type { GarmentDesign } from "../garments/types.ts";
 import { getTemplate } from "../garments/panels.ts";
-import { studioProofPixels } from "../garments/render.ts";
-import { aopOrderable, panelPrintTarget, type PanelPrintTarget } from "../pod/aop-printful.ts";
+import { coverageProblems } from "../garments/print.ts";
+import { aopOrderable } from "../pod/aop-printful.ts";
 import {
   aopFieldsFor,
   isSandboxPlacementProduct,
@@ -106,7 +106,8 @@ export function isAopProduct(productId: string): boolean {
 
 /**
  * A placement blank we sell can be ordered. An all-over piece can be ordered
- * only once `aopOrderable` says its panel files exist. Anything we do not
+ * once its printer variants are known and its panels cover every piece the
+ * printer cuts, so a print file exists for every placement. Anything we do not
  * recognize is refused. An unknown id used to fall through as orderable,
  * which let a Printful all-over catalog id skip the gate.
  */
@@ -116,12 +117,10 @@ export function canOrderProduct(productId: string, provider: PrinterId = "sandbo
     const template = getTemplate(templateId);
     const catalogProductId = printfulFactsForTemplate(templateId)?.catalogProductId;
     if (!template || catalogProductId == null) return false;
-    return aopOrderable(
-      catalogProductId,
-      template.panels.map((item) => item.id),
-    );
+    return aopOrderable(catalogProductId, coverageProblems(template.id));
   }
-  if (templateId && isSandboxPlacementProduct(templateId)) return isPlacementBound(provider, templateId);
+  if (templateId && isSandboxPlacementProduct(templateId))
+    return isPlacementBound(provider, templateId);
   return false;
 }
 
@@ -151,17 +150,20 @@ export function printfulCard(templateId: string): PrintfulCard | null {
 }
 
 /**
- * Sandbox variant id, `${productId}-printed-${size}`. Printful variant ids are
- * not invented: this returns null until the catalog variant list is filled in.
- * The first listed Printful variant is only a stand-in for a set partner; a
- * size-aware pick belongs with that list.
+ * Sandbox variant id, `${productId}-printed-${size}`. On Printful, the
+ * catalog variant for that size, or the first variant when the size is not
+ * made (a 2XS jogger, say).
  */
 export function variantForPrinter(
   provider: PrinterId,
   templateId: string,
   size = "m",
 ): string | null {
-  if (provider === "printful") return variantsForTemplate("printful", templateId)?.[0] ?? null;
+  if (provider === "printful") {
+    const bySize = printfulFactsForTemplate(templateId)?.catalogVariants;
+    const id = bySize?.[size.toUpperCase()];
+    return id != null ? String(id) : (variantsForTemplate("printful", templateId)?.[0] ?? null);
+  }
   const productId = productForTemplate("sandbox", templateId);
   if (!productId) return null;
   return `${productId}-printed-${size.toLowerCase()}`;
@@ -171,31 +173,6 @@ export function variantIdFor(templateId: string, size = "m"): string {
   const id = variantForPrinter("sandbox", templateId, size);
   if (!id) throw new Error("That garment is not in the sandbox catalog.");
   return id;
-}
-
-export type PanelExportPlan = {
-  panelId: string;
-  title: string;
-  printful: PanelPrintTarget;
-  proof: { widthPx: number; heightPx: number; note: string };
-};
-
-export function panelExportPlan(templateId: string): PanelExportPlan[] {
-  const id = canonicalTemplateId(templateId);
-  const template = id ? getTemplate(id) : null;
-  const catalogProductId = template
-    ? printfulFactsForTemplate(template.id)?.catalogProductId
-    : null;
-  if (!template || catalogProductId == null) return [];
-  return template.panels.map((item) => ({
-    panelId: item.id,
-    title: item.title,
-    printful: panelPrintTarget(catalogProductId, item.id),
-    proof: {
-      ...studioProofPixels(item.box.w, item.box.h),
-      note: "Studio proof at a fixed long edge. Not a Printful print file until the template pixel size is confirmed.",
-    },
-  }));
 }
 
 /**

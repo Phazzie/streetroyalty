@@ -556,7 +556,7 @@ export function Editor({ designId }: { designId: string }) {
   }, [layers]);
 
   return (
-    <div className="grid min-w-0 gap-4 lg:grid-cols-[16rem_minmax(0,1fr)_20rem]">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[16rem_minmax(0,1fr)_20rem]">
       <Panel title="Blanks">
         <div className="flex w-full min-w-0 gap-3 overflow-x-auto lg:flex-col lg:overflow-visible">
           {catalog.map((item) => (
@@ -992,6 +992,11 @@ export function Editor({ designId }: { designId: string }) {
             onOverride={setPrintOverride}
             notPrintingYet={
               aop && product && !canOrderProduct(product.id) ? AOP_ORDER_CLOSED : undefined
+            }
+            scope={
+              aop
+                ? "These checks cover your logo layers. The panels print from the print sheets."
+                : undefined
             }
           />
         </Panel>

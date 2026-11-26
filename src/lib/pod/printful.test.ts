@@ -167,6 +167,49 @@ describe("printful client", () => {
     assert.equal(body.order_items[0]?.retail_price, "32.00");
   });
 
+  it("sends an all-over line as one file per placement, each filling its placement", async () => {
+    const { fetchImpl, calls } = mockFetch(() => ({ json: { data: { id: 56, status: "draft" } } }));
+    const provider = createPrintfulProvider({ apiKey: "pk_test", fetchImpl });
+    await provider.createDraftOrder({
+      externalId: "ord-2",
+      shippingMethod: "STANDARD",
+      currency: "USD",
+      recipient: { name: "Ada", address1: "1 Main", city: "Austin", stateCode: "TX", countryCode: "US", zip: "78701" },
+      items: [
+        {
+          externalId: "item-2",
+          variantId: "10871",
+          quantity: 1,
+          retailCents: 9000,
+          name: "Lilac hoodie",
+          placement: "front",
+          technique: "cut-sew",
+          fileUrl: "https://shop.example/api/print-files/r.front",
+          files: [
+            { placement: "front", url: "https://shop.example/api/print-files/r.front" },
+            { placement: "hood", url: "https://shop.example/api/print-files/r.hood" },
+          ],
+        },
+      ],
+    });
+    const body = calls[0]?.body as {
+      order_items: {
+        catalog_variant_id: number;
+        placements: { placement: string; technique: string; layers: { url: string; position?: unknown }[] }[];
+      }[];
+    };
+    const item = body.order_items[0]!;
+    assert.equal(item.catalog_variant_id, 10871);
+    assert.deepEqual(
+      item.placements.map((entry) => [entry.placement, entry.technique, entry.layers[0]?.url]),
+      [
+        ["front", "cut-sew", "https://shop.example/api/print-files/r.front"],
+        ["hood", "cut-sew", "https://shop.example/api/print-files/r.hood"],
+      ],
+    );
+    assert.equal(item.placements[0]?.layers[0]?.position, undefined);
+  });
+
   it("confirms on its own endpoint", async () => {
     const { fetchImpl, calls } = mockFetch(() => ({ json: { data: { id: 55, status: "pending" } } }));
     const provider = createPrintfulProvider({ apiKey: "pk_test", fetchImpl });
