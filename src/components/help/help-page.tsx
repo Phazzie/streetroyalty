@@ -30,7 +30,7 @@ const HELP_CSS = `
 .fine-doc li{padding-left:1.4rem;position:relative}
 .fine-doc li::before{content:"";position:absolute;left:0;top:0.62em;width:0.62rem;height:0.62rem;
   background:var(--color-pipe);transform:rotate(45deg)}
-.fine-doc a{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+.fine-doc a:not(.no-underline){text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
 `;
 
 /**

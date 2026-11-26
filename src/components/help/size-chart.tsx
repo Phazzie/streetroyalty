@@ -3,17 +3,7 @@ import { cn } from "@/lib/cn";
 import type { BlankSizes } from "@/lib/help/sizes";
 import { FIT_NOTES, printfulSizeGuideUrl } from "@/lib/help/size-notes";
 import type { SizeTable } from "@/lib/pod/size-guide";
-
-type Unit = "in" | "cm";
-
-/** Inches as Printful gives them, or the same numbers in centimetres. */
-export function convert(value: string, unit: Unit): string {
-  if (unit === "in") return value;
-  return value.replace(/\d+(?:\.\d+)?/g, (number) => {
-    const cm = Number(number) * 2.54;
-    return String(Math.round(cm * 10) / 10);
-  });
-}
+import { convert, type Unit } from "@/lib/help/units";
 
 function Table({ table, unit, highlight }: { table: SizeTable; unit: Unit; highlight?: string }) {
   return (
