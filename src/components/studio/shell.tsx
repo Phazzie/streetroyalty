@@ -10,7 +10,6 @@ const LINKS = [
   { to: "/studio", label: "Studio", tone: "chip-pink" },
   { to: "/say", label: "Say it", tone: "chip-pink" },
   { to: "/patterns", label: "Patterns", tone: "chip-pink" },
-  { to: "/clash", label: "Clash", tone: "chip-pink" },
   { to: "/rack", label: "Rack", tone: "chip-orange" },
   { to: "/battles", label: "Battles", tone: "chip-orange" },
   { to: "/gallery", label: "Gallery", tone: "chip-violet" },

@@ -55,12 +55,9 @@ describe("the sandbox catalog", () => {
       "longsleeve-block",
       "jogger-court",
       "tote-corner",
-      "aop-hoodie",
-      "aop-joggers",
-      "aop-track-jacket",
     ]);
     const page = await provider.listProducts({ offset: 1, limit: 2 });
-    expect(page).toMatchObject({ total: 9, offset: 1, limit: 2 });
+    expect(page).toMatchObject({ total: 6, offset: 1, limit: 2 });
     expect(page.products.map((product) => product.id)).toEqual(["hoodie-pullover", "crew-sweat"]);
   });
 

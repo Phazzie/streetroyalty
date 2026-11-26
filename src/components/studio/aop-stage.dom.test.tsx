@@ -1,11 +1,15 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AopStage } from "@/components/studio/aop-stage";
-import { AOP_ORDER_CLOSED, PRINTFUL_AOP } from "@/lib/pod/aop-printful";
+import { AOP_ORDER_CLOSED, PRINTFUL_AOP, setAopOnSaleForTests } from "@/lib/pod/aop-printful";
 import { defaultGarment } from "@/lib/studio/garments";
 
 /** What a maker reads in the all-over view: the cloth per garment, and that ordering is not open. */
 describe("the all-over studio copy", () => {
+  // Off sale since 2026-11-26. Kept tested for orders paid before that.
+  beforeEach(() => setAopOnSaleForTests(true));
+  afterEach(() => setAopOnSaleForTests(false));
+
   it("is open for orders, names the cloth, and never says the flat is what prints", () => {
     render(
       <AopStage

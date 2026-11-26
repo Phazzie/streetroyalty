@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
+import { setAopOnSaleForTests } from "../pod/aop-printful.ts";
 import {
   AOP_TEMPLATES,
   HOUSE_COLORWAYS,
@@ -145,13 +146,18 @@ describe("all-over garments", () => {
     assert.equal(materialLine("tee-heavy"), "");
   });
 
-  it("opens the all-over pieces, blocks an unknown product and keeps a placement blank orderable", () => {
+  it("keeps the all-over pieces off sale, blocks an unknown product and keeps a placement blank orderable", () => {
+    for (const id of ["aop-hoodie", "aop-joggers", "aop-track-jacket", "388", "400", "801"]) {
+      assert.equal(canOrderProduct(id), false, id);
+    }
+    setAopOnSaleForTests(true);
     assert.equal(canOrderProduct("aop-hoodie"), true);
     assert.equal(canOrderProduct("aop-joggers"), true);
     assert.equal(canOrderProduct("aop-track-jacket"), true);
     assert.equal(canOrderProduct("388"), true);
     assert.equal(canOrderProduct("400"), true);
     assert.equal(canOrderProduct("801"), true);
+    setAopOnSaleForTests(false);
     assert.equal(canOrderProduct("tee-heavy"), true);
     assert.equal(canOrderProduct("hoodie-pullover"), true);
     assert.equal(canOrderProduct("71"), false);

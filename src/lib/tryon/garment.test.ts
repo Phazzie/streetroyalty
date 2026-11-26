@@ -26,7 +26,7 @@ const NOUN: Record<string, string> = {
 describe("every sandbox blank", () => {
   it("is named for what it is, and only a tee is called a t-shirt", async () => {
     const blanks = await sandboxBlanks();
-    expect(blanks.length).toBeGreaterThanOrEqual(9);
+    expect(blanks.length).toBeGreaterThanOrEqual(6);
     for (const blank of blanks) {
       const expected = NOUN[blank.id];
       expect(expected, `${blank.id} has no expected name`).toBeDefined();

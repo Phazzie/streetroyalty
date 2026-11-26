@@ -11,17 +11,18 @@ import type { Episode, WardrobeRef } from "./types.ts";
  * everything in this file.
  */
 
-const LILAC_SET: WardrobeRef[] = [
-  { kind: "shop", slug: "lilac-set-hoodie" },
-  { kind: "shop", slug: "lilac-set-jogger" },
+// Real blanks the studio prints on (label-pieces.ts). Swap in rack pieces once they exist.
+const HOODIE_FIT: WardrobeRef[] = [
+  { kind: "shop", slug: "hoodie-pullover" },
+  { kind: "shop", slug: "jogger-court" },
 ];
 
-const MINT_SET: WardrobeRef[] = [
-  { kind: "shop", slug: "mint-set-hoodie" },
-  { kind: "shop", slug: "mint-set-jogger" },
+const CREW_FIT: WardrobeRef[] = [
+  { kind: "shop", slug: "crew-sweat" },
+  { kind: "shop", slug: "jogger-court" },
 ];
 
-const CAP: WardrobeRef = { kind: "shop", slug: "crown-cap" };
+const TOTE: WardrobeRef = { kind: "shop", slug: "tote-corner" };
 
 export const TEMPLATE_EPISODE: Episode = {
   slug: "episode-0",
@@ -33,8 +34,8 @@ export const TEMPLATE_EPISODE: Episode = {
   durationSec: 300,
   template: true,
   cast: [
-    { name: "Character A", role: "Rename this. Wears the Lilac Set." },
-    { name: "Character B", role: "Rename this. Wears the Mint Set." },
+    { name: "Character A", role: "Rename this. Wears a hoodie and sweatpants." },
+    { name: "Character B", role: "Rename this. Wears a crewneck and sweatpants." },
   ],
   scenes: [
     {
@@ -43,7 +44,7 @@ export const TEMPLATE_EPISODE: Episode = {
       startSec: 0,
       endSec: 45,
       beat: "Write the beat here: where we are, who is on screen first, and what they are doing before anything happens.",
-      wardrobe: [{ cast: "Character A", pieces: LILAC_SET }],
+      wardrobe: [{ cast: "Character A", pieces: HOODIE_FIT }],
     },
     {
       id: "s2",
@@ -52,8 +53,8 @@ export const TEMPLATE_EPISODE: Episode = {
       endSec: 110,
       beat: "Write the beat here: who walks in, and what they want.",
       wardrobe: [
-        { cast: "Character A", pieces: LILAC_SET },
-        { cast: "Character B", pieces: MINT_SET },
+        { cast: "Character A", pieces: HOODIE_FIT },
+        { cast: "Character B", pieces: CREW_FIT },
       ],
     },
     {
@@ -62,17 +63,17 @@ export const TEMPLATE_EPISODE: Episode = {
       startSec: 110,
       endSec: 185,
       beat: "Write the beat here: what gets in the way. Keep it to one problem.",
-      wardrobe: [{ cast: "Character B", pieces: MINT_SET }],
+      wardrobe: [{ cast: "Character B", pieces: CREW_FIT }],
     },
     {
       id: "s4",
       title: "Scene 4",
       startSec: 185,
       endSec: 255,
-      beat: "Write the beat here: the turn. If somebody adds or swaps a piece, change the wardrobe for this scene. The template adds the cap here to show how.",
+      beat: "Write the beat here: the turn. If somebody adds or swaps a piece, change the wardrobe for this scene. The template adds the tote here to show how.",
       wardrobe: [
-        { cast: "Character A", pieces: [...LILAC_SET, CAP] },
-        { cast: "Character B", pieces: MINT_SET },
+        { cast: "Character A", pieces: [...HOODIE_FIT, TOTE] },
+        { cast: "Character B", pieces: CREW_FIT },
       ],
     },
     {
@@ -82,8 +83,8 @@ export const TEMPLATE_EPISODE: Episode = {
       endSec: 300,
       beat: "Write the beat here: how it ends, and the last picture people see.",
       wardrobe: [
-        { cast: "Character A", pieces: [...LILAC_SET, CAP] },
-        { cast: "Character B", pieces: MINT_SET },
+        { cast: "Character A", pieces: [...HOODIE_FIT, TOTE] },
+        { cast: "Character B", pieces: CREW_FIT },
       ],
     },
   ],

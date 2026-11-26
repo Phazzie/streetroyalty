@@ -16,7 +16,7 @@ describe("the studio catalog", () => {
       provider: "sandbox",
       podMode: "sandbox",
       paymentsMode: "sandbox",
-      total: 9,
+      total: 6,
       offset: 1,
       limit: 2,
     });

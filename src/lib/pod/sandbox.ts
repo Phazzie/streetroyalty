@@ -3,7 +3,7 @@ import { luminance } from "../color.ts";
 import { getTemplate } from "../garments/panels.ts";
 import { renderGarmentSvg } from "../garments/render.ts";
 import { arcLayout, clampFx, isFlatText } from "../text/layout.ts";
-import { AOP_DPI } from "./aop-printful.ts";
+import { AOP_DPI, aopOnSale } from "./aop-printful.ts";
 import { aopFieldsFor, bindingsFor, printfulFactsForTemplate } from "./garment-map.ts";
 import { HOUSE_BLANKS, houseAreas, sizeCode } from "./house-blanks.ts";
 import { applyMarkup } from "./money.ts";
@@ -388,7 +388,10 @@ export function createSandboxProvider(
     async listProducts(input) {
       const offset = input?.offset ?? 0;
       const limit = input?.limit ?? 24;
-      const products = BLANKS.map((blank) => toProduct(blank, markup, false));
+      // An off-sale all-over blank still loads by id, for designs and orders made before.
+      const products = BLANKS.filter((blank) => aopOnSale() || blank.shape !== "aop").map((blank) =>
+        toProduct(blank, markup, false),
+      );
       return {
         products: products.slice(offset, offset + limit),
         total: products.length,

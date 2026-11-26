@@ -353,10 +353,10 @@ export function WardrobeBuilder({ products }: { products: SheetProduct[] }) {
             </span>
           </p>
 
-          <h4 className="eyebrow mt-5">The sets</h4>
+          <h4 className="eyebrow mt-5">The blanks</h4>
           {drop.length === 0 ? (
             <p className="mt-2 border-2 border-dashed border-line px-3 py-4 text-sm text-muted">
-              The sets are empty right now.
+              No blanks are listed right now.
             </p>
           ) : (
             <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -377,7 +377,7 @@ export function WardrobeBuilder({ products }: { products: SheetProduct[] }) {
             <p className="mt-2 text-sm text-muted">Loading the rack.</p>
           ) : rackError ? (
             <p className="mt-2 border-2 border-dashed border-line px-3 py-4 text-sm text-muted">
-              The rack did not load. The sets above still work.
+              The rack did not load. The blanks above still work.
             </p>
           ) : customs.length === 0 ? (
             <p className="mt-2 border-2 border-dashed border-line px-3 py-4 text-sm text-muted">
@@ -494,7 +494,7 @@ export function WardrobeBuilder({ products }: { products: SheetProduct[] }) {
             ) : null}
             <p className="mt-1 text-sm text-muted">
               The small swatches on the board are measured from each picture, so they are a guide.
-              The words below only use colours on record. Pictures of the sets are generated, not
+              The words below only use colours on record. Pictures of the blanks are drawings, not
               photos of finished garments.
             </p>
           </div>

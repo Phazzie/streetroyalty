@@ -30,7 +30,7 @@ html{scroll-behavior:smooth}
 
 const JUMPS = [
   { href: "#words", label: "The words" },
-  { href: "#today", label: "Today and soon" },
+  { href: "#today", label: "What we make" },
   { href: "#printed-or-sewn", label: "Printed or sewn" },
   { href: "#who", label: "Who makes what" },
 ];
@@ -196,16 +196,19 @@ export function MadePage() {
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <p className="eyebrow text-subtle">Today</p>
-                <p className="display mt-2 text-4xl">One graphic on a blank</p>
+                <p className="display mt-2 text-4xl">Art on a real blank</p>
               </div>
               <div className="w-28 flex-none sm:w-40 lg:w-48">
                 <TodayOrComing kind="today" />
               </div>
             </div>
             <ul className="mt-4 grid gap-2">
-              <li>Your art and your words, placed on a tee, a hoodie, a crewneck or a hat.</li>
-              <li>Tees, hoodies and crewnecks are printed. The hat is stitched.</li>
-              <li>You pick the blank, its colour and where the graphic sits.</li>
+              <li>
+                Your art and your words on a tee, a hoodie, a crewneck, a long-sleeve, sweatpants
+                or a tote.
+              </li>
+              <li>Every spot the blank prints on can carry its own art: front, back, sleeves, legs.</li>
+              <li>You pick the blank, its colour and its size. Only real sizes and colours show.</li>
               <li>Each piece is made after it is paid for. Printing goes through Printful.</li>
             </ul>
             <p role="status" className="mt-4 border-2 border-ink bg-bg px-3 py-2 text-sm">
@@ -226,7 +229,7 @@ export function MadePage() {
           <div className="border-2 border-dashed border-ink p-5">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="eyebrow text-subtle">What is coming</p>
+                <p className="eyebrow text-subtle">What we do not make</p>
                 <p className="display mt-2 text-4xl">The whole garment</p>
               </div>
               <div className="w-28 flex-none sm:w-40 lg:w-48">
@@ -234,12 +237,12 @@ export function MadePage() {
               </div>
             </div>
             <ul className="mt-4 grid gap-2">
-              <li>A full-garment designer. It is being built now.</li>
-              <li>Colour every panel: body, sleeves, hood, cuffs, pocket.</li>
-              <li>All-over print on polyester fleece, so a pattern can run edge to edge.</li>
+              <li>Colouring each panel: body, sleeves, hood, cuffs, pocket.</li>
+              <li>All-over print, where a pattern runs edge to edge.</li>
+              <li>Stitched hats and sewn-in piping.</li>
             </ul>
             <p className="mt-4 text-sm text-muted">
-              It is not in the studio yet, and there is no date. This page will change when it is.
+              None of these can be ordered here, so the studio does not show them.
             </p>
           </div>
         </div>
@@ -261,7 +264,7 @@ export function MadePage() {
               </div>
               <div className="p-4">
                 <h3 className="display text-4xl">Printed panels</h3>
-                <p className="eyebrow mt-1.5 text-subtle">What the new designer will make</p>
+                <p className="eyebrow mt-1.5 text-subtle">All-over print. Not in the studio</p>
                 <ul className="mt-3 grid gap-2">
                   <li>
                     The panels and stripes are printed onto white polyester fleece. Then the fleece

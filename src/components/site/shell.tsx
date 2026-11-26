@@ -18,7 +18,6 @@ const NAV = [
 const MORE = [
   { to: "/say", label: "Say it" },
   { to: "/patterns", label: "Pattern lab" },
-  { to: "/clash", label: "Clash machine" },
   { to: "/made", label: "How it's made" },
   { to: "/math", label: "Do the math" },
   { to: "/me", label: "Your page" },
@@ -220,7 +219,6 @@ export function SiteFooter() {
             { to: "/studio", label: "Design studio" },
             { to: "/say", label: "Say it" },
             { to: "/patterns", label: "Pattern lab" },
-            { to: "/clash", label: "Clash machine" },
             { to: "/gallery", label: "Saved pieces" },
           ]}
         />
@@ -266,7 +264,6 @@ function FooterColumn({
       | "/battles"
       | "/say"
       | "/patterns"
-      | "/clash"
       | "/made"
       | "/math"
       | "/episodes"

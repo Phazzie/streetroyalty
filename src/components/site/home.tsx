@@ -56,7 +56,6 @@ const PROCESS = [
 const SIDE_B = [
   { to: "/battles", title: "Battles", line: "Two pieces, one vote. The throne keeps score." },
   { to: "/say", title: "Say it", line: "Say what you want on it. It lays the piece out for you." },
-  { to: "/clash", title: "Clash machine", line: "Pull the lever. Keep the colours that fight." },
   {
     to: "/patterns",
     title: "Pattern lab",
@@ -306,7 +305,7 @@ export function HomePage() {
         <div className="mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
           <SectionHead eyebrow="Side B" title="The street decides">
             <p className="max-w-sm text-muted">
-              Seven more doors. Every one works without knowing a thing about design.
+              Six more doors. Every one works without knowing a thing about design.
             </p>
           </SectionHead>
           <ol className="mt-10 border-t-2 border-ink">

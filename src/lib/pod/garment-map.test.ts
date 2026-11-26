@@ -122,16 +122,16 @@ describe("garment template mapping", () => {
     assert.equal(isPrintfulPlacementProduct("999999", []), false);
   });
 
-  it("lists the tracksuit in the sandbox catalog with the mapped template id", async () => {
+  it("lists only placement blanks, and still loads an off-sale all-over piece by id", async () => {
     const provider = createSandboxProvider();
     const page = await provider.listProducts();
-    const aop = page.products.filter((item) => item.construction === "aop");
     assert.deepEqual(
-      aop.map((item) => item.id),
-      [...TEMPLATES],
+      page.products.filter((item) => item.construction === "aop"),
+      [],
     );
-    for (const product of aop) {
-      const full = await provider.getProduct(product.id);
+    for (const id of TEMPLATES) {
+      const full = await provider.getProduct(id);
+      const product = { id };
       assert.equal(full.construction, "aop");
       assert.equal(full.aopTemplateId, templateForProduct("sandbox", product.id));
       assert.notEqual(full.aopTemplateId, undefined);

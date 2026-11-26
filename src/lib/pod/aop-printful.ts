@@ -145,9 +145,26 @@ export function printfulAopById(catalogProductId: number): AopPrintfulProduct | 
   );
 }
 
-/** What a buyer is told while an all-over piece cannot be ordered. */
-export const AOP_ORDER_CLOSED =
-  "This all-over piece can be designed, saved and shared, but it cannot be ordered yet.";
+/**
+ * The shop stopped selling all-over pieces on 2026-11-26: the owner wants only
+ * what can really be ordered on the site. Orders already paid still print.
+ */
+let onSale = false;
+
+export function aopOnSale(): boolean {
+  return onSale;
+}
+
+/**
+ * Tests only. The selling flows stay tested while they are switched off, so
+ * orders paid before the switch keep a tested path to the printer.
+ */
+export function setAopOnSaleForTests(value: boolean): void {
+  onSale = value;
+}
+
+/** What a buyer is told about an all-over piece. */
+export const AOP_ORDER_CLOSED = "All-over pieces are no longer made, so this one can't be ordered.";
 
 /**
  * The one rule for whether an all-over product can be ordered: its catalog
@@ -156,6 +173,7 @@ export const AOP_ORDER_CLOSED =
  * the traced outlines, so a piece can never ship blank.
  */
 export function aopOrderable(catalogProductId: number, problems: readonly string[]): boolean {
+  if (!aopOnSale()) return false;
   const product = printfulAopById(catalogProductId);
   if (!product || product.catalogVariantIds.length === 0) return false;
   return problems.length === 0;

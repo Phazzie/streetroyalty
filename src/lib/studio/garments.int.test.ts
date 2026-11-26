@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { setAopOnSaleForTests } from "../pod/aop-printful.ts";
 import { getSql } from "../db.ts";
 import { addToCart, listCart } from "./cart.server.ts";
 import { getDesign, getShopDesign, publishDesign, saveDesign } from "./designs.server.ts";
@@ -31,6 +32,10 @@ beforeEach(async () => {
 });
 
 describe("all-over pieces", () => {
+  // Off sale since 2026-11-26. Kept tested for orders paid before that.
+  beforeEach(() => setAopOnSaleForTests(true));
+  afterEach(() => setAopOnSaleForTests(false));
+
   it("stores colorways on an all-over piece and ignores them on a tee", async () => {
     const saved = await saveDesign("ada", piece("Lilac set"));
     expect(saved.garment?.colorways.map((item) => item.name)).toEqual([

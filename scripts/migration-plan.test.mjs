@@ -72,6 +72,7 @@ test("app migrations are applied from the top-level directory and the auth sourc
     { name: "0015_checkout_and_runway.sql", path: "0015_checkout_and_runway.sql" },
     { name: "0016_garment_identity.sql", path: "0016_garment_identity.sql" },
     { name: "0017_design_spots.sql", path: "0017_design_spots.sql" },
+    { name: "0018_aop_off_sale.sql", path: "0018_aop_off_sale.sql" },
   ]);
   assert.ok(readdirSync(join(migrationsDir, "auth")).includes("0001_auth.sql"));
 });

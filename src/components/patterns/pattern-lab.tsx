@@ -31,8 +31,8 @@ const PEEK_MAX = 208;
 const TILES_ACROSS = 2.2;
 
 const PRESETS: { name: string; colors: string[] }[] = [
-  { name: "Lilac suit", colors: ["#b9a3ee", "#f5ebdd", "#ff6a00", "#17101f"] },
-  { name: "Mint suit", colors: ["#a5dccb", "#ffc9a8", "#3d7eff", "#12343a"] },
+  { name: "Lilac", colors: ["#b9a3ee", "#f5ebdd", "#ff6a00", "#17101f"] },
+  { name: "Mint", colors: ["#a5dccb", "#ffc9a8", "#3d7eff", "#12343a"] },
   { name: "Night drop", colors: ["#0b0614", "#7c5cff", "#ff2d95", "#f6f1ff"] },
   { name: "Paper", colors: ["#f5ebdd", "#17101f", "#ff2d95", "#7c5cff"] },
   { name: "Yard", colors: ["#5b6b3a", "#17101f", "#c9b27a", "#ff6a00"] },
@@ -324,11 +324,11 @@ export function PatternLab({
       <style>{CSS}</style>
       <p className="tag">Pattern lab</p>
       <h1 className="mt-3 font-display text-4xl leading-none tracking-tight sm:text-5xl">
-        Make the cloth first.
+        Make the print first.
       </h1>
       <p className="mt-3 max-w-xl text-muted">
         Twelve patterns, drawn fresh every time. Roll one, clash the colours, then send it to the
-        studio.
+        studio to print on a real blank.
       </p>
 
       <div
@@ -402,7 +402,7 @@ export function PatternLab({
             ))}
           </div>
           <p className="mt-2 text-sm text-muted">
-            A sketch of the cloth on a shape, not the printed piece.
+            A sketch of where it prints on a real blank. The studio prints it as art, not as the whole cloth.
           </p>
         </div>
 
