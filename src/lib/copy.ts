@@ -41,7 +41,7 @@ export const copy = {
   stillBuilding: "Still building. Hit stop if you want it cut.",
   hubJob: "Name the clothes: a tee, hoodie, crewneck, long-sleeve, sweatpants or tote, in a real colour. Open the board, tap what you're wearing, then put it on you.",
   runwayHint: "Runway is the walk. The crowd cheers, boos, or does both.",
-  splashLead: "The house model holds the pictures. Your face wears the clothes.",
+  splashLead: "Real pieces the shop makes. Your face wears them.",
   stepFace: "Three photos lock your face.",
   stepPieces: "Pick real pieces the shop makes.",
   stepWalk: "Put them on you, then send it down the runway.",

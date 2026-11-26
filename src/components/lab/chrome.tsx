@@ -1,72 +1,28 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
+import { garmentFlatSvg } from "@/lib/gfx/garments";
+import { houseBlank } from "@/lib/pod/house-blanks";
 
-const SCENES = [
-  {
-    src: "/wild/scene-beam.mp4",
-    poster: "/wild/scene-beam.jpg",
-    label: "House model on the beam, coffee in hand, unfazed",
-  },
-  {
-    src: "/wild/scene-moon.mp4",
-    poster: "/wild/scene-moon.jpg",
-    label: "House model on the moon, coffee in hand, unfazed",
-  },
-  {
-    src: "/wild/scene-boat.mp4",
-    poster: "/wild/scene-boat.jpg",
-    label: "House model in the boat, coffee in hand, unfazed",
-  },
-  {
-    src: "/wild/scene-flyer.mp4",
-    poster: "/wild/scene-flyer.jpg",
-    label: "House model at the flyer, hands in pockets, unfazed",
-  },
+/** Four of the real blanks, in colours Printful really stocks, so the first screen shows only pieces you can order. */
+const OPENERS = [
+  { id: "hoodie-pullover", color: "lavender" },
+  { id: "jogger-court", color: "black" },
+  { id: "tee-heavy", color: "ivory" },
+  { id: "crew-sweat", color: "vintage-black" },
 ] as const;
 
 const STEPS = [copy.stepFace, copy.stepPieces, copy.stepWalk];
 
-function Clip({
-  src,
-  poster,
-  label,
-  className,
-}: {
-  src: string;
-  poster: string;
-  label: string;
-  className: string;
-}) {
-  const ref = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    const video = ref.current;
-    if (!video) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    video.muted = true;
-    if (reduce) {
-      video.pause();
-      return;
-    }
-    void video.play().catch(() => undefined);
-  }, []);
-
-  return (
-    <video
-      ref={ref}
-      className={className}
-      src={src}
-      poster={poster}
-      muted
-      playsInline
-      autoPlay
-      loop
-      preload="metadata"
-      aria-label={label}
-    />
-  );
+function openerArt({ id, color }: (typeof OPENERS)[number]) {
+  const blank = houseBlank(id);
+  const pick = blank?.colors.find((item) => item.code === color) ?? blank?.colors[0];
+  return {
+    key: id,
+    alt: `${blank?.name ?? "Blank"} in ${pick?.name ?? "black"}`,
+    src: garmentFlatSvg(blank?.shape ?? "hoodie", pick?.hex ?? "#111111"),
+  };
 }
 
 export function Shell({ children }: { children: ReactNode }) {
@@ -135,9 +91,17 @@ export function Splash({ onEnter }: { onEnter?: () => void }) {
     <main className="mess-field flex min-h-dvh items-center justify-center text-fg">
       <div className="phone-frame safe-top flex h-dvh w-full max-w-lg flex-col overflow-hidden bg-cream">
         <div className="grid shrink-0 grid-cols-2">
-          {SCENES.map((scene) => (
-            <Clip key={scene.src} {...scene} className="h-36 w-full object-cover object-top sm:h-44" />
-          ))}
+          {OPENERS.map((opener) => {
+            const art = openerArt(opener);
+            return (
+              <img
+                key={art.key}
+                src={art.src}
+                alt={art.alt}
+                className="h-36 w-full bg-[#1b1426] object-contain sm:h-44"
+              />
+            );
+          })}
         </div>
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-5 *:shrink-0">
           <h1 className="font-display text-4xl font-extrabold leading-none tracking-tight">{copy.title}</h1>
