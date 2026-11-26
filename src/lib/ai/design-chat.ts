@@ -14,7 +14,7 @@ export type DesignChatResult =
   | { ok: false; kind: "unavailable" | "limit" | "missed" | "bad" };
 
 /**
- * One turn of the design chat. The shopper's words and a summary of the design go to
+ * One turn of the design chat. The designer's words and a summary of the design go to
  * the model, and a checked list of edits comes back for the studio to apply. Counted
  * against the daily text cap; it never spends on pictures itself.
  */

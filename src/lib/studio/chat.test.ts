@@ -229,3 +229,23 @@ describe("what the model is told", () => {
     expect(matchGarmentColor("purple", HOODIE_COLORS)).toBeNull();
   });
 });
+
+describe("asking for an idea with no AI", () => {
+  it("offers a whole front made of real, printable layers", () => {
+    const start: LocalDesign = {
+      canvas: canvas({ front: [text("a")] }),
+      blank: { id: "tee-heavy", name: "Heavyweight Tee", type: "T-Shirt" },
+      blanks: [],
+      colors: [],
+    };
+    const answer = localAnswer("give me an idea", start);
+    expect(answer?.reply).toMatch(/^Try this/);
+    const stamps: Record<string, string> = {};
+    for (const need of stampsNeeded(answer!.ops)) stamps[stampKey(need.stamp, need.color)] = "data:image/png;base64,AAAA";
+    const out = applyOps(start.canvas, answer!.ops, options({ stamps }));
+    expect(out.skipped).toEqual([]);
+    expect(out.canvas.spots.front!.length).toBeGreaterThan(0);
+    expect(out.canvas.spots.front!.some((layer) => layer.id === "a")).toBe(false);
+    expect(parseLayers(out.canvas.spots.front)).toEqual(out.canvas.spots.front);
+  });
+});

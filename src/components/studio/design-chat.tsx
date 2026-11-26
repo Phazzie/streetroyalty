@@ -29,6 +29,7 @@ type Bubble = {
 };
 
 const SUGGESTIONS = [
+  "Give me an idea",
   "Make the text red",
   "Bigger, and move it up",
   "Put the Chicago skyline on the back",
@@ -205,7 +206,8 @@ export function DesignChat({
       {bubbles.length === 0 ? (
         <div className="flex flex-col gap-3 p-4">
           <p className="text-sm text-muted">
-            Say what you want and it happens on the piece. "Make the words red." "Bigger, move it up." "Skyline on the back."
+            Your design partner. Say what you want and it happens on the piece: "make the words red", "bigger, move it up",
+            "skyline on the back". Stuck? Ask it for an idea.
           </p>
           {cheyBlankId ? (
             <button
@@ -219,7 +221,7 @@ export function DesignChat({
               </span>
               <span className="chey-word relative z-10 block text-[1.7rem] leading-none text-[#e0182d]">CHEY SOCIETY</span>
               <span className="relative z-10 mt-1 block text-xs text-[#f2ece4]">
-                A black hoodie built in four messages: red type, the skyline on the back, a star on the sleeve.
+                How one designer's black hoodie came together in four messages: red type, the skyline on the back, a star on the sleeve.
               </span>
               <svg
                 viewBox="0 0 1800 500"
@@ -349,7 +351,7 @@ export function DesignChat({
           <Link to="/login" className="underline">
             Sign in
           </Link>{" "}
-          to let the AI take anything you can describe.
+          to let the AI design with you. Plain edits work without it.
         </p>
       ) : null}
     </section>

@@ -593,7 +593,7 @@ export function Editor({ designId }: { designId: string }) {
     return { changed: changed + applied.changed, skipped: [...skipped, ...applied.skipped] };
   }
 
-  /** Paid art, only after the shopper said yes. Null when it landed, else what went wrong. */
+  /** Paid art, only after the designer said yes. Null when it landed, else what went wrong. */
   async function drawChatArt(ask: Extract<ChatOp, { op: "make_art" }>): Promise<string | null> {
     try {
       const result = await generateArt({ data: { idea: ask.idea, style: ask.style } });

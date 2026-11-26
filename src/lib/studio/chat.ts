@@ -1,5 +1,5 @@
 /**
- * The design chat. A shopper says what they want in plain words, the chat answers
+ * The design chat. A designer says what they want in plain words, the chat answers
  * with a short reply and a list of edits, and the studio applies those edits to the
  * real layers on the real blank. Pure: the edit list, its parser, the prompt, the
  * reducer that applies edits, and a no-AI reader for the simple asks.
@@ -211,7 +211,7 @@ export function parseAnswer(raw: string): ChatAnswer | null {
   for (const entry of Array.isArray(record.ops) ? record.ops : []) {
     const op = parseOp(entry);
     if (!op) continue;
-    // One paid picture a turn at most, and the shopper still has to say yes to it.
+    // One paid picture a turn at most, and the designer still has to say yes to it.
     if (op.op === "make_art" && ++art > 1) continue;
     ops.push(op);
     if (ops.length >= MAX_OPS) break;
@@ -341,7 +341,7 @@ export function cleanHistory(input: unknown): ChatLine[] {
 /** The standing instructions. Everything the model may do, and nothing it may invent. */
 export function systemPrompt(): string {
   return [
-    "You are the design chat inside a streetwear print-on-demand studio. The shopper describes changes in plain words, often casually; you make the edits.",
+    "You are the design partner inside a print-on-demand studio where independent designers make their own clothing lines. The designer describes changes in plain words, often casually; you make the edits. When they ask for ideas or say they are stuck, pick one bold, specific direction and build it, then say what you did.",
     "Every piece is a real Printful blank printed by DTG on the listed print spots. Only what is listed can be made: the listed blanks, their listed garment colours, text, code-drawn stamps and AI art on the listed spots.",
     "You cannot change the cut, sew panels, add embroidery, patches, rhinestones, glitter, puff ink or any colour of garment not listed. If asked, say so in one short line and offer the nearest thing you can do.",
     "Reply with JSON only: {\"reply\":\"\",\"ops\":[]}. reply is one or two short, warm, plain sentences, under 220 characters, no jargon, no emoji. Say what you changed.",
@@ -352,7 +352,7 @@ export function systemPrompt(): string {
     '{"op":"nudge","layer":"<id>","dx":0,"dy":-0.08,"grow":1.2,"turn":0} moves, grows (multiplies scale) or turns a layer relative to where it is. "Bigger" is grow 1.2 to 1.3, "a lot bigger" 1.6. "Up a bit" is dy -0.06.',
     '{"op":"remove","layer":"<id>"}, {"op":"clear","spot":"front"} empties a spot, {"op":"stack","layer":"<id>","to":"front|back"}.',
     `{"op":"add_stamp","spot":"back","stamp":"<id>","color":"#rrggbb","x":0.5,"y":0.4,"scale":1.6} adds free code-drawn art. Stamps: ${STAMPS.map((stamp) => `${stamp.id} (${stamp.note})`).join("; ")}. Prefer a stamp when one fits.`,
-    `{"op":"make_art","spot":"front","idea":"","style":"<id>","y":0.45,"scale":1} asks for new AI art. It costs the shop money, so the shopper is asked before it runs; use it only when they want a new picture no stamp covers, at most once a turn, and say in reply that it needs their OK. idea is a short visual description. Styles: ${ART_STYLES.map((style) => `${style.id} (${style.label})`).join(", ")}.`,
+    `{"op":"make_art","spot":"front","idea":"","style":"<id>","y":0.45,"scale":1} asks for new AI art. It costs the shop money, so the designer is asked before it runs; use it only when they want a new picture no stamp covers, at most once a turn, and say in reply that it needs their OK. idea is a short visual description. Styles: ${ART_STYLES.map((style) => `${style.id} (${style.label})`).join(", ")}.`,
     '{"op":"set_color","color":"<one of the listed garment colours>"} changes the garment colour. {"op":"set_blank","blank":"<blank id>"} switches to another listed blank; spots and colours then follow that blank. {"op":"show_spot","spot":"back"} brings a spot on screen.',
     "Use layer ids exactly as listed. \"It\" or \"the text\" means the selected layer, or the most recent matching layer. Keep text readable against the garment colour. Leave the rest of the design alone unless asked.",
     `Fonts: ${FONTS.map((font) => `${font.name} (${font.vibe})`).join(", ")}.`,
@@ -360,7 +360,7 @@ export function systemPrompt(): string {
   ].join("\n");
 }
 
-/** The current design and the shopper's words, as the user message. */
+/** The current design and the designer's words, as the user message. */
 export function turnPrompt(context: ChatContext, message: string): string {
   const spots = context.spots.map((spot) => {
     const list = context.layers[spot.placement] ?? [];
@@ -373,7 +373,7 @@ export function turnPrompt(context: ChatContext, message: string): string {
     `Selected layer: ${context.selected || "none"}.`,
     "Print spots and their layers (layers listed bottom first):",
     ...spots,
-    `Shopper: ${message.replace(/\s+/g, " ").trim().slice(0, 500)}`,
+    `Designer: ${message.replace(/\s+/g, " ").trim().slice(0, 500)}`,
   ].join("\n");
 }
 
@@ -645,6 +645,11 @@ export type LocalDesign = {
  */
 export function localAnswer(message: string, design: LocalDesign): ChatAnswer | null {
   const text = ` ${message.toLowerCase().replace(/[’']/g, "'")} `;
+  if (/\b(idea|ideas|inspire|inspiration|stuck|surprise me)\b/.test(text)) {
+    const count = Object.values(design.canvas.spots).reduce((sum, list) => sum + list.length, 0);
+    const pick = HOUSE_IDEAS[count % HOUSE_IDEAS.length]!;
+    return { reply: pick.reply, ops: [{ op: "clear", spot: design.canvas.placement }, ...pick.ops(design.canvas.placement)] };
+  }
   const ops: ChatOp[] = [];
   const said: string[] = [];
   const quoted = /["“]([^"”]{1,80})["”]/.exec(message)?.[1]?.trim();
@@ -759,6 +764,28 @@ export function localAnswer(message: string, design: LocalDesign): ChatAnswer | 
   const sentence = said.length > 1 ? `${said.slice(0, -1).join(", ")} and ${said.at(-1)}` : said[0]!;
   return { reply: `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}.`, ops };
 }
+
+/** Ideas the studio can offer with no model behind it. Each one is a whole front. */
+const HOUSE_IDEAS: { reply: string; ops: (spot: string) => ChatOp[] }[] = [
+  {
+    reply: "Try this: NO DAYS OFF arched in Old English over a red star. Change the words to yours and it's a crest.",
+    ops: (spot) => [
+      { op: "add_text", spot, text: "NO DAYS OFF", font: "UnifrakturCook", color: "#ffffff", y: 0.3, scale: 1.1, arc: -40 },
+      { op: "add_stamp", spot, stamp: "chicago-star", color: "#e11d2e", y: 0.58, scale: 0.4 },
+    ],
+  },
+  {
+    reply: "Try this: one tall word in Anton with a pink sticker outline, tilted like a sign. Put your own word in.",
+    ops: (spot) => [{ op: "add_text", spot, text: "UNBOTHERED", font: "Anton", color: "#d6ff3c", y: 0.4, scale: 1.6, rotation: -8, stroke: "#ff2d95" }],
+  },
+  {
+    reply: "Try this: a city skyline across the chest with spaced-out words under it, like a tour shirt.",
+    ops: (spot) => [
+      { op: "add_stamp", spot, stamp: "chicago-skyline", color: "#ffffff", y: 0.34, scale: 1.7 },
+      { op: "add_text", spot, text: "WORLD TOUR", font: "Bebas Neue", color: "#ffffff", y: 0.56, scale: 0.8, tracking: 0.4 },
+    ],
+  },
+];
 
 /* ------------------------------------------------------ the showcase */
 
