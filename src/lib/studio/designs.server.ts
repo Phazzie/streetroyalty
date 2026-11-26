@@ -433,6 +433,11 @@ export async function getShopDesign(slug: string): Promise<ShopPiece> {
     }
   }
   const chosen = product?.variants.find((variant) => variant.id === row.variant_id);
+  // A piece printed on more than one spot costs what the cart will charge for it.
+  const extra =
+    product && !isAopProduct(templateId)
+      ? spotExtraCents(product, designSpots(row).map((spot) => spot.placement))
+      : 0;
   const sizes = (product?.variants ?? [])
     .filter((variant) => {
       if (variant.retailCents == null) return false;
@@ -442,7 +447,7 @@ export async function getShopDesign(slug: string): Promise<ShopPiece> {
     .map((variant) => ({
       variantId: variant.id,
       label: variant.size,
-      retailCents: variant.retailCents ?? Number(row.retail_cents),
+      retailCents: variant.retailCents == null ? Number(row.retail_cents) : variant.retailCents + extra,
     }));
   if (!sizes.some((size) => size.variantId === row.variant_id)) {
     sizes.push({

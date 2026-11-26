@@ -31,6 +31,7 @@ import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ReturnsRouteImport } from './routes/returns'
 import { Route as SayRouteImport } from './routes/say'
 import { Route as ShippingRouteImport } from './routes/shipping'
+import { Route as SizesRouteImport } from './routes/sizes'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as EpisodesIndexRouteImport } from './routes/episodes.index'
@@ -155,6 +156,11 @@ const ShippingRoute = ShippingRouteImport.update({
   path: '/shipping',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SizesRoute = SizesRouteImport.update({
+  id: '/sizes',
+  path: '/sizes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StudioRoute = StudioRouteImport.update({
   id: '/studio',
   path: '/studio',
@@ -244,6 +250,7 @@ export interface FileRoutesByFullPath {
   '/returns': typeof ReturnsRoute
   '/say': typeof SayRoute
   '/shipping': typeof ShippingRoute
+  '/sizes': typeof SizesRoute
   '/studio': typeof StudioRoute
   '/terms': typeof TermsRoute
   '/episodes/$slug': typeof EpisodesSlugRoute
@@ -279,6 +286,7 @@ export interface FileRoutesByTo {
   '/returns': typeof ReturnsRoute
   '/say': typeof SayRoute
   '/shipping': typeof ShippingRoute
+  '/sizes': typeof SizesRoute
   '/studio': typeof StudioRoute
   '/terms': typeof TermsRoute
   '/episodes/$slug': typeof EpisodesSlugRoute
@@ -317,6 +325,7 @@ export interface FileRoutesById {
   '/returns': typeof ReturnsRoute
   '/say': typeof SayRoute
   '/shipping': typeof ShippingRoute
+  '/sizes': typeof SizesRoute
   '/studio': typeof StudioRoute
   '/terms': typeof TermsRoute
   '/episodes/$slug': typeof EpisodesSlugRoute
@@ -356,6 +365,7 @@ export interface FileRouteTypes {
     | '/returns'
     | '/say'
     | '/shipping'
+    | '/sizes'
     | '/studio'
     | '/terms'
     | '/episodes/$slug'
@@ -391,6 +401,7 @@ export interface FileRouteTypes {
     | '/returns'
     | '/say'
     | '/shipping'
+    | '/sizes'
     | '/studio'
     | '/terms'
     | '/episodes/$slug'
@@ -428,6 +439,7 @@ export interface FileRouteTypes {
     | '/returns'
     | '/say'
     | '/shipping'
+    | '/sizes'
     | '/studio'
     | '/terms'
     | '/episodes/$slug'
@@ -466,6 +478,7 @@ export interface RootRouteChildren {
   ReturnsRoute: typeof ReturnsRoute
   SayRoute: typeof SayRoute
   ShippingRoute: typeof ShippingRoute
+  SizesRoute: typeof SizesRoute
   StudioRoute: typeof StudioRoute
   TermsRoute: typeof TermsRoute
   MHandleRoute: typeof MHandleRoute
@@ -633,6 +646,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShippingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sizes': {
+      id: '/sizes'
+      path: '/sizes'
+      fullPath: '/sizes'
+      preLoaderRoute: typeof SizesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/studio': {
       id: '/studio'
       path: '/studio'
@@ -776,6 +796,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReturnsRoute: ReturnsRoute,
   SayRoute: SayRoute,
   ShippingRoute: ShippingRoute,
+  SizesRoute: SizesRoute,
   StudioRoute: StudioRoute,
   TermsRoute: TermsRoute,
   MHandleRoute: MHandleRoute,
