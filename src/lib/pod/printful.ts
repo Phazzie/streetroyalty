@@ -58,7 +58,30 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function createPrintfulProvider(options: PrintfulClientOptions): PodProvider {
+/** One printed spot sent for a photo mockup. */
+export type PhotoSpot = { placement: string; url: string; area?: PrintArea };
+
+/** Printful's photos of one variant, one or more per printed spot. */
+export type PhotoSet = {
+  /** Printful's task, to ask again while it is still pending. */
+  taskId: string;
+  status: "pending" | "completed" | "failed";
+  photos: { placement: string; url: string }[];
+  error?: string;
+};
+
+export type PrintfulProvider = PodProvider & {
+  /** Every printed spot of one variant in one mockup task, so the photos show the whole piece. */
+  createPhotoSet(input: {
+    productId: string;
+    variantId: string;
+    technique: string;
+    spots: PhotoSpot[];
+  }): Promise<PhotoSet>;
+  getPhotoSet(taskId: string): Promise<PhotoSet>;
+};
+
+export function createPrintfulProvider(options: PrintfulClientOptions): PrintfulProvider {
   const baseUrl = (options.baseUrl ?? "https://api.printful.com").replace(/\/$/, "");
   const fetchImpl = options.fetchImpl ?? fetch;
   const markup = options.markup ?? 2.2;
@@ -331,8 +354,67 @@ export function createPrintfulProvider(options: PrintfulClientOptions): PodProvi
     };
   }
 
+  function mapPhotos(raw: unknown): PhotoSet {
+    const records = asArray(raw);
+    const record = asRecord(records[0] ?? raw) ?? {};
+    const photos: { placement: string; url: string }[] = [];
+    for (const group of asArray(record.catalog_variant_mockups)) {
+      for (const entry of asArray(asRecord(group)?.mockups)) {
+        const mockup = asRecord(entry);
+        const url = text(mockup?.mockup_url);
+        if (url) photos.push({ placement: text(mockup?.placement, "front"), url });
+      }
+    }
+    const failure = text(asRecord(asArray(record.failure_reasons)[0])?.detail);
+    const statusText = text(record.status, "pending");
+    return {
+      taskId: text(record.id),
+      status: statusText === "completed" || statusText === "failed" ? statusText : "pending",
+      photos,
+      error: failure || undefined,
+    };
+  }
+
   return {
     id: "printful",
+    async createPhotoSet(input) {
+      if (input.spots.length === 0) throw new PodError("Put art on a spot first.", 400);
+      const envelope = await request("/v2/mockup-tasks", {
+        method: "POST",
+        body: {
+          format: "jpg",
+          mockup_width_px: 1000,
+          products: [
+            {
+              source: "catalog",
+              catalog_product_id: Number(input.productId),
+              catalog_variant_ids: [Number(input.variantId)],
+              placements: input.spots.map((spot) => ({
+                placement: spot.placement,
+                technique: input.technique,
+                layers: [
+                  spot.area
+                    ? { type: "file", url: spot.url, position: layerPosition(spot.area) }
+                    : { type: "file", url: spot.url },
+                ],
+              })),
+            },
+          ],
+        },
+      });
+      let task = mapPhotos(payloadOf(envelope));
+      for (let attempt = 0; attempt < poll.attempts && task.status === "pending" && task.taskId; attempt += 1) {
+        await sleep(poll.delayMs);
+        task = await this.getPhotoSet(task.taskId);
+      }
+      return task;
+    },
+    async getPhotoSet(taskId) {
+      const task = mapPhotos(
+        payloadOf(await request(`/v2/mockup-tasks?id=${encodeURIComponent(taskId)}`)),
+      );
+      return { ...task, taskId: task.taskId || taskId };
+    },
     async listProducts(input) {
       // Only the pieces the studio can make. The full Printful catalog holds
       // hundreds of products the studio has no print files or panels for.

@@ -92,6 +92,26 @@ export const keepSpotFile = createServerFn({ method: "POST" })
     return { id: await storePrintFile(context.userId, data.printFile) };
   });
 
+export const photoMockup = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { productId?: string; variantId?: string; spots?: unknown }) => ({
+    productId: String(input?.productId ?? ""),
+    variantId: String(input?.variantId ?? ""),
+    spots: input?.spots,
+  }))
+  .handler(async ({ data, context }) => {
+    const { makePhotoMockup } = await import("./photo.server.ts");
+    return makePhotoMockup(context.userId, data);
+  });
+
+export const photoMockupStatus = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { taskId?: string }) => ({ taskId: String(input?.taskId ?? "") }))
+  .handler(async ({ data }) => {
+    const { checkPhotoMockup } = await import("./photo.server.ts");
+    return checkPhotoMockup(data.taskId);
+  });
+
 export const publishPiece = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { designId?: string }) => ({ designId: String(input?.designId ?? "") }))

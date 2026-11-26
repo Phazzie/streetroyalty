@@ -1,3 +1,4 @@
+import { isPublicHttpUrl } from "./validate.ts";
 import { getRequest } from "@tanstack/react-start/server";
 import { type Sql } from "../db.ts";
 import { getPodProvider, readPaymentsMode, readPodMode, readMarkup } from "../pod/index.ts";
@@ -158,6 +159,8 @@ export function readStudioConfig(): StudioConfig {
     paymentsMode: readPaymentsMode(env),
     markup: readMarkup(env),
     currency: "USD",
+    photoMockups:
+      Boolean(env.PRINTFUL_API_KEY?.trim()) && isPublicHttpUrl(env.APP_PUBLIC_URL?.trim() ?? ""),
   };
 }
 
