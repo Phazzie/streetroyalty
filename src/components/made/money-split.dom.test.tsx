@@ -62,6 +62,6 @@ describe("the seam bar", () => {
     );
     expect(view.container.querySelectorAll(".seam-seg")).toHaveLength(2);
     expect(view.container.querySelectorAll("li")).toHaveLength(3);
-    expect(screen.getByText("$0.00")).toBeTruthy();
+    expect(screen.getByText("$0")).toBeTruthy();
   });
 });

@@ -23,6 +23,8 @@ describe("the database handle", () => {
       "0016_garment_identity.sql",
       "0017_design_spots.sql",
       "0018_aop_off_sale.sql",
+      "0019_label_stock.sql",
+      "0020_order_emails.sql",
     ]);
   });
 

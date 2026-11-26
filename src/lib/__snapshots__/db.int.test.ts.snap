@@ -124,10 +124,17 @@ exports[`the database handle > has the tables and columns the app reads 1`] = `
     "updated_at: timestamp with time zone",
     "user_id: text",
   ],
+  "label_stock": [
+    "created_at: timestamp with time zone",
+    "design_id: text",
+    "piece_key: text",
+  ],
   "orders": [
     "checkout_url: text",
     "created_at: timestamp with time zone",
     "currency: text",
+    "emailed_placed_at: timestamp with time zone",
+    "emailed_shipped_at: timestamp with time zone",
     "failure_reason: text",
     "id: text",
     "idempotency_key: text",

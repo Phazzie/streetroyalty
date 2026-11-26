@@ -187,8 +187,8 @@ describe("a regular piece with art on every spot", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add text" }));
     expect(await screen.findByRole("button", { name: "Back, has art" })).toBeTruthy();
     expect(screen.getByText(/2 spots print on this piece/)).toBeTruthy();
-    // The back is $5.95 at Printful, marked up 2x in this harness.
-    expect(screen.getByText("Includes $11.90 for the extra print spots.")).toBeTruthy();
+    // The back is $5.95 at Printful, marked up 2x in this harness and rounded up to a whole dollar.
+    expect(screen.getByText("Includes $12 for the extra print spots.")).toBeTruthy();
 
     fireEvent.click(chip(/^Front, has art$/));
     expect(starter().length).toBeGreaterThan(0);

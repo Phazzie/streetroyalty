@@ -84,7 +84,7 @@ describe("printful client", () => {
       ["front", "back", "sleeve_left", "sleeve_right"],
     );
     assert.equal(tee.placements[0]?.extraRetailCents, undefined);
-    assert.equal(tee.placements[1]?.extraRetailCents, 1190);
+    assert.equal(tee.placements[1]?.extraRetailCents, 1200);
     assert.equal(tee.construction, "placement");
     // Only the colours the studio shows: a variant outside them is dropped.
     assert.deepEqual(tee.variants.map((item) => item.id), ["15115"]);
@@ -118,7 +118,7 @@ describe("printful client", () => {
     const provider = createPrintfulProvider({ apiKey: "pk_test", fetchImpl, markup: 2 });
     const product = await provider.getProduct("71");
     assert.equal(product.variants[0]?.wholesaleCents, 1395);
-    assert.equal(product.variants[0]?.retailCents, 2790);
+    assert.equal(product.variants[0]?.retailCents, 2800);
     assert.equal(product.variants[0]?.printAreas[0]?.widthIn, 12);
     assert.equal(product.construction, "placement");
     assert.equal(product.aopTemplateId, undefined);
@@ -358,7 +358,7 @@ describe("sandbox provider", () => {
     const product = await provider.getProduct("tee-heavy");
     const variant = product.variants[0];
     assert.ok(variant);
-    assert.equal(variant.retailCents, (variant.wholesaleCents ?? 0) * 2);
+    assert.equal(variant.retailCents, Math.ceil(((variant.wholesaleCents ?? 0) * 2) / 100) * 100);
     const mockup = await provider.createMockup({
       productId: product.id,
       variantId: variant.id,

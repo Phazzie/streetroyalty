@@ -101,6 +101,8 @@ export async function nextBattle(
   options: NextBattleOptions = {},
   random: () => number = Math.random,
 ): Promise<NextBattle> {
+  const { ensureLabelStock } = await import("../label/stock.server.ts");
+  await ensureLabelStock();
   const sql = await getSql();
   const signedIn = userId !== null;
   const rows = await sql<PieceRow>`

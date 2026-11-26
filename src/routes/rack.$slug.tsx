@@ -16,6 +16,7 @@ import { ScanStrip } from "@/components/rack/scan-strip";
 import { TryOn } from "@/components/rack/try-on";
 import { Note, StudioShell } from "@/components/studio/shell";
 import { formatMoney } from "@/lib/pod/money";
+import { houseBlank, houseBlankByPrintfulId } from "@/lib/pod/house-blanks";
 import { SignInCall } from "@/components/ai/sign-in-call";
 import { useAiPrompt } from "@/components/ai/use-paid-ai";
 import { printNote } from "@/lib/ai/api";
@@ -142,7 +143,16 @@ function ProductPage() {
               <p className="mt-4 font-display text-3xl">
                 {formatMoney(size?.retailCents ?? piece.retailCents)}
               </p>
-              <p className="mt-4 text-sm text-muted">Size</p>
+              <div className="mt-4 flex items-baseline justify-between gap-3">
+                <p className="text-sm text-muted">Size</p>
+                <Link
+                  to="/sizes"
+                  hash={sizeGuideAnchor(piece.templateId)}
+                  className="text-sm text-fg underline underline-offset-4"
+                >
+                  Size guide
+                </Link>
+              </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {piece.sizes.map((item) => (
                   <button
@@ -265,4 +275,9 @@ function ProductPage() {
       ) : null}
     </StudioShell>
   );
+}
+
+/** Where this piece's blank sits on the size guide. */
+function sizeGuideAnchor(templateId: string): string | undefined {
+  return (houseBlank(templateId) ?? houseBlankByPrintfulId(templateId))?.id;
 }

@@ -25,7 +25,7 @@ import { STRIPE_WEBHOOK_SECRET, stripeEvent } from "../../test/webhooks.ts";
 const STRIPE = "https://api.stripe.com/v1/checkout/sessions";
 const STANDARD = { recipient: RECIPIENT, shippingMethod: "STANDARD" };
 // 13.95 wholesale at the default 2.2 markup, plus 4.75 shipping.
-const TEE = 3069;
+const TEE = 3100;
 const TOTAL = TEE + 475;
 
 let printful: ReturnType<typeof fakePrintful>;
@@ -306,7 +306,7 @@ describe("going live with a design", () => {
     expect(published.status).toBe("published");
     expect(printful.synced).toHaveLength(1);
     const sent = JSON.stringify(printful.synced[0]);
-    expect(sent).toContain('"retail_price":"30.69"');
+    expect(sent).toContain('"retail_price":"31.00"');
     expect(sent).toMatch(
       /https:\/\/streetroyalty\.com\/api\/print-files\/[0-9a-f-]{36}\?token=[0-9a-f]{64}/,
     );

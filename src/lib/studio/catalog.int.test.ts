@@ -28,7 +28,7 @@ describe("the studio catalog", () => {
     const product = await loadProduct(TEE.productId);
     expect(product.podMode).toBe("sandbox");
     expect(product.variants.find((variant) => variant.id === TEE.variantId)?.retailCents).toBe(
-      3432,
+      3500,
     );
   });
 

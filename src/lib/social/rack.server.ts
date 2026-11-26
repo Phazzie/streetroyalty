@@ -129,7 +129,9 @@ export async function piecesFor(options: {
 }
 
 /** The rack. Fresh is newest first, crowned is most crowns first, following is your makers only. */
-export function rackList(viewerId: string | null, sort: RackSort): Promise<RackPiece[]> {
+export async function rackList(viewerId: string | null, sort: RackSort): Promise<RackPiece[]> {
+  const { ensureLabelStock } = await import("../label/stock.server.ts");
+  await ensureLabelStock();
   return piecesFor({ viewerId, sort });
 }
 

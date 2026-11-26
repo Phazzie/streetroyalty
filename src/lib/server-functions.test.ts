@@ -12,6 +12,8 @@ import { describe, expect, it } from "vitest";
 const OPEN: Record<string, string> = {
   // Studio catalog and config: the same for everyone, nothing personal.
   getStudioConfig: "public config",
+  getShopContact: "the shop email shown on the public contact page",
+  getSizeGuides: "Printful size tables shown on the public size guide",
   listOAuthProviders: "login page asks which sign-in buttons this host may show; no user data",
   listCatalog: "public catalog",
   getCatalogProduct: "public catalog",
