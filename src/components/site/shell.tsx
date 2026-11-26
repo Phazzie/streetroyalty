@@ -11,7 +11,6 @@ const NAV = [
   { to: "/lab", label: "Outfit Lab", wide: false },
   { to: "/studio", label: "Studio", wide: false },
   { to: "/battles", label: "Battles", wide: true },
-  { to: "/episodes", label: "The Show", wide: true },
 ] as const;
 
 /** Smaller doors, shown under the big ones in the phone menu. */

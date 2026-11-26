@@ -97,9 +97,9 @@ const SIDE_B = [
     line: "Every piece on the rack carries its maker's name. Follow the ones you rate.",
   },
   {
-    to: "/episodes",
-    title: "The show",
-    line: "Episodes where the cast wears the rack. Off air for now.",
+    to: "/math",
+    title: "Do the math",
+    line: "Price a piece yourself and see where every dollar goes.",
   },
   {
     to: "/made",
