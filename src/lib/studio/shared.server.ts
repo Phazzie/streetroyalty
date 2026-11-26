@@ -5,7 +5,7 @@ import type { CatalogProduct } from "../pod/types.ts";
 import { printFileAuthorized, printSigningSecret, signedPrintFileUrl } from "../pod/print-access.ts";
 import { activePrinter, catalogIdFor, parseStoredGarment, resolveTemplateId } from "./garments.ts";
 import { parseLayers } from "./validate.ts";
-import type { DesignRecord, DesignSummary, StudioConfig } from "./models.ts";
+import type { DesignRecord, DesignSpot, DesignSummary, StudioConfig } from "./models.ts";
 
 export type DesignRow = {
   id: string;
@@ -36,6 +36,7 @@ export type DesignRow = {
   provider_catalog_id?: string | null;
   provider_variant_id?: string | null;
   garment_json?: string | null;
+  spots_json?: string | null;
   set_id?: string | null;
   updated_at: string;
 };
@@ -67,13 +68,59 @@ export function summary(row: DesignRow): DesignSummary {
   };
 }
 
+/**
+ * Every printed spot of a design. A row saved before spots existed, or with a
+ * single spot, is its one placement.
+ */
+export function designSpots(row: DesignRow): DesignSpot[] {
+  const primary: DesignSpot = {
+    placement: row.placement,
+    technique: row.technique,
+    layers: parseLayers(JSON.parse(row.layers_json)),
+    printFileId: row.print_file_id,
+  };
+  if (!row.spots_json) return [primary];
+  try {
+    const raw = JSON.parse(row.spots_json) as unknown;
+    if (!Array.isArray(raw) || raw.length === 0) return [primary];
+    const spots = raw.flatMap((entry): DesignSpot[] => {
+      const item = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : null;
+      if (!item || typeof item.placement !== "string") return [];
+      return [
+        {
+          placement: item.placement,
+          technique: typeof item.technique === "string" ? item.technique : row.technique,
+          layers: parseLayers(item.layers),
+          printFileId: typeof item.printFileId === "string" ? item.printFileId : null,
+        },
+      ];
+    });
+    // The first spot is the row's own placement. Keep the row's copy of it.
+    return [primary, ...spots.filter((spot) => spot.placement !== row.placement)];
+  } catch {
+    return [primary];
+  }
+}
+
+/** What the spots add to a piece's retail price, from the product's current surcharges. */
+export function spotExtraCents(
+  product: Pick<CatalogProduct, "placements">,
+  placements: readonly string[],
+): number {
+  return [...new Set(placements)].reduce(
+    (sum, key) =>
+      sum + (product.placements.find((item) => item.placement === key)?.extraRetailCents ?? 0),
+    0,
+  );
+}
+
 export function record(row: DesignRow): DesignRecord {
   return {
     ...summary(row),
+    spots: designSpots(row),
     layers: parseLayers(JSON.parse(row.layers_json)),
     printFileId: row.print_file_id,
     garment: parseStoredGarment(row.garment_json),
-    setId: row.set_id ?? null,
   };
 }
 

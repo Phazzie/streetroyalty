@@ -21,13 +21,13 @@
  * least 150 DPI.
  * https://www.printful.com/graphics-and-embroidery-guide
  *
- * NOT confirmed. The catalog API requires a key, and the public pages do not
- * publish these. Leave them null. Do not invent pixel sizes or variant ids.
- * Fill them from GET /v2/catalog-products/{id} and that product's print files.
+ * Confirmed with the owner's Printful key on 2026-11-19 (docs/printful-aop-data.md):
  *
- * - catalog variant ids
- * - placement keys (front, sleeve_left, hood, pocket, ...)
- * - template width and height in pixels, per placement
+ * - catalog variant ids, one per size, all on the undyed white base
+ * - placement keys (front, sleeve_left, hood, pocket, ...) and print sizes,
+ *   which live with the traced cut pieces in `src/lib/garments/outlines/`
+ * - the technique, "cut-sew" ("All-over synthetic")
+ * - the fabric of all three: 95-96% recycled polyester with elastane or spandex
  */
 
 export const AOP_DPI = 150;
@@ -44,24 +44,30 @@ export type AopMaterial = {
   fabricConfirmed: boolean;
 };
 
-/**
- * Printful's all-over print page, checked 18 Nov 2026: "Sublimation or
- * direct-to-fabric inks apply your design depending on the fabric, then the
- * garment is cut and sewn to shape", and dye sublimation is "for synthetics".
- * https://www.printful.com/all-over-print
- */
-const CUT_AND_SEWN = "Printed all over, then cut and sewn.";
-
 export type AopPrintfulProduct = {
   catalogProductId: number;
   name: string;
   sourceUrl: string;
   /** Starting price on the public product page, in cents. Not an API variant cost. */
   startingPriceCents: number;
-  /** TODO: null until the catalog variants endpoint is read with a Printful key. */
-  catalogVariantIds: null;
+  /** Printful catalog variant id by size label. Every variant is the white base the print goes on. */
+  catalogVariants: Readonly<Record<string, number>>;
+  /** The same ids as a list, in size order. */
+  catalogVariantIds: readonly number[];
   material: AopMaterial;
 };
+
+/** Printful's technique key for a cut-and-sew all-over garment. */
+export const AOP_TECHNIQUE = "cut-sew";
+
+/** The shared cloth line, with what is particular to each garment in front. */
+function fleece(cut: string): string {
+  return `${cut} Recycled polyester and elastane with a soft cotton-feel face and brushed fleece inside, printed all over by sublimation, then cut and sewn. The colors are the print, not sewn cotton panels.`;
+}
+
+function variants(map: Record<string, number>) {
+  return { catalogVariants: map, catalogVariantIds: Object.values(map) };
+}
 
 export const PRINTFUL_AOP = {
   hoodie: {
@@ -70,13 +76,23 @@ export const PRINTFUL_AOP = {
     sourceUrl:
       "https://www.printful.com/custom/sweatshirts-hoodies/388/all-over-print-recycled-unisex-hoodie",
     startingPriceCents: 4075,
-    catalogVariantIds: null,
-    // Checked 18 Nov 2026 on the sourceUrl above. The product description says it "is made
-    // from a recycled polyester and spandex blend". A synthetic, so sublimation, per the
-    // all-over print page quoted at CUT_AND_SEWN.
+    ...variants({
+      "2XS": 18730,
+      XS: 10869,
+      S: 10870,
+      M: 10871,
+      L: 10872,
+      XL: 10873,
+      "2XL": 10874,
+      "3XL": 10875,
+      "4XL": 18731,
+      "5XL": 18732,
+      "6XL": 18733,
+    }),
+    // GET /products/388: 96% recycled polyester and 4% elastane (US/Mexico), 95/5 in Latvia.
     material: {
-      line: "Recycled polyester and spandex blend, printed all over by sublimation, then cut and sewn. The colors are the print, not sewn cotton panels.",
-      fabric: "recycled polyester and spandex blend",
+      line: fleece("Double-lined hood."),
+      fabric: "recycled polyester and elastane",
       fabricConfirmed: true,
     },
   },
@@ -86,14 +102,13 @@ export const PRINTFUL_AOP = {
     sourceUrl:
       "https://www.printful.com/custom/all-over-print-recycled-mens-joggers/400/all-over-print-recycled-mens-joggers",
     startingPriceCents: 3948,
-    catalogVariantIds: null,
-    // Checked 18 Nov 2026 on the sourceUrl above. The page names no fabric or print method
-    // ("soft, comfy, have pockets"), and buyer reviews mention a cotton lining. Say less.
+    ...variants({ XS: 11033, S: 11034, M: 11035, L: 11036, XL: 11037, "2XL": 11038, "3XL": 11039 }),
+    // GET /products/400: 96% recycled polyester and 4% elastane, 95/5 spandex in Latvia.
     // The public catalog's recycled jogger is the men's cut (400), not a unisex.
     material: {
-      line: `${CUT_AND_SEWN} The fabric is not confirmed yet.`,
-      fabric: null,
-      fabricConfirmed: false,
+      line: fleece("Slim fit with cuffed legs."),
+      fabric: "recycled polyester and elastane",
+      fabricConfirmed: true,
     },
   },
   jacket: {
@@ -102,38 +117,27 @@ export const PRINTFUL_AOP = {
     sourceUrl:
       "https://www.printful.com/custom/all-over-print-recycled-unisex-track-jacket/801/all-over-print-recycled-unisex-track-jacket",
     startingPriceCents: 6241,
-    catalogVariantIds: null,
-    // Checked 18 Nov 2026 on the sourceUrl above. The page names no fabric or print method
-    // ("Order a custom track jacket"). Say less.
+    ...variants({
+      "2XS": 20370,
+      XS: 20371,
+      S: 20372,
+      M: 20373,
+      L: 20374,
+      XL: 20375,
+      "2XL": 20376,
+      "3XL": 20377,
+      "4XL": 20378,
+      "5XL": 20379,
+      "6XL": 20380,
+    }),
+    // GET /products/801: 96% recycled polyester and 4% elastane, 95/5 in Latvia.
     material: {
-      line: `${CUT_AND_SEWN} The fabric is not confirmed yet.`,
-      fabric: null,
-      fabricConfirmed: false,
+      line: fleece("Full zip with zippered pockets."),
+      fabric: "recycled polyester and elastane",
+      fabricConfirmed: true,
     },
   },
 } as const satisfies Record<string, AopPrintfulProduct>;
-
-export type PanelPrintTarget = {
-  confirmed: false;
-  dpi: typeof AOP_DPI;
-  /** TODO: null until Printful's template pixel size is read. Do not guess. */
-  widthPx: null;
-  heightPx: null;
-  /** TODO: null until the catalog placement key is read. */
-  placementKey: null;
-  todo: string;
-};
-
-export function panelPrintTarget(catalogProductId: number, panelId: string): PanelPrintTarget {
-  return {
-    confirmed: false,
-    dpi: AOP_DPI,
-    widthPx: null,
-    heightPx: null,
-    placementKey: null,
-    todo: `TODO: Printful template size for catalog product ${catalogProductId}, panel "${panelId}", is not in the public docs. Read the catalog product and its print files before using any pixel size as a Printful file.`,
-  };
-}
 
 export function printfulAopById(catalogProductId: number): AopPrintfulProduct | null {
   return (
@@ -143,18 +147,16 @@ export function printfulAopById(catalogProductId: number): AopPrintfulProduct | 
 
 /** What a buyer is told while an all-over piece cannot be ordered. */
 export const AOP_ORDER_CLOSED =
-  "All-over pieces can be designed, saved and shared now. Ordering opens once the printer's panel templates are set up.";
+  "This all-over piece can be designed, saved and shared, but it cannot be ordered yet.";
 
 /**
- * The one rule for whether an all-over product can be ordered. True only when
- * its catalog variant ids are known and every panel has a confirmed Printful
- * template (pixel size and placement key), so a real print file can be made
- * for each panel. Until then only the chest logo would reach the printer.
- * The wiring job flips this by filling in those facts above, not by editing
- * the callers.
+ * The one rule for whether an all-over product can be ordered: its catalog
+ * variant ids are known, and the garment's panels cover every piece the
+ * printer cuts (`problems` is empty). The caller works out the coverage from
+ * the traced outlines, so a piece can never ship blank.
  */
-export function aopOrderable(catalogProductId: number, panelIds: readonly string[]): boolean {
+export function aopOrderable(catalogProductId: number, problems: readonly string[]): boolean {
   const product = printfulAopById(catalogProductId);
-  if (!product?.catalogVariantIds || panelIds.length === 0) return false;
-  return panelIds.every((panelId) => panelPrintTarget(catalogProductId, panelId).confirmed);
+  if (!product || product.catalogVariantIds.length === 0) return false;
+  return problems.length === 0;
 }

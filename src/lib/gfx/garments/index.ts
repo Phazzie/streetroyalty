@@ -315,10 +315,11 @@ function compose(options: {
   layers: DesignLayer[];
   square: boolean;
   printArea?: { widthIn: number; heightIn: number };
+  placement?: string;
 }): string {
   const hex = garmentHex(options.colorHex);
   const tones = palette(hex);
-  const drawing: Drawing = drawGarment(options.shape, options.view);
+  const drawing: Drawing = drawGarment(options.shape, options.view, options.placement);
   const window = fitWindow(drawing.window, options.printArea);
   const { camera } = drawing;
   const fallbackInk = tones.trim;
@@ -411,6 +412,7 @@ export function garmentMockupMarkup(input: GarmentMockupInput): string {
   return compose({
     shape,
     view: resolveView(shape, input?.placement),
+    placement: input?.placement,
     colorHex: input?.colorHex,
     layers: Array.isArray(input?.layers) ? input.layers : [],
     square: false,

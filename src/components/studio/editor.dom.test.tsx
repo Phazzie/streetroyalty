@@ -14,21 +14,21 @@ const harness = vi.hoisted(() => ({ mode: "sandbox" as "sandbox" | "live" }));
 const TRACKSUIT = [
   {
     id: 388,
-    name: "AOP Hoodie",
+    name: "All-Over Hoodie",
     type: "Hoodie",
     techniques: [{ key: "dtg", display_name: "DTG", is_default: true }],
     placements: [{ placement: "front", technique: "dtg", title: "Front" }],
   },
   {
     id: 400,
-    name: "AOP Joggers",
+    name: "All-Over Joggers",
     type: "Joggers",
     techniques: [{ key: "dtg", display_name: "DTG", is_default: true }],
     placements: [{ placement: "front", technique: "dtg", title: "Front" }],
   },
   {
     id: 801,
-    name: "AOP Track Jacket",
+    name: "All-Over Track Jacket",
     type: "Jacket",
     techniques: [{ key: "dtg", display_name: "DTG", is_default: true }],
     placements: [{ placement: "front", technique: "dtg", title: "Front" }],
@@ -36,8 +36,8 @@ const TRACKSUIT = [
 ];
 
 const TEE = {
-  id: 71,
-  name: "Softstyle Tee",
+  id: 586,
+  name: "Garment-Dyed Heavyweight T-Shirt",
   type: "T-Shirt",
   techniques: [{ key: "dtg", display_name: "DTG", is_default: true }],
   placements: [{ placement: "front", technique: "dtg", title: "Front" }],
@@ -56,6 +56,14 @@ function printfulFetch(input: RequestInfo | URL): Response {
           color_code: "#c4a6e0",
           placement_dimensions: [{ placement: "front", width: 12, height: 16 }],
         },
+        {
+          id: 15115,
+          name: "Black M",
+          size: "M",
+          color: "Black",
+          color_code: "#1b1b1c",
+          placement_dimensions: [{ placement: "front", width: 12, height: 16 }],
+        },
       ],
     });
   }
@@ -63,7 +71,10 @@ function printfulFetch(input: RequestInfo | URL): Response {
     return Response.json({
       data: {
         currency: "USD",
-        variant: { id: 9001, techniques: [{ technique_key: "dtg", discounted_price: "40.75" }] },
+        variants: [9001, 15115].map((id) => ({
+          id,
+          techniques: [{ technique_key: "dtg", discounted_price: "40.75" }],
+        })),
       },
     });
   }
@@ -116,34 +127,62 @@ import { Editor } from "./editor";
 async function openHoodie(firstHeading: string) {
   render(<Editor designId="" />);
   expect(await screen.findByRole("heading", { name: firstHeading })).toBeTruthy();
-  expect(screen.getByRole("button", { name: /AOP Hoodie/ })).toBeTruthy();
-  expect(screen.getByRole("button", { name: /AOP Joggers/ })).toBeTruthy();
-  expect(screen.getByRole("button", { name: /AOP Track Jacket/ })).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: /AOP Hoodie/ }));
-  expect(await screen.findByRole("img", { name: "AOP Hoodie, front" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /All-Over Hoodie/ })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /All-Over Joggers/ })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /All-Over Track Jacket/ })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /All-Over Hoodie/ }));
+  expect(await screen.findByRole("img", { name: "All-Over Hoodie, front" })).toBeTruthy();
   const titles = screen.getAllByRole("button").map((button) => button.textContent ?? "");
   expect(titles).toContain("Hood");
-  expect(
-    screen.getAllByText(/Ordering opens once the printer's panel templates/).length,
-  ).toBeGreaterThan(0);
+  // All-over pieces print from real Printful pieces now, so ordering is open.
+  expect(screen.queryByText(/cannot be ordered yet/)).toBeNull();
+  expect(screen.getByText(/These checks cover your logo layers/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "See print sheets" }));
+  expect(await screen.findByRole("img", { name: "Hood print sheet" })).toBeTruthy();
   expect(screen.queryByText(/Print area/)).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "See the set" }));
-  await waitFor(() => {
-    expect(screen.getByText(/Joggers:/)).toBeTruthy();
-  });
+  expect(screen.queryByRole("button", { name: "See the set" })).toBeNull();
 }
 
-describe("the studio tracksuit", () => {
+describe("the studio's all-over pieces", () => {
   beforeEach(() => {
     harness.mode = "sandbox";
   });
 
-  it("shows the tracksuit and attaches the hoodie panel editor in the sandbox", async () => {
-    await openHoodie("Heavyweight Street Tee");
+  it("lists the all-over pieces and attaches the hoodie panel editor in the sandbox", async () => {
+    await openHoodie("Heavyweight Tee");
   });
 
-  it("shows the tracksuit and attaches the hoodie panel editor on live Printful", async () => {
+  it("lists only the studio's own pieces on live Printful and attaches the panel editor", async () => {
     harness.mode = "live";
-    await openHoodie("Softstyle Tee");
+    await openHoodie("Garment-Dyed Heavyweight T-Shirt");
+  });
+});
+
+describe("a regular piece with art on every spot", () => {
+  beforeEach(() => {
+    harness.mode = "sandbox";
+  });
+
+  it("keeps each spot's art apart, marks the spots that print, and prices the extra ones", async () => {
+    render(<Editor designId="" />);
+    expect(await screen.findByRole("heading", { name: "Heavyweight Tee" })).toBeTruthy();
+    const chip = (name: RegExp) => screen.getByRole("button", { name });
+    // The starter line sits on the front only.
+    expect(chip(/^Front, has art$/)).toBeTruthy();
+    const starter = () => screen.queryAllByRole("button", { name: "STREET ROYALTY" });
+    expect(starter().length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Includes/)).toBeNull();
+
+    fireEvent.click(chip(/^Back$/));
+    expect(starter()).toEqual([]);
+    fireEvent.click(screen.getByRole("button", { name: "Add text" }));
+    expect(await screen.findByRole("button", { name: "Back, has art" })).toBeTruthy();
+    expect(screen.getByText(/2 spots print on this piece/)).toBeTruthy();
+    // The back is $5.95 at Printful, marked up 2x in this harness.
+    expect(screen.getByText("Includes $11.90 for the extra print spots.")).toBeTruthy();
+
+    fireEvent.click(chip(/^Front, has art$/));
+    expect(starter().length).toBeGreaterThan(0);
+    expect(screen.queryAllByRole("button", { name: "NEW" })).toEqual([]);
   });
 });

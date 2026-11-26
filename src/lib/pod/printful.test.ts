@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { describe, it } from "vitest";
-import { createPrintfulProvider } from "./printful.ts";
+import { STUDIO_CATALOG, createPrintfulProvider } from "./printful.ts";
 import { PodError } from "./types.ts";
 import { buildMockupSvg, createSandboxProvider } from "./sandbox.ts";
 import { signPrintfulBody, verifyPrintfulSignature } from "./signature.ts";
@@ -33,19 +33,61 @@ const variant = {
 };
 
 describe("printful client", () => {
-  it("lists catalog products from v2", async () => {
-    const { fetchImpl, calls } = mockFetch(() => ({
-      json: {
-        data: [{ id: 71, name: "Softstyle Tee", type: "T-Shirt", image: " https://cdn.example/tee.jpg ", is_discontinued: false, sizes: ["M"], colors: [{ name: "Black", value: "#111" }], techniques: [{ key: "dtg", display_name: "DTG", is_default: true }], placements: [{ placement: "front", technique: "dtg" }] }],
-        paging: { total: 40, offset: 0, limit: 24 },
-      },
-    }));
+  it("lists only the studio's own pieces, one v2 product each, in order", async () => {
+    const { fetchImpl, calls } = mockFetch((call) => {
+      const id = Number(call.url.match(/catalog-products\/(\d+)/)?.[1]);
+      return {
+        json: {
+          data: { id, name: `Product ${id}`, type: "T-Shirt", image: " https://cdn.example/tee.jpg ", is_discontinued: false, sizes: ["M"], colors: [{ name: "Black", value: "#111" }], techniques: [{ key: "dtg", display_name: "DTG", is_default: true }], placements: [{ placement: "front", technique: "dtg" }] },
+        },
+      };
+    });
     const provider = createPrintfulProvider({ apiKey: "pk_test", fetchImpl, markup: 2 });
     const page = await provider.listProducts({ limit: 24, offset: 0 });
-    assert.equal(calls[0]?.url.includes("/v2/catalog-products?"), true);
-    assert.equal(page.products[0]?.name, "Softstyle Tee");
+    assert.deepEqual(
+      calls.map((call) => call.url.replace(/^.*catalog-products\//, "")),
+      [...STUDIO_CATALOG],
+    );
+    assert.deepEqual(page.products.map((item) => item.id), [...STUDIO_CATALOG]);
     assert.equal(page.products[0]?.imageUrl, "https://cdn.example/tee.jpg");
-    assert.equal(page.total, 40);
+    assert.equal(page.total, STUDIO_CATALOG.length);
+    const second = await provider.listProducts({ limit: 2, offset: 1 });
+    assert.deepEqual(second.products.map((item) => item.id), STUDIO_CATALOG.slice(1, 3));
+  });
+
+  it("offers a house piece only its DTG spots, with Printful's surcharge marked up", async () => {
+    const { fetchImpl } = mockFetch((call) => {
+      if (call.url.includes("/catalog-variants")) {
+        return { json: { data: [{ ...variant, id: 15115 }, { ...variant, id: 999999 }] } };
+      }
+      if (call.url.includes("/prices")) return { json: { data: null } };
+      return {
+        json: {
+          data: {
+            id: 586,
+            name: "Garment-Dyed Heavyweight T-Shirt",
+            type: "T-Shirt",
+            techniques: [{ key: "dtg", display_name: "DTG", is_default: true }],
+            placements: [
+              { placement: "front", technique: "dtg" },
+              { placement: "embroidery_chest_left", technique: "embroidery" },
+              { placement: "front_dtf", technique: "dtfilm" },
+            ],
+          },
+        },
+      };
+    });
+    const provider = createPrintfulProvider({ apiKey: "pk_test", fetchImpl, markup: 2 });
+    const tee = await provider.getProduct("586");
+    assert.deepEqual(
+      tee.placements.map((item) => item.placement),
+      ["front", "back", "sleeve_left", "sleeve_right"],
+    );
+    assert.equal(tee.placements[0]?.extraRetailCents, undefined);
+    assert.equal(tee.placements[1]?.extraRetailCents, 1190);
+    assert.equal(tee.construction, "placement");
+    // Only the colours the studio shows: a variant outside them is dropped.
+    assert.deepEqual(tee.variants.map((item) => item.id), ["15115"]);
   });
 
   it("loads variants and wholesale prices", async () => {
@@ -129,7 +171,12 @@ describe("printful client", () => {
       assert.equal(product.aopTemplateId, item.templateId);
       assert.ok(product.materialNote && product.materialNote.length > 10);
     }
-    const page = await provider.listProducts();
+    const page = await createPrintfulProvider({
+      apiKey: "pk_test",
+      fetchImpl,
+      markup: 2,
+      catalog: ["388", "400", "801", "71"],
+    }).listProducts();
     assert.equal(page.products.find((item) => item.id === "388")?.aopTemplateId, "aop-hoodie");
     assert.equal(page.products.find((item) => item.id === "71")?.construction, "placement");
     assert.equal(page.products.find((item) => item.id === "71")?.aopTemplateId, undefined);
@@ -165,6 +212,49 @@ describe("printful client", () => {
     assert.equal(JSON.stringify(calls).includes("confirmation"), false);
     const body = calls[0]?.body as { order_items: { retail_price: string }[] };
     assert.equal(body.order_items[0]?.retail_price, "32.00");
+  });
+
+  it("sends an all-over line as one file per placement, each filling its placement", async () => {
+    const { fetchImpl, calls } = mockFetch(() => ({ json: { data: { id: 56, status: "draft" } } }));
+    const provider = createPrintfulProvider({ apiKey: "pk_test", fetchImpl });
+    await provider.createDraftOrder({
+      externalId: "ord-2",
+      shippingMethod: "STANDARD",
+      currency: "USD",
+      recipient: { name: "Ada", address1: "1 Main", city: "Austin", stateCode: "TX", countryCode: "US", zip: "78701" },
+      items: [
+        {
+          externalId: "item-2",
+          variantId: "10871",
+          quantity: 1,
+          retailCents: 9000,
+          name: "Lilac hoodie",
+          placement: "front",
+          technique: "cut-sew",
+          fileUrl: "https://shop.example/api/print-files/r.front",
+          files: [
+            { placement: "front", url: "https://shop.example/api/print-files/r.front" },
+            { placement: "hood", url: "https://shop.example/api/print-files/r.hood" },
+          ],
+        },
+      ],
+    });
+    const body = calls[0]?.body as {
+      order_items: {
+        catalog_variant_id: number;
+        placements: { placement: string; technique: string; layers: { url: string; position?: unknown }[] }[];
+      }[];
+    };
+    const item = body.order_items[0]!;
+    assert.equal(item.catalog_variant_id, 10871);
+    assert.deepEqual(
+      item.placements.map((entry) => [entry.placement, entry.technique, entry.layers[0]?.url]),
+      [
+        ["front", "cut-sew", "https://shop.example/api/print-files/r.front"],
+        ["hood", "cut-sew", "https://shop.example/api/print-files/r.hood"],
+      ],
+    );
+    assert.equal(item.placements[0]?.layers[0]?.position, undefined);
   });
 
   it("confirms on its own endpoint", async () => {

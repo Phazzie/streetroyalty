@@ -15,6 +15,7 @@ export {
   publishDesign,
   readPrintFile,
   saveDesign,
+  storePrintFile,
 } from "./designs.server.ts";
 export {
   addToCart,

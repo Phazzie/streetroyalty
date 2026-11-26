@@ -5,6 +5,7 @@ import { renderGarmentSvg } from "../garments/render.ts";
 import { arcLayout, clampFx, isFlatText } from "../text/layout.ts";
 import { AOP_DPI } from "./aop-printful.ts";
 import { aopFieldsFor, bindingsFor, printfulFactsForTemplate } from "./garment-map.ts";
+import { HOUSE_BLANKS, houseAreas, sizeCode } from "./house-blanks.ts";
 import { applyMarkup } from "./money.ts";
 import type {
   CatalogPage,
@@ -31,42 +32,6 @@ type SandboxOrder = {
   confirmed: boolean;
 };
 
-const TEE: PrintArea[] = [
-  { placement: "front", widthIn: 12, heightIn: 16, dpi: AOP_DPI },
-  { placement: "back", widthIn: 12, heightIn: 16, dpi: AOP_DPI },
-  { placement: "sleeve_left", widthIn: 3.5, heightIn: 3.5, dpi: AOP_DPI },
-  { placement: "sleeve_right", widthIn: 3.5, heightIn: 3.5, dpi: AOP_DPI },
-];
-
-const HOODIE: PrintArea[] = [
-  { placement: "front", widthIn: 12, heightIn: 12, dpi: AOP_DPI },
-  { placement: "back", widthIn: 12, heightIn: 16, dpi: AOP_DPI },
-];
-
-const HAT: PrintArea[] = [{ placement: "front", widthIn: 4, heightIn: 2, dpi: AOP_DPI }];
-
-const CREW: PrintArea[] = [
-  { placement: "front", widthIn: 12, heightIn: 14, dpi: AOP_DPI },
-  { placement: "back", widthIn: 12, heightIn: 16, dpi: AOP_DPI },
-];
-
-const LONGSLEEVE: PrintArea[] = [
-  { placement: "front", widthIn: 12, heightIn: 16, dpi: AOP_DPI },
-  { placement: "back", widthIn: 12, heightIn: 16, dpi: AOP_DPI },
-  { placement: "sleeve_left", widthIn: 3.5, heightIn: 12, dpi: AOP_DPI },
-  { placement: "sleeve_right", widthIn: 3.5, heightIn: 12, dpi: AOP_DPI },
-];
-
-const JOGGER: PrintArea[] = [
-  { placement: "front", widthIn: 5, heightIn: 5, dpi: AOP_DPI },
-  { placement: "back", widthIn: 8, heightIn: 4, dpi: AOP_DPI },
-];
-
-const TOTE: PrintArea[] = [
-  { placement: "front", widthIn: 12, heightIn: 12, dpi: AOP_DPI },
-  { placement: "back", widthIn: 12, heightIn: 12, dpi: AOP_DPI },
-];
-
 const CHEST: PrintArea[] = [{ placement: "front", widthIn: 4, heightIn: 3, dpi: AOP_DPI }];
 
 const APPAREL_SIZES = [
@@ -82,172 +47,63 @@ export function sandboxVariantId(productId: string, colorCode: string, sizeCode:
   return `${productId}-${colorCode}-${sizeCode}`;
 }
 
+type BlankSize = { code: string; name: string };
+
 type Blank = {
   id: string;
   name: string;
   type: string;
+  brand: string;
   description: string;
   technique: string;
   techniqueTitle: string;
-  placements: { placement: string; title: string }[];
+  placements: { placement: string; title: string; extraCents: number }[];
   areas: PrintArea[];
-  colors: { code: string; name: string; hex: string }[];
-  sizes: { code: string; name: string }[];
+  colors: {
+    code: string;
+    name: string;
+    hex: string;
+    /** Wholesale cents and stock per size label. Missing means not made in that size. */
+    sizes?: Record<string, { cents: number; inStock: boolean }>;
+  }[];
+  sizes: BlankSize[];
   wholesaleCents: number;
   shape: "tee" | "hoodie" | "hat" | "crew" | "tote" | "joggers" | "aop";
 };
 
-const BLANKS: Blank[] = [
-  {
-    id: "tee-heavy",
-    name: "Heavyweight Street Tee",
-    type: "T-Shirt",
-    description: "240gsm cotton tee with a wide front print area. The house blank.",
-    technique: "dtg",
+/** The regular pieces: the same Printful products, colours and sizes the live shop sells. */
+function houseBlanks(): Blank[] {
+  return HOUSE_BLANKS.map((blank) => ({
+    id: blank.id,
+    name: blank.name,
+    type: blank.type,
+    brand: blank.model,
+    description: `${blank.description} Printful ${blank.printfulId}, ${blank.model}.`,
+    technique: blank.technique,
     techniqueTitle: "DTG printing",
-    placements: [
-      { placement: "front", title: "Front" },
-      { placement: "back", title: "Back" },
-      { placement: "sleeve_left", title: "Left sleeve" },
-      { placement: "sleeve_right", title: "Right sleeve" },
-    ],
-    areas: TEE,
-    colors: [
-      { code: "black", name: "Black", hex: "#141414" },
-      { code: "bone", name: "Bone", hex: "#efe6d6" },
-      { code: "hot-pink", name: "Hot Pink", hex: "#ff2d95" },
-      { code: "royal", name: "Royal", hex: "#2f5bff" },
-    ],
-    sizes: APPAREL_SIZES,
-    wholesaleCents: 1395,
-    shape: "tee",
-  },
-  {
-    id: "hoodie-pullover",
-    name: "Pullover Hoodie",
-    type: "Hoodie",
-    description: "Fleece pullover. Front print sits above the pocket.",
-    technique: "dtg",
-    techniqueTitle: "DTG printing",
-    placements: [
-      { placement: "front", title: "Front" },
-      { placement: "back", title: "Back" },
-    ],
-    areas: HOODIE,
-    colors: [
-      { code: "black", name: "Black", hex: "#141414" },
-      { code: "bone", name: "Bone", hex: "#efe6d6" },
-      { code: "lime", name: "Lime", hex: "#d6ff3c" },
-    ],
-    sizes: APPAREL_SIZES,
-    wholesaleCents: 2895,
-    shape: "hoodie",
-  },
-  {
-    id: "hat-dad",
-    name: "Dad Hat",
-    type: "Hat",
-    description: "Unstructured cap with a small front embroidery.",
-    technique: "embroidery",
-    techniqueTitle: "Embroidery",
-    placements: [{ placement: "front", title: "Front" }],
-    areas: HAT,
-    colors: [
-      { code: "black", name: "Black", hex: "#141414" },
-      { code: "bone", name: "Bone", hex: "#efe6d6" },
-      { code: "hot-pink", name: "Hot Pink", hex: "#ff2d95" },
-    ],
-    sizes: [{ code: "one-size", name: "One size" }],
-    wholesaleCents: 1195,
-    shape: "hat",
-  },
-  {
-    id: "crew-sweat",
-    name: "Crewneck Sweatshirt",
-    type: "Sweatshirt",
-    description: "Heavy crew with room for a back print.",
-    technique: "dtg",
-    techniqueTitle: "DTG printing",
-    placements: [
-      { placement: "front", title: "Front" },
-      { placement: "back", title: "Back" },
-    ],
-    areas: CREW,
-    colors: [
-      { code: "black", name: "Black", hex: "#141414" },
-      { code: "bone", name: "Bone", hex: "#efe6d6" },
-      { code: "royal", name: "Royal", hex: "#2f5bff" },
-    ],
-    sizes: APPAREL_SIZES,
-    wholesaleCents: 2495,
-    shape: "crew",
-  },
-  {
-    id: "longsleeve-block",
-    name: "Block Long-Sleeve",
-    type: "Long-Sleeve",
-    description: "Long sleeves carry their own print run, down the arm, not just the chest.",
-    technique: "dtg",
-    techniqueTitle: "DTG printing",
-    placements: [
-      { placement: "front", title: "Front" },
-      { placement: "back", title: "Back" },
-      { placement: "sleeve_left", title: "Left sleeve" },
-      { placement: "sleeve_right", title: "Right sleeve" },
-    ],
-    areas: LONGSLEEVE,
-    colors: [
-      { code: "black", name: "Black", hex: "#141414" },
-      { code: "bone", name: "Bone", hex: "#efe6d6" },
-      { code: "violet", name: "Violet", hex: "#7c5cff" },
-    ],
-    sizes: APPAREL_SIZES,
-    wholesaleCents: 1895,
-    shape: "tee",
-  },
-  {
-    id: "jogger-court",
-    name: "Court Joggers",
-    type: "Joggers",
-    description: "Tapered fleece joggers. A thigh hit on the front, a block print across the back.",
-    technique: "dtg",
-    techniqueTitle: "DTG printing",
-    placements: [
-      { placement: "front", title: "Front thigh" },
-      { placement: "back", title: "Back" },
-    ],
-    areas: JOGGER,
-    colors: [
-      { code: "black", name: "Black", hex: "#141414" },
-      { code: "bone", name: "Bone", hex: "#efe6d6" },
-      { code: "royal", name: "Royal", hex: "#2f5bff" },
-    ],
-    sizes: APPAREL_SIZES,
-    wholesaleCents: 2695,
-    shape: "joggers",
-  },
-  {
-    id: "tote-corner",
-    name: "Corner Store Tote",
-    type: "Tote",
-    description: "Heavy canvas tote, both sides printable.",
-    technique: "dtg",
-    techniqueTitle: "DTG printing",
-    placements: [
-      { placement: "front", title: "Front" },
-      { placement: "back", title: "Back" },
-    ],
-    areas: TOTE,
-    colors: [
-      { code: "bone", name: "Bone", hex: "#efe6d6" },
-      { code: "black", name: "Black", hex: "#141414" },
-    ],
-    sizes: [{ code: "one-size", name: "One size" }],
-    wholesaleCents: 995,
-    shape: "tote",
-  },
-  ...aopBlanks(),
-];
+    placements: blank.placements.map((item) => ({
+      placement: item.placement,
+      title: item.title,
+      extraCents: item.extraCents,
+    })),
+    areas: houseAreas(blank),
+    colors: blank.colors.map((item) => ({
+      code: item.code,
+      name: item.name,
+      hex: item.hex,
+      sizes: Object.fromEntries(
+        Object.entries(item.variants).map(([size, v]) => [size, { cents: v.cents, inStock: v.inStock }]),
+      ),
+    })),
+    sizes: blank.sizes.map((name) => ({ code: sizeCode(name), name })),
+    wholesaleCents: Math.min(
+      ...blank.colors.flatMap((item) => Object.values(item.variants).map((v) => v.cents)),
+    ),
+    shape: blank.shape,
+  }));
+}
+
+const BLANKS: Blank[] = [...houseBlanks(), ...aopBlanks()];
 
 function aopBlanks(): Blank[] {
   return bindingsFor("sandbox")
@@ -265,7 +121,8 @@ function aopBlanks(): Blank[] {
       description: `${facts.material.line} Matched to Printful ${facts.catalogProductId}, ${facts.name}. Panel colors are the print, not a dyed blank. Printful's template pixel sizes are not confirmed yet.`,
       technique: "sublimation",
       techniqueTitle: "Sublimation",
-      placements: [{ placement: "front", title: "Chest logo" }],
+      brand: "Street Royalty",
+      placements: [{ placement: "front", title: "Chest logo", extraCents: 0 }],
       areas: CHEST,
       colors: [{ code: "printed", name: "Printed", hex: "#c4a6e0" }],
       sizes: APPAREL_SIZES,
@@ -285,7 +142,9 @@ function variantsFor(blank: Blank, markup: number): CatalogVariant[] {
   const variants: CatalogVariant[] = [];
   for (const color of blank.colors) {
     for (const size of blank.sizes) {
-      const wholesale = blank.wholesaleCents + sizePremium(size.name);
+      const listed = color.sizes?.[size.name];
+      if (color.sizes && !listed) continue;
+      const wholesale = listed?.cents ?? blank.wholesaleCents + sizePremium(size.name);
       variants.push({
         id: sandboxVariantId(blank.id, color.code, size.code),
         productId: blank.id,
@@ -299,7 +158,7 @@ function variantsFor(blank: Blank, markup: number): CatalogVariant[] {
         retailCents: applyMarkup(wholesale, markup),
         currency: "USD",
         printAreas: blank.areas,
-        inStock: true,
+        inStock: listed?.inStock ?? true,
       });
     }
   }
@@ -311,7 +170,7 @@ function toProduct(blank: Blank, markup: number, withVariants: boolean): Catalog
     id: blank.id,
     name: blank.name,
     type: blank.type,
-    brand: "Street Royalty",
+    brand: blank.brand,
     description: blank.description,
     imageUrl: blankImage(blank),
     discontinued: false,
@@ -320,6 +179,12 @@ function toProduct(blank: Blank, markup: number, withVariants: boolean): Catalog
       placement: placement.placement,
       technique: blank.technique,
       title: placement.title,
+      ...(placement.extraCents > 0
+        ? {
+            extraRetailCents: applyMarkup(placement.extraCents, markup),
+            extraWholesaleCents: placement.extraCents,
+          }
+        : {}),
     })),
     colors: blank.colors.map((color) => ({ code: color.code, name: color.name, hex: color.hex })),
     sizes: blank.sizes.map((size) => size.name),

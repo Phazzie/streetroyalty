@@ -42,6 +42,10 @@ export type CatalogPlacement = {
   placement: string;
   technique: string;
   title: string;
+  /** What printing this spot adds to the retail price, in cents. Absent means nothing. */
+  extraRetailCents?: number;
+  /** What the printer charges for this spot, in cents. */
+  extraWholesaleCents?: number;
 };
 
 export type CatalogProduct = {
@@ -167,6 +171,12 @@ export type DraftOrderItem = {
   technique: string;
   fileUrl: string;
   printArea?: PrintArea;
+  /**
+   * One file per placement. When present the printer gets these instead of the
+   * single `placement` / `fileUrl` pair. An all-over file fills its whole
+   * placement; a file with an `area` is placed in that print area.
+   */
+  files?: { placement: string; url: string; area?: PrintArea }[];
 };
 
 export type DraftOrderRequest = {

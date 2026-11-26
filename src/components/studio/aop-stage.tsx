@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GarmentFlat } from "@/components/studio/garment-flat";
-import { renderPanelProof } from "@/components/studio/panel-proof";
+import { pictureForPanel } from "@/components/studio/panel-picture";
 import {
   AOP_ORDER_CLOSED,
   COLOR_ROLES,
@@ -10,10 +10,9 @@ import {
   activeColorway,
   addColorway,
   getTemplate,
-  panelExportPlan,
   printfulCard,
   removeColorway,
-  resolvePaint,
+  renderPrintSheets,
   setPanelFill,
   setRoleColor,
   updateColorway,
@@ -25,29 +24,80 @@ import {
 
 const ROLE_LABEL: Record<ColorRole, string> = {
   body: "Body",
-  contrast: "Side panels",
-  trim: "Piping and cuffs",
-  mark: "Logo",
+  contrast: "Stripes and side panels",
+  trim: "Piping, cuffs and bands",
+  mark: "Logo ink",
 };
+
+const PLACEMENT_LABEL: Record<string, string> = {
+  front: "Front",
+  back: "Back",
+  hood: "Hood",
+  pocket: "Pocket",
+  label_panel: "Neck panel",
+  sleeve_left: "Left sleeve",
+  sleeve_right: "Right sleeve",
+  leg_left: "Left leg",
+  leg_right: "Right leg",
+  details: "Collar and zip facings",
+};
+
+/** Print sheets, drawn small for the screen. The server draws the same sheets at full size. */
+function PrintSheets({ garment }: { garment: GarmentDesign }) {
+  const sheets = useMemo(
+    () =>
+      renderPrintSheets(garment, { widthPx: 360, showLogoBox: true, paper: true }).map((sheet) => ({
+        ...sheet,
+        href: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(sheet.svg)}`,
+      })),
+    [garment],
+  );
+  return (
+    <div className="mt-4">
+      <p className="font-display text-xs tracking-wide uppercase">Print sheets</p>
+      <p className="mt-1 text-sm text-muted">
+        These are the real pieces the printer cuts, in the colorway you have on. Each sheet is
+        printed at full size, about 40 inches across, and colour runs a little past every cut line
+        so a shifted cut still lands in colour. The dashed box is where your logo layers print.
+      </p>
+      <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3" aria-label="Print sheets">
+        {sheets.map((sheet) => (
+          <li key={sheet.placement} className="border-2 border-line bg-cream p-1">
+            <img
+              src={sheet.href}
+              alt={`${PLACEMENT_LABEL[sheet.placement] ?? sheet.placement} print sheet`}
+              className="aspect-square w-full object-contain"
+            />
+            <a
+              className="block px-1 pt-1 text-xs text-ink underline"
+              href={sheet.href}
+              download={`${garment.templateId}-${sheet.placement}.svg`}
+            >
+              {PLACEMENT_LABEL[sheet.placement] ?? sheet.placement}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 /** Per-panel designer for an all-over garment. */
 export function AopStage({
   garment,
   label,
   onChange,
-  onPreviewSet,
 }: {
   garment: GarmentDesign;
   label?: string;
   onChange: (next: GarmentDesign) => void;
-  onPreviewSet: () => void;
 }) {
   const template = getTemplate(garment.templateId);
   const [face, setFace] = useState<"front" | "back">("front");
   const [selected, setSelected] = useState(template?.panels[0]?.id ?? "");
   const [colorwayName, setColorwayName] = useState("");
-  const [proofs, setProofs] = useState<{ title: string; href: string; note: string }[]>([]);
-  const [proofNote, setProofNote] = useState("");
+  const [showSheets, setShowSheets] = useState(false);
+  const [pictureNote, setPictureNote] = useState("");
   if (!template) return null;
   const linked = printfulCard(template.id);
   const colorway = activeColorway(garment);
@@ -55,7 +105,6 @@ export function AopStage({
   const fill = garment.panels.find((item) => item.id === panelDef?.id)?.fill ?? {
     kind: "role" as const,
   };
-  const plan = panelExportPlan(template.id);
 
   function paintFill(next: PanelFill) {
     if (!panelDef) return;
@@ -67,7 +116,8 @@ export function AopStage({
       {linked ? <p className="mb-3 text-sm text-muted">{linked.materialLine}</p> : null}
       <p className="mb-3 text-sm text-muted">
         {linked ? `Matched to Printful product ${linked.catalogProductId}, ${linked.name}. ` : ""}
-        Each panel can take the colorway, its own color, a pattern, or art.
+        Tap a part to change it. Each one can follow the colorway, take its own color, a pattern, or
+        a picture.
       </p>
       {canOrderProduct(template.id) ? null : <p className="mb-3 text-sm">{AOP_ORDER_CLOSED}</p>}
       <div className="mb-3 flex flex-wrap gap-2">
@@ -112,7 +162,7 @@ export function AopStage({
               className={`chip ${fill.kind === "role" ? "chip-on" : ""}`}
               onClick={() => paintFill({ kind: "role" })}
             >
-              Follow colorway
+              {panelDef.kind === "mark" ? "Logo only" : "Follow colorway"}
             </button>
             <button
               type="button"
@@ -143,6 +193,12 @@ export function AopStage({
               Checker
             </button>
           </div>
+          {panelDef.kind === "mark" ? (
+            <p className="mt-2 text-sm text-muted">
+              Your text and art layers print here. Pick a color or pattern to print a patch behind
+              them.
+            </p>
+          ) : null}
           <label className="mt-3 block text-sm text-muted" htmlFor="panel-color">
             Own color
           </label>
@@ -153,6 +209,32 @@ export function AopStage({
             onChange={(event) => paintFill({ kind: "color", hex: event.target.value })}
             className="mt-1 h-12 w-full border-2 border-ink bg-cream"
           />
+          <label className="mt-3 block text-sm text-muted" htmlFor="panel-picture">
+            Picture {fill.kind === "art" ? "(on)" : ""}
+          </label>
+          <input
+            id="panel-picture"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="mt-1 block w-full text-sm"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (!file) return;
+              setPictureNote("Fitting the picture…");
+              void pictureForPanel(file)
+                .then((src) => {
+                  paintFill({ kind: "art", src });
+                  setPictureNote("");
+                })
+                .catch((error: unknown) =>
+                  setPictureNote(
+                    error instanceof Error ? error.message : "That picture did not load.",
+                  ),
+                );
+            }}
+          />
+          {pictureNote ? <p className="mt-1 text-sm text-muted">{pictureNote}</p> : null}
         </div>
       ) : null}
       <div className="mt-4">
@@ -224,55 +306,15 @@ export function AopStage({
         </div>
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button type="button" onClick={onPreviewSet}>
-          See the set
-        </Button>
         <Button
           type="button"
-          variant="ghost"
-          onClick={() => {
-            void (async () => {
-              const files = [];
-              for (const item of plan) {
-                const def = template.panels.find((panel) => panel.id === item.panelId);
-                if (!def) continue;
-                const paint = resolvePaint(
-                  def,
-                  garment.panels.find((panel) => panel.id === def.id)?.fill,
-                  colorway,
-                );
-                const href = await renderPanelProof(
-                  item.proof.widthPx,
-                  item.proof.heightPx,
-                  paint,
-                  item.title,
-                );
-                files.push({ title: item.title, href, note: item.printful.todo });
-              }
-              setProofs(files);
-              setProofNote(plan[0]?.printful.todo ?? "");
-            })();
-          }}
+          aria-expanded={showSheets}
+          onClick={() => setShowSheets((now) => !now)}
         >
-          Export panel proofs
+          {showSheets ? "Hide print sheets" : "See print sheets"}
         </Button>
       </div>
-      {proofNote ? <p className="mt-3 text-sm text-muted">{proofNote}</p> : null}
-      {proofs.length > 0 ? (
-        <ul className="mt-2 flex flex-col gap-1">
-          {proofs.map((file) => (
-            <li key={file.title}>
-              <a
-                className="text-sm underline"
-                href={file.href}
-                download={`${file.title.replace(/\s+/g, "-").toLowerCase()}-proof.png`}
-              >
-                {file.title} proof
-              </a>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      {showSheets ? <PrintSheets garment={garment} /> : null}
     </div>
   );
 }

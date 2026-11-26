@@ -6,7 +6,6 @@ import { ArtEffects, ArtMaker, WornPreview } from "@/components/studio/art-tools
 import { AopStage } from "@/components/studio/aop-stage";
 import { CurvedText } from "@/components/studio/curved-text";
 import { PreflightPanel } from "@/components/studio/preflight-panel";
-import { SetBoard } from "@/components/studio/set-board";
 import { Note, Panel } from "@/components/studio/shell";
 import { renderPrintFile } from "@/components/studio/print-file";
 import { luminance } from "@/lib/color";
@@ -20,6 +19,7 @@ import {
   addCollection,
   cartAdd,
   getCatalogProduct,
+  keepSpotFile,
   listCatalog,
   makeMockup,
   myCollections,
@@ -45,9 +45,6 @@ import {
   AOP_ORDER_CLOSED,
   canOrderProduct,
   defaultGarment,
-  getTemplate,
-  setPartner,
-  withSharedColorways,
   type GarmentDesign,
 } from "@/lib/studio/garments";
 import { canPublish, preflightVerdict, runPrintChecks, type ImageFacts } from "@/lib/studio/preflight";
@@ -78,21 +75,6 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : "That did not land.";
 }
 
-function setPieces(garment: GarmentDesign, productName?: string) {
-  const partnerId = setPartner(garment.templateId);
-  const pieces = [{ name: productName ?? "This piece", garment }];
-  if (!partnerId) return pieces;
-  pieces.push({
-    name: getTemplate(partnerId)?.shortName ?? "The match",
-    garment: withSharedColorways(
-      defaultGarment(partnerId),
-      garment.colorways,
-      garment.activeColorwayId,
-    ),
-  });
-  return pieces;
-}
-
 export function Editor({ designId }: { designId: string }) {
   const navigate = useNavigate();
   const ai = useAiPrompt();
@@ -102,8 +84,10 @@ export function Editor({ designId }: { designId: string }) {
   const [variantId, setVariantId] = useState("");
   const [placement, setPlacement] = useState("front");
   const [layers, setLayers] = useState<DesignLayer[]>([starter]);
+  // Art on the spots that are not on screen right now, by placement. A regular
+  // piece prints every spot that has art.
+  const [spotLayers, setSpotLayers] = useState<Record<string, DesignLayer[]>>({});
   const [garment, setGarment] = useState<GarmentDesign | null>(null);
-  const [showSet, setShowSet] = useState(false);
   const [printOverride, setPrintOverride] = useState(false);
   const [imageFacts, setImageFacts] = useState<ImageFacts[]>([]);
   const [selected, setSelected] = useState("tagline");
@@ -178,6 +162,13 @@ export function Editor({ designId }: { designId: string }) {
           setSavedId(design.id);
           setTitle(design.title);
           setLayers(design.layers);
+          setSpotLayers(
+            Object.fromEntries(
+              (design.spots ?? [])
+                .filter((spot) => spot.placement !== design.placement)
+                .map((spot) => [spot.placement, spot.layers]),
+            ),
+          );
           setGarment(design.garment);
           setPlacement(design.placement);
           setCollectionId(design.collectionId ?? "");
@@ -321,6 +312,52 @@ export function Editor({ designId }: { designId: string }) {
     return renderPrintFile(area, layers);
   }
 
+  function areaFor(key: string): PrintArea {
+    return (
+      variant?.printAreas.find((item) => item.placement === key) ??
+      variant?.printAreas[0] ?? { placement: key, widthIn: 12, heightIn: 16, dpi: AOP_DPI }
+    );
+  }
+
+  /** Puts the art on screen away under its spot and brings up the art of the next one. */
+  function switchSpot(next: string) {
+    if (next === placement) return;
+    const incoming = spotLayers[next] ?? [];
+    setSpotLayers((current) => {
+      const { [next]: _taken, ...rest } = current;
+      return layers.length > 0 ? { ...rest, [placement]: layers } : rest;
+    });
+    setLayers(incoming);
+    setSelected(incoming[0]?.id ?? "");
+    setPlacement(next);
+  }
+
+  /**
+   * Everything a save sends. The first spot with art travels with the save;
+   * every other spot's print file goes up first on its own, so no single
+   * request carries more than one picture.
+   */
+  async function savePayload() {
+    if (aop || spots.length <= 1) {
+      const only = spots[0] ?? { placement, layers };
+      return {
+        placement: only.placement,
+        layers: only.layers,
+        printFile: await renderPrintFile(areaFor(only.placement), only.layers),
+        spots: [],
+      };
+    }
+    const [first, ...rest] = spots;
+    const printFile = await renderPrintFile(areaFor(first!.placement), first!.layers);
+    const extra = [];
+    for (const spot of rest) {
+      const file = await renderPrintFile(areaFor(spot.placement), spot.layers);
+      const kept = await keepSpotFile({ data: { printFile: file } });
+      extra.push({ placement: spot.placement, layers: spot.layers, printFileId: kept.id });
+    }
+    return { placement: first!.placement, layers: first!.layers, printFile, spots: extra };
+  }
+
   async function onMockup() {
     if (!product || !variant) return;
     await flight.current(async () => {
@@ -361,7 +398,6 @@ export function Editor({ designId }: { designId: string }) {
     await flight.current(async () => {
     setBusy(true);
     try {
-      const printFile = await exportPrint();
       const saved = await savePiece({
         data: {
           id: savedId || undefined,
@@ -369,9 +405,7 @@ export function Editor({ designId }: { designId: string }) {
           collectionId: collectionId || null,
           productId: product.id,
           variantId: variant.id,
-          placement,
-          layers,
-          printFile,
+          ...(await savePayload()),
           mockupUrl: mockupUrl || null,
           garment: aop ? garment : undefined,
         },
@@ -428,9 +462,7 @@ export function Editor({ designId }: { designId: string }) {
           collectionId: collectionId || null,
           productId: product.id,
           variantId: variant.id,
-          placement,
-          layers,
-          printFile,
+          ...(await savePayload()),
           mockupUrl: url,
           garment: aop ? garment : undefined,
         },
@@ -454,16 +486,13 @@ export function Editor({ designId }: { designId: string }) {
       try {
         let id = savedId;
         if (!id) {
-          const printFile = await exportPrint();
           const saved = await savePiece({
             data: {
               title,
               collectionId: collectionId || null,
               productId: product.id,
               variantId: variant.id,
-              placement,
-              layers,
-              printFile,
+              ...(await savePayload()),
               mockupUrl: mockupUrl || null,
               garment: aop ? garment : undefined,
             },
@@ -483,6 +512,23 @@ export function Editor({ designId }: { designId: string }) {
   }
 
   const aop = product?.construction === "aop" && Boolean(product.aopTemplateId);
+  // Every spot of this product that has art, in the product's own order.
+  const spots = (product?.placements ?? [])
+    .map((item) => ({
+      placement: item.placement,
+      layers: item.placement === placement ? layers : (spotLayers[item.placement] ?? []),
+    }))
+    .filter((spot) => spot.layers.length > 0);
+  const spotCost = (key: "extraRetailCents" | "extraWholesaleCents") =>
+    aop
+      ? 0
+      : spots.reduce(
+          (sum, spot) =>
+            sum + (product?.placements.find((item) => item.placement === spot.placement)?.[key] ?? 0),
+          0,
+        );
+  const spotExtra = spotCost("extraRetailCents");
+  const spotWholesale = spotCost("extraWholesaleCents");
   // The print check measures ink against the garment actually selected, never one left over from an all-over visit.
   const groundHex = printGround({
     aopTemplateId: aop ? product?.aopTemplateId : null,
@@ -556,7 +602,7 @@ export function Editor({ designId }: { designId: string }) {
   }, [layers]);
 
   return (
-    <div className="grid min-w-0 gap-4 lg:grid-cols-[16rem_minmax(0,1fr)_20rem]">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[16rem_minmax(0,1fr)_20rem]">
       <Panel title="Blanks">
         <div className="flex w-full min-w-0 gap-3 overflow-x-auto lg:flex-col lg:overflow-visible">
           {catalog.map((item) => (
@@ -594,7 +640,6 @@ export function Editor({ designId }: { designId: string }) {
               garment={garment}
               label={layers.find((layer) => layer.type === "text")?.text}
               onChange={setGarment}
-              onPreviewSet={() => setShowSet(true)}
             />
           ) : (
           <div className="mx-auto w-full max-w-md">
@@ -676,17 +721,6 @@ export function Editor({ designId }: { designId: string }) {
             onNote={setNote}
           />
         </Panel>
-        {showSet && garment ? (
-          <Panel title="The set">
-            <SetBoard
-              title={`${title} set`}
-              colorways={garment.colorways}
-              activeColorwayId={garment.activeColorwayId}
-              onPick={(id) => setGarment({ ...garment, activeColorwayId: id })}
-              pieces={setPieces(garment, product?.name)}
-            />
-          </Panel>
-        ) : null}
       </div>
 
       <div className="flex flex-col gap-4">
@@ -700,18 +734,29 @@ export function Editor({ designId }: { designId: string }) {
             onChange={(event) => setTitle(event.target.value)}
           />
           <div className="mt-3 flex flex-wrap gap-2">
-            {product?.placements.map((item) => (
-              <button
-                key={item.placement}
-                type="button"
-                aria-pressed={placement === item.placement}
-                onClick={() => setPlacement(item.placement)}
-                className={`chip ${placement === item.placement ? "chip-on" : ""}`}
-              >
-                {item.title}
-              </button>
-            ))}
+            {product?.placements.map((item) => {
+              const inked = !aop && spots.some((spot) => spot.placement === item.placement);
+              return (
+                <button
+                  key={item.placement}
+                  type="button"
+                  aria-pressed={placement === item.placement}
+                  aria-label={inked ? `${item.title}, has art` : item.title}
+                  onClick={() => (aop ? setPlacement(item.placement) : switchSpot(item.placement))}
+                  className={`chip ${placement === item.placement ? "chip-on" : ""}`}
+                >
+                  {item.title}
+                  {inked ? <span aria-hidden="true"> ●</span> : null}
+                </button>
+              );
+            })}
           </div>
+          {!aop && product ? (
+            <p className="mt-2 text-sm text-muted">
+              Each spot has its own art. Every spot with art gets printed.
+              {spots.length > 1 ? ` ${spots.length} spots print on this piece.` : ""}
+            </p>
+          ) : null}
           <p className="mt-4 text-sm text-muted">Color</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {colors.map((item) => (
@@ -747,11 +792,16 @@ export function Editor({ designId }: { designId: string }) {
             ))}
           </div>
           <p className="mt-4 font-display text-2xl">
-            {variant?.retailCents != null ? formatMoney(variant.retailCents) : "—"}
+            {variant?.retailCents != null ? formatMoney(variant.retailCents + spotExtra) : "—"}
           </p>
+          {spotExtra > 0 ? (
+            <p className="text-sm text-muted">
+              Includes {formatMoney(spotExtra)} for the extra print spots.
+            </p>
+          ) : null}
           <p className="text-sm text-muted">
             {variant?.wholesaleCents != null
-              ? `Print cost ${formatMoney(variant.wholesaleCents)}`
+              ? `Print cost ${formatMoney(variant.wholesaleCents + spotWholesale)}`
               : "Price lands with the catalog."}
           </p>
         </Panel>
@@ -992,6 +1042,11 @@ export function Editor({ designId }: { designId: string }) {
             onOverride={setPrintOverride}
             notPrintingYet={
               aop && product && !canOrderProduct(product.id) ? AOP_ORDER_CLOSED : undefined
+            }
+            scope={
+              aop
+                ? "These checks cover your logo layers. The panels print from the print sheets."
+                : undefined
             }
           />
         </Panel>

@@ -1,22 +1,28 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { getSql } from "../db.ts";
-import { AOP_ORDER_CLOSED, aopOrderable, PRINTFUL_AOP } from "../pod/aop-printful.ts";
+import { aopOrderable, PRINTFUL_AOP } from "../pod/aop-printful.ts";
+import {
+  AOP_RECIPE_MIME,
+  aopFileUrls,
+  parseAopFileId,
+  renderAopPrintFile,
+} from "./aop-print.server.ts";
 import { addToCart, listCart, quoteShipping } from "./cart.server.ts";
 import { generateMockup, getDesign, publishDesign, saveDesign } from "./designs.server.ts";
 import {
   AOP_TEMPLATES,
   canOrderProduct,
+  coverageProblems,
   defaultGarment,
   printfulCard,
   setPanelFill,
   type GarmentDesign,
 } from "./garments.ts";
-import { createMatchedSet } from "./garments.server.ts";
 import { startCheckout } from "./orders.server.ts";
 import { seenTo } from "../../test/msw/server.ts";
 import { truncateAll } from "../../test/db.ts";
 import { pngDataUrl } from "../../test/png.ts";
-import { RECIPIENT, TEE, seedDesign, seedUser } from "../../test/seed.ts";
+import { RECIPIENT, TEE, seedUser } from "../../test/seed.ts";
 
 const PRINT = pngDataUrl(600, 450);
 const LAYERS = [{ id: "t", type: "text", text: "SR", x: 0.5, y: 0.4, scale: 1, rotation: 0 }];
@@ -133,7 +139,9 @@ describe("all-over mockups", () => {
     expect(drawn).not.toContain("onload");
     expect(drawn).not.toContain("javascript:");
     expect(drawn).toContain("&lt;script&gt;");
-    expect(drawn).toContain('data-panel="pocket" d="M174 236 H226 V312 H174 Z" fill="#c6a15b"');
+    expect(drawn).toContain(
+      'data-panel="pocket" d="M162 300 L174 252 H226 L238 300 Z" fill="#c6a15b"',
+    );
   });
 
   it("leaves a placement mockup alone when a garment is sent with it", async () => {
@@ -159,38 +167,93 @@ describe("ordering an all-over piece", () => {
     return publishDesign(owner, saved.id);
   }
 
-  it("keeps the rule in one place, closed while no panel template is confirmed", () => {
+  it("keeps the rule in one place: open because the panels cover every cut piece", () => {
     for (const template of Object.values(AOP_TEMPLATES)) {
-      expect(canOrderProduct(template.id)).toBe(false);
-      expect(
-        aopOrderable(
-          printfulCard(template.id)?.catalogProductId ?? 0,
-          template.panels.map((item) => item.id),
-        ),
-      ).toBe(false);
+      expect(coverageProblems(template.id)).toEqual([]);
+      expect(canOrderProduct(template.id)).toBe(true);
+      expect(aopOrderable(printfulCard(template.id)?.catalogProductId ?? 0, [])).toBe(true);
     }
-    expect(aopOrderable(PRINTFUL_AOP.hoodie.catalogProductId, [])).toBe(false);
+    expect(
+      aopOrderable(PRINTFUL_AOP.hoodie.catalogProductId, ["front/body_front has no panel."]),
+    ).toBe(false);
     expect(canOrderProduct(TEE.productId)).toBe(true);
-    expect(AOP_ORDER_CLOSED).toMatch(/^All-over pieces can be designed, saved and shared now\./);
   });
 
-  it("can still be published, but not added to the cart, while a tee can", async () => {
+  it("goes in the bag in the colorway the buyer picked, and checks out in the sandbox", async () => {
     await seedUser("bo");
     const piece = await publishedHoodie();
-    expect(piece.status).toBe("published");
-    await expect(addToCart("bo", piece.id, "aop-hoodie-printed-m")).rejects.toThrow(
-      AOP_ORDER_CLOSED,
-    );
-    await expect(addToCart("ada", piece.id, "aop-hoodie-printed-m", "black-gold")).rejects.toThrow(
-      AOP_ORDER_CLOSED,
-    );
-    const tee = await seedDesign("ada", { published: true });
-    await addToCart("bo", tee.id, TEE.variantId);
+    await addToCart("bo", piece.id, "aop-hoodie-printed-m", "black-gold");
+    const lines = await listCart("bo");
+    expect(lines.map((line) => line.designId)).toEqual([piece.id]);
+    const quote = await quoteShipping("bo", RECIPIENT);
+    expect(quote.subtotalCents).toBeGreaterThan(0);
+    const checkout = await startCheckout("bo", {
+      recipient: RECIPIENT,
+      shippingMethod: quote.rates[0]!.id,
+    });
+    expect(checkout.mode).toBe("sandbox");
+    expect(seenTo("api.printful.com")).toEqual([]);
     const sql = await getSql();
-    const lines = await sql<{
-      design_id: string;
-    }>`select design_id from cart_items where user_id = 'bo'`;
-    expect(lines.map((line) => line.design_id)).toEqual([tee.id]);
+    const recipes = await sql<{ id: string; user_id: string }>`
+      select id, user_id from print_files where mime = ${AOP_RECIPE_MIME}
+    `;
+    expect(recipes).toHaveLength(1);
+    expect(recipes[0]?.user_id).toBe("bo");
+  });
+
+  it("renders every placement at Printful's print size, in the colorway that was bought", async () => {
+    await seedUser("bo");
+    const piece = await publishedHoodie();
+    await addToCart("bo", piece.id, "aop-hoodie-printed-m", "lilac-cream");
+    await startCheckout("bo", { recipient: RECIPIENT, shippingMethod: "STANDARD" });
+    const sql = await getSql();
+    const [recipe] = await sql<{
+      id: string;
+    }>`select id from print_files where mime = ${AOP_RECIPE_MIME}`;
+    const urls = aopFileUrls(recipe!.id, "aop-hoodie");
+    expect(urls.map((item) => item.placement)).toEqual([
+      "front",
+      "back",
+      "hood",
+      "pocket",
+      "label_panel",
+      "sleeve_left",
+      "sleeve_right",
+    ]);
+    for (const { url } of urls) {
+      const id = new URL(url).pathname.split("/").pop()!;
+      expect(parseAopFileId(id)?.recipe).toBe(recipe!.id);
+    }
+    const file = await renderAopPrintFile(recipe!.id, "pocket");
+    expect(file?.mime).toBe("image/png");
+    const bytes = file!.bytes;
+    // PNG header: width and height are big-endian at bytes 16 and 20.
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    expect([view.getUint32(16), view.getUint32(20)]).toEqual([6000, 6000]);
+    expect(await renderAopPrintFile(recipe!.id, "leg_left")).toBeNull();
+    expect(await renderAopPrintFile(crypto.randomUUID(), "front")).toBeNull();
+  }, 60_000);
+
+  it("snapshots the piece, so a later edit does not change what was ordered", async () => {
+    await seedUser("bo");
+    const piece = await publishedHoodie();
+    await addToCart("bo", piece.id, "aop-hoodie-printed-m", "black-gold");
+    await startCheckout("bo", { recipient: RECIPIENT, shippingMethod: "STANDARD" });
+    const sql = await getSql();
+    const [row] = await sql<{ data_base64: string }>`
+      select data_base64 from print_files where mime = ${AOP_RECIPE_MIME}
+    `;
+    const recipe = JSON.parse(Buffer.from(row!.data_base64, "base64").toString("utf8")) as {
+      colorwayId: string;
+      garment: GarmentDesign;
+      logoFileId: string;
+    };
+    expect(recipe.colorwayId).toBe("black-gold");
+    expect(recipe.garment.panels.find((item) => item.id === "side_left")?.fill).toMatchObject({
+      kind: "pattern",
+      pattern: "checker",
+    });
+    expect(recipe.logoFileId).toMatch(/^[0-9a-f-]{36}$/);
   });
 
   it("publishes an all-over piece to the rack in the sandbox and does not call Printful", async () => {
@@ -204,7 +267,7 @@ describe("ordering an all-over piece", () => {
     expect(rows[0]?.provider_product_id).toBeNull();
   });
 
-  it("publishes an all-over piece to the rack in live mode and skips the chest-file sync", async () => {
+  it("publishes an all-over piece in live mode without a store sync, since orders carry the files", async () => {
     const piece = await publishedHoodie();
     process.env.POD_MODE = "live";
     process.env.PRINTFUL_API_KEY = "pf_test_key";
@@ -213,66 +276,5 @@ describe("ordering an all-over piece", () => {
     const again = await publishDesign("ada", piece.id);
     expect(again.status).toBe("published");
     expect(seenTo("api.printful.com")).toEqual([]);
-    const sql = await getSql();
-    const rows = await sql<{ provider_product_id: string | null }>`
-      select provider_product_id from designs where id = ${piece.id}
-    `;
-    expect(rows[0]?.provider_product_id).toBeNull();
-  });
-
-  it("refuses in live mode too, before asking the printer", async () => {
-    await seedUser("bo");
-    const piece = await publishedHoodie();
-    process.env.POD_MODE = "live";
-    process.env.PRINTFUL_API_KEY = "pf_test_key";
-    await expect(addToCart("bo", piece.id, "aop-hoodie-printed-m")).rejects.toThrow(
-      AOP_ORDER_CLOSED,
-    );
-  });
-
-  it("stops checkout and the shipping quote when an all-over line is already in the cart", async () => {
-    await seedUser("bo");
-    const piece = await publishedHoodie();
-    const tee = await seedDesign("ada", { published: true });
-    await addToCart("bo", tee.id, TEE.variantId);
-    const sql = await getSql();
-    await sql`
-      insert into cart_items (id, user_id, design_id, variant_id, variant_label, quantity, colorway_id)
-      values (${crypto.randomUUID()}, 'bo', ${piece.id}, 'aop-hoodie-printed-m', 'M', 1, '')
-    `;
-    await expect(
-      startCheckout("bo", { recipient: RECIPIENT, shippingMethod: "STANDARD" }),
-    ).rejects.toThrow(AOP_ORDER_CLOSED);
-    await expect(quoteShipping("bo", RECIPIENT)).rejects.toThrow(AOP_ORDER_CLOSED);
-    const orders = await sql<{ id: string }>`select id from orders where user_id = 'bo'`;
-    expect(orders).toHaveLength(0);
-    // The line still shows in the bag, so it can be taken out.
-    expect((await listCart("bo")).map((line) => line.designId).sort()).toEqual(
-      [piece.id, tee.id].sort(),
-    );
-  });
-});
-
-describe("making a matched set", () => {
-  async function designCount(userId: string): Promise<number> {
-    const sql = await getSql();
-    const rows = await sql<{
-      count: number;
-    }>`select count(*)::int as count from designs where user_id = ${userId}`;
-    return Number(rows[0]?.count ?? 0);
-  }
-
-  it("refuses a one-letter set name before it saves the partner, however often it is tried", async () => {
-    const piece = await saveDesign("ada", { ...hoodie(blackGoldChecker()), title: "Night track" });
-    const before = await designCount("ada");
-    await expect(createMatchedSet("ada", piece.id, "x")).rejects.toThrow(/Name the set/);
-    await expect(createMatchedSet("ada", piece.id, " y ")).rejects.toThrow(/Name the set/);
-    expect(await designCount("ada")).toBe(before);
-    const sql = await getSql();
-    expect(await sql`select id from garment_sets where user_id = 'ada'`).toHaveLength(0);
-
-    const set = await createMatchedSet("ada", piece.id, "Night track set");
-    expect(set.pieces).toHaveLength(2);
-    expect(await designCount("ada")).toBe(before + 1);
   });
 });

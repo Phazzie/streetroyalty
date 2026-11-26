@@ -7,6 +7,8 @@ import { defaultGarment } from "./garments.ts";
 import { truncateAll } from "../../test/db.ts";
 import { pngDataUrl } from "../../test/png.ts";
 import { seedUser } from "../../test/seed.ts";
+import { server } from "../../test/msw/server.ts";
+import { http, HttpResponse } from "msw";
 
 const LAYERS = [{ id: "t", type: "text", text: "SR", x: 0.5, y: 0.4, scale: 1, rotation: 0 }];
 
@@ -44,9 +46,8 @@ describe("garment identity across printers", () => {
     const shop = await getShopDesign(saved.slug);
     expect(shop.templateId).toBe("aop-hoodie");
     expect(shop.sizes.map((size) => size.variantId)).toContain("aop-hoodie-printed-m");
-    await expect(addToCart("ada", saved.id, "aop-hoodie-printed-m")).rejects.toThrow(
-      /Ordering opens|not bound/,
-    );
+    // A sandbox size is not a Printful variant, so the live shop will not bag it.
+    await expect(addToCart("ada", saved.id, "aop-hoodie-printed-m")).rejects.toThrow();
     expect((await getShopDesign(saved.slug)).id).toBe(saved.id);
     expect((await getDesign("ada", saved.id)).garment?.panels.length).toBeGreaterThan(0);
   });
@@ -72,6 +73,8 @@ describe("garment identity across printers", () => {
       "tee-heavy-black-l",
       "tee-heavy-black-xl",
       "tee-heavy-black-2xl",
+      "tee-heavy-black-3xl",
+      "tee-heavy-black-4xl",
     ]);
     await addToCart("bo", saved.id, "tee-heavy-black-l");
     const cart = await listCart("bo");
@@ -103,7 +106,11 @@ describe("garment identity across printers", () => {
       set garment_json = null, product_id = '388'
       where id = 'old-388'
     `;
-    const after = await sql<{ template_id: string; garment_json: string | null; product_id: string }>`
+    const after = await sql<{
+      template_id: string;
+      garment_json: string | null;
+      product_id: string;
+    }>`
       select template_id, garment_json, product_id from designs where id = 'old-388'
     `;
     expect(after[0]?.product_id).toBe("388");
@@ -113,7 +120,7 @@ describe("garment identity across printers", () => {
     expect(loaded.garment?.templateId).toBe("aop-hoodie");
   });
 
-  it("refuses an unbound blank in live and still shows a piece the printer will not answer", async () => {
+  it("orders a piece made in sandbox as the same real Printful piece once the shop is live", async () => {
     const saved = await saveDesign("ada", {
       title: "Live tee",
       productId: "tee-heavy",
@@ -130,21 +137,56 @@ describe("garment identity across printers", () => {
     process.env.PRINTFUL_API_KEY = "pf_test_key";
     process.env.PRINTFUL_STORE_ID = "1";
     process.env.APP_PUBLIC_URL = "https://streetroyalty.example";
-
-    expect(await listCart("bo")).toHaveLength(1);
-    const shop = await getShopDesign(saved.slug);
-    expect(shop.sizes.map((size) => size.variantId)).toContain("tee-heavy-black-m");
-    await expect(
-      saveDesign("ada", {
-        title: "Another tee",
-        productId: "tee-heavy",
-        variantId: "tee-heavy-black-m",
-        placement: "front",
-        layers: LAYERS,
+    process.env.PRINT_FILE_SIGNING_SECRET = "a-long-print-secret";
+    const asked: string[] = [];
+    server.use(
+      http.get("https://api.printful.com/v2/catalog-products/:id", ({ params }) => {
+        asked.push(String(params.id));
+        return HttpResponse.json({
+          data: {
+            id: 586,
+            name: "Unisex Garment-Dyed Heavyweight T-Shirt",
+            type: "T-Shirt",
+            techniques: [{ key: "dtg", display_name: "DTG", is_default: true }],
+            placements: [{ placement: "front", technique: "dtg" }],
+          },
+        });
       }),
-    ).rejects.toThrow(/not bound/);
-    await expect(loadProduct("tee-heavy")).rejects.toThrow(/not bound/);
-    await expect(addToCart("bo", saved.id, "tee-heavy-black-l")).rejects.toThrow(/not bound/);
+      http.get("https://api.printful.com/v2/catalog-products/:id/catalog-variants", () =>
+        HttpResponse.json({
+          data: [15115, 15116].map((id) => ({
+            id,
+            name: `Black ${id === 15115 ? "M" : "L"}`,
+            size: id === 15115 ? "M" : "L",
+            color: "Black",
+            color_code: "#1b1b1c",
+            placement_dimensions: [{ placement: "front", width: 12, height: 16 }],
+          })),
+        }),
+      ),
+      http.get("https://api.printful.com/v2/catalog-products/:id/prices", () =>
+        HttpResponse.json({
+          data: {
+            currency: "USD",
+            variants: [15115, 15116].map((id) => ({
+              id,
+              techniques: [{ technique_key: "dtg", discounted_price: "15.60" }],
+            })),
+          },
+        }),
+      ),
+    );
+
+    // The sandbox cart line maps to Printful's black M of product 586.
+    const cart = await listCart("bo");
+    expect(cart).toHaveLength(1);
+    expect(cart[0]?.unitCents).toBe(3432);
+    expect(asked).toContain("586");
+    await addToCart("bo", saved.id, "tee-heavy-black-l");
+    expect(await listCart("bo")).toHaveLength(2);
+    const product = await loadProduct("tee-heavy");
+    expect(product.id).toBe("tee-heavy");
+    expect(product.variants.map((variant) => variant.id)).toEqual(["15115", "15116"]);
 
     const sql = await getSql();
     await sql`

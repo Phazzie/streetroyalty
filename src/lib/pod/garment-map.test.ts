@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "vitest";
 import { AOP_TEMPLATES } from "../garments/panels.ts";
 import { createSandboxProvider } from "./sandbox.ts";
+import { houseBlank } from "./house-blanks.ts";
 import {
   GARMENT_BINDINGS,
   SANDBOX_PLACEMENT_PRODUCT_IDS,
@@ -49,8 +50,12 @@ describe("garment template mapping", () => {
     for (const id of SANDBOX_PLACEMENT_PRODUCT_IDS) {
       assert.equal(productForTemplate("sandbox", id), id);
       assert.equal(templateForProduct("sandbox", id), id);
-      assert.equal(productForTemplate("printful", id), null);
-      assert.equal(variantsForTemplate("printful", id), null);
+      // Every regular piece is a real Printful product with its variants listed.
+      const house = houseBlank(id);
+      assert.ok(house, id);
+      assert.equal(productForTemplate("printful", id), String(house.printfulId));
+      assert.equal(templateForProduct("printful", String(house.printfulId)), id);
+      assert.ok((variantsForTemplate("printful", id)?.length ?? 0) > 0);
     }
     for (const templateId of TEMPLATES) {
       assert.equal(productForTemplate("sandbox", templateId), templateId);
@@ -72,7 +77,8 @@ describe("garment template mapping", () => {
     assert.equal(normalizeVariantIds(null), null);
     assert.equal(normalizeVariantIds([]), null);
     assert.deepEqual(normalizeVariantIds([9001, "9002"]), ["9001", "9002"]);
-    assert.equal(variantsForTemplate("printful", "aop-hoodie"), null);
+    assert.equal(variantsForTemplate("printful", "aop-hoodie")?.includes("10871"), true);
+    assert.equal(templateForVariant("printful", "10871"), "aop-hoodie");
     assert.equal(templateForVariant("printful", "9001"), null);
     assert.deepEqual(variantsForTemplate("printful", "aop-hoodie", FIXTURE), ["9001", "9002"]);
     assert.equal(templateForVariant("printful", "9002", FIXTURE), "aop-hoodie");

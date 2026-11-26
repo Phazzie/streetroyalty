@@ -72,6 +72,12 @@ export function printSpot(piece: PieceKind, placement: string): string {
   const spot = plain(placement.replaceAll("_", " "), "front");
   const side = /left/.test(spot) ? "left" : /right/.test(spot) ? "right" : "";
   if (piece.wear === "legs") {
+    // Printful's leg spots: leg_front_left, leg_back_right, …
+    if (/\bleg\b/.test(spot) && side) {
+      return /back/.test(spot)
+        ? `down the back of the ${side} leg`
+        : `down the front of the ${side} leg`;
+    }
     if (spot === "front") return "on the front of the upper thigh";
     if (spot === "back") return "across the back, just under the waistband";
     return `on the ${spot}`;

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
-import { AOP_DPI, PRINTFUL_AOP, panelPrintTarget, printfulAopById } from "./aop-printful.ts";
+import { AOP_DPI, PRINTFUL_AOP, aopOrderable, printfulAopById } from "./aop-printful.ts";
 
 describe("Printful all-over print facts", () => {
   it("keeps the product ids that the public pages publish", () => {
@@ -14,18 +14,23 @@ describe("Printful all-over print facts", () => {
     assert.equal(printfulAopById(1), null);
   });
 
-  it("does not invent template pixel sizes or variant ids", () => {
+  it("keeps the catalog variant ids read with the Printful key, one per size", () => {
+    assert.equal(PRINTFUL_AOP.hoodie.catalogVariants.M, 10871);
+    assert.equal(PRINTFUL_AOP.hoodie.catalogVariants["2XS"], 18730);
+    assert.equal(PRINTFUL_AOP.joggers.catalogVariants.XS, 11033);
+    assert.equal(PRINTFUL_AOP.joggers.catalogVariants["4XL"], undefined);
+    assert.equal(PRINTFUL_AOP.jacket.catalogVariants["6XL"], 20380);
     for (const product of Object.values(PRINTFUL_AOP)) {
-      assert.equal(product.catalogVariantIds, null);
       assert.ok(product.startingPriceCents > 0);
-      const target = panelPrintTarget(product.catalogProductId, "body_front");
-      assert.equal(target.confirmed, false);
-      assert.equal(target.widthPx, null);
-      assert.equal(target.heightPx, null);
-      assert.equal(target.placementKey, null);
-      assert.match(target.todo, /TODO/);
-      assert.match(target.todo, new RegExp(String(product.catalogProductId)));
+      assert.deepEqual(product.catalogVariantIds, Object.values(product.catalogVariants));
+      assert.equal(new Set(product.catalogVariantIds).size, product.catalogVariantIds.length);
     }
+  });
+
+  it("opens ordering only when the panels cover every cut piece", () => {
+    assert.equal(aopOrderable(388, []), true);
+    assert.equal(aopOrderable(388, ["front/body_front has no panel."]), false);
+    assert.equal(aopOrderable(1, []), false);
   });
 
   it("gives each product its own material line and names no fabric that is not confirmed", () => {
@@ -49,9 +54,10 @@ describe("Printful all-over print facts", () => {
         );
       }
     }
+    // All three confirmed by GET /products/{388,400,801} (docs/printful-aop-data.md).
     assert.equal(PRINTFUL_AOP.hoodie.material.fabricConfirmed, true);
-    assert.equal(PRINTFUL_AOP.joggers.material.fabricConfirmed, false);
-    assert.equal(PRINTFUL_AOP.jacket.material.fabricConfirmed, false);
+    assert.equal(PRINTFUL_AOP.joggers.material.fabricConfirmed, true);
+    assert.equal(PRINTFUL_AOP.jacket.material.fabricConfirmed, true);
     assert.ok(lines.size >= 2, "the lines are per product, not one line for all");
   });
 });

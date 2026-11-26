@@ -40,22 +40,22 @@ export type ShopPiece = DesignSummary & {
   activeColorwayId: string | null;
   materialNote: string | null;
   construction: "aop" | "placement";
-  set: {
-    id: string;
-    title: string;
-    slug: string;
-    provider: string;
-    colorways: Colorway[];
-    activeColorwayId: string;
-    pieces: { id: string; title: string; slug: string; productType: string }[];
-  } | null;
+};
+
+/** One printed spot of a regular piece: its own art and its own print file. */
+export type DesignSpot = {
+  placement: string;
+  technique: string;
+  layers: DesignLayer[];
+  printFileId: string | null;
 };
 
 export type DesignRecord = DesignSummary & {
   layers: DesignLayer[];
+  /** Every spot with art, the first one being `placement` / `layers` / `printFileId`. */
+  spots: DesignSpot[];
   printFileId: string | null;
   garment: GarmentDesign | null;
-  setId: string | null;
 };
 
 export type CollectionRecord = {

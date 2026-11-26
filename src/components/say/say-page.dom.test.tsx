@@ -95,14 +95,14 @@ describe("the say it page", () => {
       }),
     );
     expect(
-      await screen.findByRole("img", { name: /black Pullover Hoodie that reads DO BETTER/ }),
+      await screen.findByRole("img", { name: /black Premium Pullover Hoodie that reads DO BETTER/ }),
     ).toBeTruthy();
   });
 
   it("shows back kindly what it missed, and says when a colour is the closest there is", async () => {
     render(<SayPage />);
-    type("a white tee that says free world in blue");
-    expect(await screen.findByText("Closest this blank comes in: Bone.")).toBeTruthy();
+    type("an orange tee that says free world in blue");
+    expect(await screen.findByText(/^Closest this blank comes in: /)).toBeTruthy();
     type("make it holographic");
     const missed = await screen.findByText(/Did not catch/);
     expect(missed.parentElement?.textContent).toBe("Did not catch: make it holographic");

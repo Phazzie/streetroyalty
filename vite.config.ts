@@ -157,6 +157,12 @@ export default defineConfig(({ command, isPreview }) => ({
     strictPort: true,
   },
   resolve: { tsconfigPaths: true },
+  // The print-file renderer is a native module. Load it from node_modules as-is, never bundle it.
+  ssr: {
+    external: ["@resvg/resvg-js"],
+    optimizeDeps: { exclude: ["@resvg/resvg-js"] },
+  },
+  optimizeDeps: { exclude: ["@resvg/resvg-js"] },
   plugins: [
     pgliteBootstrapPlugin(),
     // Before tanstackStart so /auth/popup never falls through to the SPA.

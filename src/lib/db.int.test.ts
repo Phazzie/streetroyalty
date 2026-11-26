@@ -21,6 +21,7 @@ describe("the database handle", () => {
       "0014_action_quotas.sql",
       "0015_checkout_and_runway.sql",
       "0016_garment_identity.sql",
+      "0017_design_spots.sql",
     ]);
   });
 

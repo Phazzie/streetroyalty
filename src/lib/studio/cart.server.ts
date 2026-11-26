@@ -2,8 +2,10 @@ import { getSql } from "../db.ts";
 import { getPodProvider, readPodMode } from "../pod/index.ts";
 import type { CatalogProduct } from "../pod/types.ts";
 import { isPrintfulPlacementProduct } from "../pod/garment-map.ts";
+import { printfulVariantFor } from "../pod/house-blanks.ts";
 import {
   AOP_ORDER_CLOSED,
+  AOP_TECHNIQUE,
   activePrinter,
   canOrderProduct,
   catalogIdFor,
@@ -15,7 +17,7 @@ import {
 import { canBuyDesign, parseRecipient } from "./validate.ts";
 import { cartDelta, normalizeCartQuantity } from "./cart-qty.ts";
 import type { CartLine } from "./models.ts";
-import { fileUrl, sumCents, type DesignRow } from "./shared.server.ts";
+import { designSpots, fileUrl, spotExtraCents, sumCents, type DesignRow } from "./shared.server.ts";
 
 /**
  * Refuses a piece the printer cannot make yet. A known all-over id stays closed
@@ -25,6 +27,22 @@ import { fileUrl, sumCents, type DesignRow } from "./shared.server.ts";
  */
 function printerNow() {
   return activePrinter(readPodMode(process.env));
+}
+
+/**
+ * The variant to look up on this printer. A regular piece made while the shop
+ * ran in sandbox keeps its sandbox variant id; live, it maps to the same colour
+ * and size of the real Printful product.
+ */
+function variantOnPrinter(printer: string, variantId: string): string {
+  if (printer !== "printful") return variantId;
+  return printfulVariantFor(variantId) ?? variantId;
+}
+
+function findVariant(product: CatalogProduct, printer: string, variantId: string | null | undefined) {
+  if (!variantId) return undefined;
+  const wanted = variantOnPrinter(printer, variantId);
+  return product.variants.find((item) => item.id === wanted);
 }
 
 async function assertOrderable(productId: string): Promise<void> {
@@ -65,9 +83,12 @@ export async function addToCart(
   const catalogId = catalogIdFor(printer, templateId, design.provider_catalog_id);
   if (!catalogId) throw new Error("This blank is not bound to the printer yet.");
   const product = await getPodProvider().getProduct(catalogId);
-  const variant = product.variants.find((item) => item.id === variantId);
-  const saved = product.variants.find((item) => item.id === design.variant_id);
-  if (!variant || (saved?.colorCode && variant.colorCode && saved.colorCode !== variant.colorCode)) {
+  const variant = findVariant(product, printer, variantId);
+  const saved = findVariant(product, printer, design.variant_id);
+  if (
+    !variant ||
+    (saved?.colorCode && variant.colorCode && saved.colorCode !== variant.colorCode)
+  ) {
     throw new Error("Pick a size in this color.");
   }
   const colorway = colorwayId
@@ -157,19 +178,20 @@ export async function listCart(userId: string): Promise<CartLine[]> {
   const products = new Map<string, CatalogProduct>();
   for (const row of rows) {
     try {
-      const catalogId = catalogLookupId(
-        printerNow(),
-        rowTemplate(row),
-        row.provider_catalog_id,
-      );
+      const catalogId = catalogLookupId(printerNow(), rowTemplate(row), row.provider_catalog_id);
       if (!catalogId) continue;
       let product = products.get(catalogId);
       if (!product) {
         product = await provider.getProduct(catalogId);
         products.set(catalogId, product);
       }
-      const variant = product.variants.find((item) => item.id === row.cart_variant_id);
-      if (variant?.retailCents != null) prices.set(row.cart_id, variant.retailCents);
+      const variant = findVariant(product, printerNow(), row.cart_variant_id);
+      if (variant?.retailCents != null) {
+        const extra = isAopProduct(rowTemplate(row))
+          ? 0
+          : spotExtraCents(product, designSpots(row).map((spot) => spot.placement));
+        prices.set(row.cart_id, variant.retailCents + extra);
+      }
     } catch {
       /* Catalog lookups can fail in the cart view. Checkout prices the order again. */
     }
@@ -204,9 +226,10 @@ export async function priceCart(userId: string) {
       product = await provider.getProduct(catalogId);
       products.set(catalogId, product);
     }
-    const variant = product.variants.find((item) => item.id === row.cart_variant_id);
+    const variant = findVariant(product, printer, row.cart_variant_id);
     if (!variant || variant.retailCents == null)
       throw new Error(`${row.title} is not available in that size.`);
+    if (!variant.inStock) throw new Error(`${row.title} is out of stock in that size.`);
     const area =
       variant.printAreas.find((item) => item.placement === row.placement) ?? variant.printAreas[0];
     const colorway = row.cart_colorway_id
@@ -218,17 +241,42 @@ export async function priceCart(userId: string) {
     // way a size that is gone does, rather than charge for a colorway the order will not name.
     if (row.cart_colorway_id && !colorway)
       throw new Error(`${row.title} no longer comes in that colorway. Remove it and pick again.`);
+    const garment = isAopProduct(templateId) ? parseStoredGarment(row.garment_json) : null;
+    if (isAopProduct(templateId) && !garment)
+      throw new Error(`${row.title} lost its panels. Open it in the studio and save it again.`);
+    // A regular piece prints every spot that has art, each from its own file.
+    const spots = garment ? [] : designSpots(row);
+    if (spots.some((spot) => !spot.printFileId))
+      throw new Error(`${row.title} is missing a print file. Open it in the studio and save it again.`);
+    const files =
+      spots.length > 1
+        ? spots.map((spot) => ({
+            placement: spot.placement,
+            url: fileUrl(spot.printFileId ?? ""),
+            area:
+              variant.printAreas.find((item) => item.placement === spot.placement) ?? undefined,
+          }))
+        : undefined;
+    const extraCents = spotExtraCents(
+      product,
+      spots.map((spot) => spot.placement),
+    );
     lines.push({
       designId: row.id,
       title: row.title,
       variantId: variant.id,
       variantLabel: colorway ? `${variant.name} · ${colorway.name}` : variant.name,
       quantity: Number(row.quantity),
-      unitCents: variant.retailCents,
+      unitCents: variant.retailCents + extraCents,
+      files,
       placement: row.placement,
-      technique: row.technique,
+      technique: garment ? AOP_TECHNIQUE : row.technique,
       fileUrl: fileUrl(row.print_file_id),
       printArea: area,
+      // An all-over line prints every placement. Checkout turns this into one file per placement.
+      aop: garment
+        ? { garment, colorwayId: colorway?.id ?? null, logoFileId: row.print_file_id }
+        : undefined,
       colorwayId: colorway?.id,
       colorwayName: colorway?.name,
       templateId,

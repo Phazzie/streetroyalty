@@ -14,7 +14,6 @@ async function sandboxBlanks(): Promise<CatalogProduct[]> {
 const NOUN: Record<string, string> = {
   "tee-heavy": "t-shirt",
   "hoodie-pullover": "pullover hoodie",
-  "hat-dad": "cap",
   "crew-sweat": "crewneck sweatshirt",
   "longsleeve-block": "long-sleeve top",
   "jogger-court": "joggers",
@@ -27,7 +26,7 @@ const NOUN: Record<string, string> = {
 describe("every sandbox blank", () => {
   it("is named for what it is, and only a tee is called a t-shirt", async () => {
     const blanks = await sandboxBlanks();
-    expect(blanks.length).toBeGreaterThanOrEqual(10);
+    expect(blanks.length).toBeGreaterThanOrEqual(9);
     for (const blank of blanks) {
       const expected = NOUN[blank.id];
       expect(expected, `${blank.id} has no expected name`).toBeDefined();
@@ -59,11 +58,10 @@ describe("every sandbox blank", () => {
     expect(spot("tee-heavy", "back")).toBe("across the back");
     expect(spot("tee-heavy", "sleeve_left")).toBe("on the left sleeve");
     expect(spot("longsleeve-block", "sleeve_right")).toBe("down the right sleeve");
-    expect(spot("jogger-court", "front")).toBe("on the front of the upper thigh");
-    expect(spot("jogger-court", "back")).toBe("across the back, just under the waistband");
+    expect(spot("jogger-court", "leg_front_left")).toBe("down the front of the left leg");
+    expect(spot("jogger-court", "leg_back_right")).toBe("down the back of the right leg");
     expect(spot("tote-corner", "front")).toBe("on the front of the bag");
     expect(spot("tote-corner", "back")).toBe("on the back of the bag");
-    expect(spot("hat-dad", "front")).toBe("on the front panel");
   });
 });
 
@@ -134,9 +132,9 @@ describe("an all-over piece", () => {
     });
     expect(words.startsWith("an all-over printed pullover hoodie, made exactly like")).toBe(true);
     expect(words).toContain("front and back");
-    // Lilac / cream: lilac body, cream side panels, orange trim.
+    // Lilac / cream: lilac body, cream side stripes, orange trim.
     expect(words).toContain("lavender hood, sleeves and body");
-    expect(words).toContain("side panels and pocket");
+    expect(words).toContain("side stripes and pocket");
     expect(words).toContain("orange cuffs, piping and waistband");
     expect(words).not.toContain("t-shirt");
   });
@@ -145,7 +143,7 @@ describe("an all-over piece", () => {
     const garment = { ...defaultGarment("aop-hoodie"), activeColorwayId: "black-gold" };
     const words = panelColorWords(garment);
     expect(words).toBe(
-      "black hood, sleeves and body; tan cuffs, side panels, piping, pocket and waistband; white chest logo",
+      "black hood, sleeves and body; tan cuffs, side stripes, piping, pocket and waistband; white chest logo",
     );
     expect(words).not.toContain("lavender");
   });
@@ -155,7 +153,7 @@ describe("an all-over piece", () => {
     const garment = {
       ...base,
       panels: base.panels.map((item) =>
-        item.id === "pocket"
+        item.id === "cuff_left" || item.id === "cuff_right"
           ? {
               id: item.id,
               fill: {
@@ -168,7 +166,7 @@ describe("an all-over piece", () => {
           : item,
       ),
     };
-    expect(panelColorWords(garment)).toContain("black and white check pocket");
+    expect(panelColorWords(garment)).toContain("black and white check cuffs");
   });
 
   it("stays inside what the picture maker reads, even with every panel painted its own way", () => {
@@ -196,7 +194,7 @@ describe("an all-over piece", () => {
       garment: defaultGarment("aop-joggers"),
     });
     expect(joggers.startsWith("all-over printed joggers worn on the legs")).toBe(true);
-    expect(joggers).toContain("lavender legs, seat and back");
+    expect(joggers).toContain("lavender legs");
     expect(joggers).toContain("a plain black top and white sneakers");
     const jacket = allOverWords({
       productType: "Jacket",

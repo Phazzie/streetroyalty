@@ -16,11 +16,11 @@ describe("the studio catalog", () => {
       provider: "sandbox",
       podMode: "sandbox",
       paymentsMode: "sandbox",
-      total: 10,
+      total: 9,
       offset: 1,
       limit: 2,
     });
-    expect(page.products.map((product) => product.id)).toEqual(["hoodie-pullover", "hat-dad"]);
+    expect(page.products.map((product) => product.id)).toEqual(["hoodie-pullover", "crew-sweat"]);
     expect(page.products[0]).not.toHaveProperty("variants");
   });
 
@@ -28,7 +28,7 @@ describe("the studio catalog", () => {
     const product = await loadProduct(TEE.productId);
     expect(product.podMode).toBe("sandbox");
     expect(product.variants.find((variant) => variant.id === TEE.variantId)?.retailCents).toBe(
-      3069,
+      3432,
     );
   });
 

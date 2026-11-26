@@ -1,4 +1,4 @@
-import { resolveGarment, type GarmentDesign, type Paint } from "@/lib/studio/garments";
+import { labelAnchor, resolveGarment, type GarmentDesign, type Paint } from "@/lib/studio/garments";
 
 function patternNode(id: string, paint: Paint) {
   if (paint.type !== "pattern") return null;
@@ -34,6 +34,11 @@ export function GarmentFlat({
   label?: string;
 }) {
   const resolved = resolveGarment(garment, face);
+  const fills = new Map(garment.panels.map((item) => [item.id, item.fill]));
+  const markAt = labelAnchor(
+    resolved.panels.map(({ panel }) => panel),
+    label?.slice(0, 24),
+  );
   return (
     <svg
       viewBox={resolved.template.viewBox}
@@ -59,13 +64,16 @@ export function GarmentFlat({
               ? `url(#pat-${panel.id})`
               : "#f4f0e6";
         const pressed = selected === panel.id;
+        // A logo with no patch is just where the layers print: drawn as a dashed box.
+        const bare = panel.kind === "mark" && (fills.get(panel.id)?.kind ?? "role") === "role";
         return (
           <path
             key={panel.id}
             d={panel.d}
-            fill={fill}
-            stroke={pressed ? "#3df0ff" : "#141018"}
+            fill={bare ? "transparent" : fill}
+            stroke={pressed ? "#3df0ff" : bare ? resolved.colorway.colors.mark : "#141018"}
             strokeWidth={pressed ? 4 : 1.5}
+            strokeDasharray={bare && !pressed ? "4 3" : undefined}
             role={onSelect ? "button" : undefined}
             tabIndex={onSelect ? 0 : undefined}
             aria-label={panel.title}
@@ -104,10 +112,10 @@ export function GarmentFlat({
           </clipPath>
         ))}
       </defs>
-      {label ? (
+      {label && markAt ? (
         <text
-          x="200"
-          y="172"
+          x={markAt.x}
+          y={markAt.y}
           textAnchor="middle"
           fill={resolved.colorway.colors.mark}
           // Outlined in the body colour, so the letters still read where they cross the
@@ -117,7 +125,7 @@ export function GarmentFlat({
           strokeLinejoin="round"
           paintOrder="stroke"
           fontFamily="Arial Black, sans-serif"
-          fontSize="16"
+          fontSize={markAt.size}
         >
           {label.slice(0, 24)}
         </text>

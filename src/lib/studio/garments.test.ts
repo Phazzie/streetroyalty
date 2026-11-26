@@ -9,9 +9,7 @@ import {
   printfulCard,
   canOrderProduct,
   addColorway,
-  assessSet,
   defaultGarment,
-  panelExportPlan,
   parseGarment,
   parseStoredGarment,
   removeColorway,
@@ -20,7 +18,6 @@ import {
   setPanelFill,
   setRoleColor,
   studioProofPixels,
-  withSharedColorways,
 } from "./garments.ts";
 
 const decode = (url: string) => decodeURIComponent(url.slice(url.indexOf(",") + 1));
@@ -40,7 +37,8 @@ describe("all-over garments", () => {
     }
     assert.ok(AOP_TEMPLATES["aop-hoodie"]?.panels.some((panel) => panel.id === "hood"));
     assert.ok(AOP_TEMPLATES["aop-joggers"]?.panels.some((panel) => panel.id === "stripe_left"));
-    assert.ok(AOP_TEMPLATES["aop-joggers"]?.panels.some((panel) => panel.id === "pocket"));
+    // Printful cuts no seat, back or pocket piece on the joggers. Each leg wraps the leg.
+    assert.ok(!AOP_TEMPLATES["aop-joggers"]?.panels.some((panel) => panel.id === "pocket"));
   });
 
   it("paints a lilac body and cream side panels from the active colorway", () => {
@@ -115,7 +113,10 @@ describe("all-over garments", () => {
     again = addColorway(again, "Night mint");
     const fresh = again.colorways.slice(HOUSE_COLORWAYS.length).map((item) => item.id);
     assert.equal(new Set(fresh).size, 2);
-    assert.equal(fresh.some((id) => id.startsWith("night-mint")), false);
+    assert.equal(
+      fresh.some((id) => id.startsWith("night-mint")),
+      false,
+    );
     assert.throws(
       () =>
         removeColorway(
@@ -135,51 +136,22 @@ describe("all-over garments", () => {
     assert.equal(parsed.panels.length, AOP_TEMPLATES["aop-track-jacket"]?.panels.length);
   });
 
-  it("plans a proof per panel and leaves the Printful file unconfirmed", () => {
-    const plan = panelExportPlan("aop-hoodie");
-    assert.ok(plan.length > 5);
-    for (const item of plan) {
-      assert.equal(item.printful.confirmed, false);
-      assert.equal(item.printful.widthPx, null);
-      assert.equal(item.printful.dpi, 150);
-      assert.match(item.proof.note, /Not a Printful print file/);
-      assert.ok(item.proof.widthPx > 0 && item.proof.heightPx > 0);
-    }
+  it("keeps the studio proof size helper", () => {
     assert.deepEqual(studioProofPixels(10, 20), { widthPx: 450, heightPx: 900 });
   });
 
-  it("builds a set only when the pieces share a maker and the same colorways", () => {
-    const hoodie = defaultGarment("aop-hoodie");
-    const joggers = defaultGarment("aop-joggers");
-    const good = assessSet([
-      { provider: "printful", templateId: "aop-hoodie", colorways: hoodie.colorways },
-      { provider: "printful", templateId: "aop-joggers", colorways: joggers.colorways },
-    ]);
-    assert.equal(good.ok, true);
-    if (good.ok) assert.equal(good.provider, "printful");
-    const mixed = assessSet([
-      { provider: "printful", templateId: "aop-hoodie", colorways: hoodie.colorways },
-      { provider: "sandbox", templateId: "aop-joggers", colorways: joggers.colorways },
-    ]);
-    assert.equal(mixed.ok, false);
-    const drifted = withSharedColorways(joggers, joggers.colorways, joggers.activeColorwayId);
-    drifted.colorways[0] = setRoleColor(drifted.colorways[0]!, "body", "#000000");
-    const clash = assessSet([
-      { provider: "sandbox", templateId: "aop-hoodie", colorways: hoodie.colorways },
-      { provider: "sandbox", templateId: "aop-joggers", colorways: drifted.colorways },
-    ]);
-    assert.equal(clash.ok, false);
-    if (!clash.ok) assert.match(clash.reason, /same colorways/);
+  it("names the fabric only for all-over pieces", () => {
     assert.match(materialLine("aop-hoodie"), /sublimation/);
     assert.equal(materialLine("tee-heavy"), "");
   });
 
-  it("blocks an unknown product and keeps a placement blank orderable", () => {
-    assert.equal(canOrderProduct("aop-hoodie"), false);
-    assert.equal(canOrderProduct("aop-joggers"), false);
-    assert.equal(canOrderProduct("388"), false);
-    assert.equal(canOrderProduct("400"), false);
-    assert.equal(canOrderProduct("801"), false);
+  it("opens the all-over pieces, blocks an unknown product and keeps a placement blank orderable", () => {
+    assert.equal(canOrderProduct("aop-hoodie"), true);
+    assert.equal(canOrderProduct("aop-joggers"), true);
+    assert.equal(canOrderProduct("aop-track-jacket"), true);
+    assert.equal(canOrderProduct("388"), true);
+    assert.equal(canOrderProduct("400"), true);
+    assert.equal(canOrderProduct("801"), true);
     assert.equal(canOrderProduct("tee-heavy"), true);
     assert.equal(canOrderProduct("hoodie-pullover"), true);
     assert.equal(canOrderProduct("71"), false);

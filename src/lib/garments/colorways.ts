@@ -181,14 +181,3 @@ export function parseGarment(input: unknown): GarmentDesign {
   return garment;
 }
 
-export function withSharedColorways(
-  garment: GarmentDesign,
-  colorways: Colorway[],
-  activeColorwayId: string,
-): GarmentDesign {
-  const next = colorways.map(copyColorway);
-  const active = next.some((item) => item.id === activeColorwayId)
-    ? activeColorwayId
-    : (next[0]?.id ?? "");
-  return { ...garment, colorways: next, activeColorwayId: active };
-}
