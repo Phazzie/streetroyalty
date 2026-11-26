@@ -433,10 +433,9 @@ const JACKET_PANELS: AopPanel[] = [
 export const AOP_TEMPLATES: Record<string, AopTemplate> = {
   "aop-hoodie": {
     id: "aop-hoodie",
-    name: "AOP Hoodie",
+    name: "All-Over Hoodie",
     shortName: "Hoodie",
     kind: "Hoodie",
-    partnerId: "aop-joggers",
     viewBox: "0 0 400 460",
     viewWidth: 400,
     viewHeight: 460,
@@ -444,10 +443,9 @@ export const AOP_TEMPLATES: Record<string, AopTemplate> = {
   },
   "aop-joggers": {
     id: "aop-joggers",
-    name: "AOP Joggers",
+    name: "All-Over Joggers",
     shortName: "Joggers",
     kind: "Joggers",
-    partnerId: "aop-hoodie",
     viewBox: "0 0 400 520",
     viewWidth: 400,
     viewHeight: 520,
@@ -455,10 +453,9 @@ export const AOP_TEMPLATES: Record<string, AopTemplate> = {
   },
   "aop-track-jacket": {
     id: "aop-track-jacket",
-    name: "AOP Track Jacket",
+    name: "All-Over Track Jacket",
     shortName: "Track jacket",
     kind: "Jacket",
-    partnerId: "aop-joggers",
     viewBox: "0 0 400 460",
     viewWidth: 400,
     viewHeight: 460,
@@ -469,18 +466,6 @@ export const AOP_TEMPLATES: Record<string, AopTemplate> = {
 export function getTemplate(templateId: string): AopTemplate | null {
   return AOP_TEMPLATES[templateId] ?? null;
 }
-
-/** The other all-over garment this one pairs with. Null when the template is unknown or unpaired. */
-export function setPartner(templateId: string): string | null {
-  return getTemplate(templateId)?.partnerId ?? null;
-}
-
-/** Which blank a piece pairs with when a designer builds a set. Derived from the templates. */
-export const SET_PARTNER: Record<string, string> = Object.fromEntries(
-  Object.values(AOP_TEMPLATES).flatMap((template) =>
-    template.partnerId ? [[template.id, template.partnerId]] : [],
-  ),
-);
 
 export function defaultPanels(templateId: string): PanelDesign[] {
   const template = getTemplate(templateId);

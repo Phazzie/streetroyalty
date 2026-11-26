@@ -97,6 +97,7 @@ exports[`the database handle > has the tables and columns the app reads 1`] = `
     "set_id: text",
     "size_label: text",
     "slug: text",
+    "spots_json: text",
     "status: text",
     "technique: text",
     "template_id: text",

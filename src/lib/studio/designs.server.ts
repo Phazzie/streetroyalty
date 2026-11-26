@@ -19,7 +19,6 @@ import {
   catalogLookupId,
   isAopProduct,
   materialLine,
-  parseColorwayBlob,
   parseGarment,
   parseStoredGarment,
   resolveTemplateId,
@@ -27,13 +26,16 @@ import {
   type PrinterId,
 } from "./garments.ts";
 import {
+  designSpots,
   fileUrl,
   ownedDesign,
   readStudioConfig,
   record,
+  spotExtraCents,
   summary,
   type DesignRow,
 } from "./shared.server.ts";
+import type { DesignSpot } from "./models.ts";
 
 function printerNow(): PrinterId {
   return activePrinter(readPodMode(process.env));
@@ -116,7 +118,59 @@ type SaveInput = {
   printFile?: unknown;
   mockupUrl?: string | null;
   garment?: unknown;
+  /**
+   * The other spots with art, besides `placement`. Each one names a print file
+   * already uploaded with `storePrintFile`, so one save never carries more
+   * than one picture.
+   */
+  spots?: unknown;
 };
+
+/** Stores one print file for a spot and returns its id. */
+export async function storePrintFile(userId: string, printFile: unknown): Promise<string> {
+  const print = parsePrintFile(printFile);
+  if (!print) throw new Error("There is no print file to keep.");
+  const id = crypto.randomUUID();
+  const sql = await getSql();
+  await sql`insert into print_files (id, user_id, mime, data_base64) values (${id}, ${userId}, ${print.mime}, ${print.base64})`;
+  return id;
+}
+
+/** Reads the extra spots a maker sent, keeping only spots this product prints and files this maker owns. */
+async function parseExtraSpots(
+  userId: string,
+  input: unknown,
+  product: CatalogProduct,
+  primary: string,
+): Promise<DesignSpot[]> {
+  if (input == null) return [];
+  if (!Array.isArray(input)) throw new Error("The spots did not come through.");
+  const seen = new Set([primary]);
+  const spots: DesignSpot[] = [];
+  const sql = await getSql();
+  for (const entry of input.slice(0, product.placements.length)) {
+    const item = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
+    const key = String(item.placement ?? "");
+    const placement = product.placements.find((option) => option.placement === key);
+    if (!placement) throw new Error("That product does not print there.");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    // A spot with no art is not printed.
+    if (!Array.isArray(item.layers) || item.layers.length === 0) continue;
+    const layers = parseLayers(item.layers);
+    let printFileId: string | null = null;
+    if (item.printFileId) {
+      const id = String(item.printFileId);
+      const owned = await sql<{ id: string }>`
+        select id from print_files where id = ${id} and user_id = ${userId} and mime like 'image/%'
+      `;
+      if (!owned[0]) throw new Error("A print file for one of the spots is missing.");
+      printFileId = id;
+    }
+    spots.push({ placement: key, technique: placement.technique, layers, printFileId });
+  }
+  return spots;
+}
 
 export async function saveDesign(
   userId: string,
@@ -132,6 +186,10 @@ export async function saveDesign(
     throw new Error("That size and color is not in the catalog.");
   const placement = product.placements.find((item) => item.placement === input.placement);
   if (!placement) throw new Error("That product does not print there.");
+  // All-over pieces print from their panels. Only a regular piece carries extra spots.
+  const extraSpots = isAopProduct(templateId)
+    ? []
+    : await parseExtraSpots(userId, input.spots, product, placement.placement);
   const sql = await getSql();
   if (input.collectionId) {
     const owned = await sql<{
@@ -160,6 +218,17 @@ export async function saveDesign(
     }
   }
   const layersJson = JSON.stringify(layers);
+  const spotsJson =
+    extraSpots.length > 0
+      ? JSON.stringify([
+          { placement: placement.placement, technique: placement.technique, layers, printFileId },
+          ...extraSpots,
+        ])
+      : null;
+  // Printful charges for each extra spot it prints. The price carries it.
+  const retailCents =
+    variant.retailCents +
+    spotExtraCents(product, [placement.placement, ...extraSpots.map((spot) => spot.placement)]);
   const keptBecauseAop =
     isAopProduct(templateId) ||
     (existing != null && isAopProduct(existing.template_id ?? existing.product_id));
@@ -192,10 +261,11 @@ export async function saveDesign(
         placement = ${placement.placement},
         technique = ${placement.technique},
         layers_json = ${layersJson},
+        spots_json = ${spotsJson},
         garment_json = ${garmentJson},
         print_file_id = ${printFileId},
         mockup_url = ${mockup},
-        retail_cents = ${variant.retailCents},
+        retail_cents = ${retailCents},
         updated_at = now()
       where id = ${existing.id} and user_id = ${userId}
     `;
@@ -209,12 +279,12 @@ export async function saveDesign(
       id, user_id, collection_id, title, slug, status, product_id, template_id, provider,
       provider_catalog_id, provider_variant_id, product_name, product_type,
       variant_id, variant_label, color_name, color_hex, size_label, placement, technique,
-      layers_json, garment_json, print_file_id, mockup_url, retail_cents, currency
+      layers_json, spots_json, garment_json, print_file_id, mockup_url, retail_cents, currency
     ) values (
       ${id}, ${userId}, ${input.collectionId || null}, ${title}, ${slug}, 'draft', ${templateId}, ${templateId}, ${printer},
       ${catalogId}, ${variant.id}, ${product.name}, ${product.type},
       ${variant.id}, ${variant.name}, ${variant.color}, ${variant.colorHex}, ${variant.size}, ${placement.placement}, ${placement.technique},
-      ${layersJson}, ${garmentJson}, ${printFileId}, ${mockup}, ${variant.retailCents}, 'USD'
+      ${layersJson}, ${spotsJson}, ${garmentJson}, ${printFileId}, ${mockup}, ${retailCents}, 'USD'
     )
   `;
   const saved = await ownedDesign(sql, userId, id);
@@ -283,6 +353,9 @@ export async function publishDesign(userId: string, designId: string): Promise<D
   const row = await ownedDesign(sql, userId, designId);
   if (!row) throw new Error("That design is not on your rack.");
   if (!row.print_file_id) throw new Error("Save a print file before publishing.");
+  const spots = designSpots(row);
+  if (spots.some((spot) => !spot.printFileId))
+    throw new Error("Save the piece again so every spot has its print file.");
   if (!row.mockup_url) throw new Error("Generate a mockup before publishing.");
   // The shop took this piece off the rack after a report. Only the shop can put it back.
   const held = await sql<{ id: string }>`
@@ -302,8 +375,11 @@ export async function publishDesign(userId: string, designId: string): Promise<D
     if (resolveTemplateId(templateId) && !catalogIdFor(printer, templateId)) {
       throw new Error("That garment is not bound to this printer yet.");
     }
-    const url = fileUrl(row.print_file_id);
-    if (!isPublicHttpUrl(url))
+    const files = spots.map((spot) => ({
+      placement: spot.placement,
+      url: fileUrl(spot.printFileId ?? row.print_file_id ?? ""),
+    }));
+    if (files.some((file) => !isPublicHttpUrl(file.url)))
       throw new Error("Set APP_PUBLIC_URL so Printful can fetch the print file.");
     const synced = await getPodProvider().syncProduct({
       externalId: row.id,
@@ -314,7 +390,7 @@ export async function publishDesign(userId: string, designId: string): Promise<D
         {
           catalogVariantId: row.provider_variant_id ?? row.variant_id,
           retailPrice: centsToDecimal(Number(row.retail_cents)),
-          files: [{ placement: row.placement, url }],
+          files,
         },
       ],
     });
@@ -374,63 +450,8 @@ export async function getShopDesign(slug: string): Promise<ShopPiece> {
     });
   }
   const garment = parseStoredGarment(row.garment_json);
-  let colorways = garment?.colorways ?? [];
-  let activeColorwayId = garment?.activeColorwayId ?? null;
-  let set: {
-    id: string;
-    title: string;
-    slug: string;
-    provider: string;
-    colorways: typeof colorways;
-    activeColorwayId: string;
-    pieces: { id: string; title: string; slug: string; productType: string }[];
-  } | null = null;
-  if (row.set_id) {
-    const sets = await sql<{
-      id: string;
-      title: string;
-      slug: string;
-      provider: string;
-      status: string;
-      colorways_json: string;
-      piece_ids_json: string;
-    }>`select id, title, slug, provider, status, colorways_json, piece_ids_json from garment_sets where id = ${row.set_id}`;
-    const found = sets[0];
-    if (found?.status === "published") {
-      const blob = parseColorwayBlob(found.colorways_json);
-      colorways = blob.colorways;
-      activeColorwayId = blob.activeColorwayId;
-      const ids = JSON.parse(found.piece_ids_json) as string[];
-      const pieces = [];
-      for (const id of ids) {
-        const pieceRows = await sql<{
-          id: string;
-          title: string;
-          slug: string;
-          product_type: string;
-        }>`
-          select id, title, slug, product_type from designs where id = ${id}
-        `;
-        const piece = pieceRows[0];
-        if (piece)
-          pieces.push({
-            id: piece.id,
-            title: piece.title,
-            slug: piece.slug,
-            productType: piece.product_type,
-          });
-      }
-      set = {
-        id: found.id,
-        title: found.title,
-        slug: found.slug,
-        provider: found.provider,
-        colorways,
-        activeColorwayId: activeColorwayId ?? "",
-        pieces,
-      };
-    }
-  }
+  const colorways = garment?.colorways ?? [];
+  const activeColorwayId = garment?.activeColorwayId ?? null;
   return {
     ...summary(row),
     sizes,
@@ -438,7 +459,6 @@ export async function getShopDesign(slug: string): Promise<ShopPiece> {
     activeColorwayId,
     materialNote: product?.materialNote ?? (materialLine(templateId) || null),
     construction: product?.construction ?? (isAopProduct(templateId) ? "aop" : "placement"),
-    set,
   };
 }
 

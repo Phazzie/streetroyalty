@@ -23,7 +23,7 @@ import {
   stripeEvent,
 } from "../../test/webhooks.ts";
 
-const TEE_PRICE = 3069;
+const TEE_PRICE = 3432;
 const STANDARD = { recipient: RECIPIENT, shippingMethod: "STANDARD" };
 
 async function orderRow(orderId: string) {

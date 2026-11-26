@@ -1,7 +1,7 @@
 import type { ShopPiece } from "@/lib/studio/models";
 
 /**
- * Colorway picker, fabric line, and matched-set summary for a rack piece.
+ * Colorway picker and fabric line for a rack piece.
  * The rack route itself is Claude's for this round. Mount this under the title
  * on `src/routes/rack.$slug.tsx` and pass the selected colorway id into cartAdd.
  */
@@ -54,21 +54,6 @@ export function PieceOptions({
               </button>
             ))}
           </div>
-        </div>
-      ) : null}
-      {piece.set ? (
-        <div className="mt-4 border-2 border-ink p-3">
-          <p className="font-display text-xs tracking-wide uppercase">
-            Matched set · {piece.set.provider}
-          </p>
-          <p className="mt-1 text-sm">{piece.set.title}</p>
-          <ul className="mt-2 text-sm text-muted">
-            {piece.set.pieces.map((item) => (
-              <li key={item.id}>
-                {item.productType}: {item.title}
-              </li>
-            ))}
-          </ul>
         </div>
       ) : null}
     </div>

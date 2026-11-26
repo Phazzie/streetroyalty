@@ -11,7 +11,7 @@ import {
 import { truncateAll } from "../../test/db.ts";
 import { RECIPIENT, TEE, seedDesign, seedUser } from "../../test/seed.ts";
 
-const TEE_PRICE = 3069; // sandbox wholesale 1395 at the default 2.2 markup, rounded the way the shop rounds
+const TEE_PRICE = 3432; // Printful wholesale 1560 (Comfort Colors 1717, M) at the default 2.2 markup, rounded the way the shop rounds
 
 async function onlyLine(userId: string) {
   const lines = await listCart(userId);
@@ -52,14 +52,14 @@ describe("adding to the cart", () => {
 
   it("refuses a size in a different color than the design was made in", async () => {
     const design = await seedDesign("ada");
-    await expect(addToCart("ada", design.id, "tee-heavy-bone-m")).rejects.toThrow(
+    await expect(addToCart("ada", design.id, "tee-heavy-ivory-m")).rejects.toThrow(
       /size in this color/,
     );
   });
 
   it("refuses a variant from another product", async () => {
     const design = await seedDesign("ada");
-    await expect(addToCart("ada", design.id, "hat-dad-black-one-size")).rejects.toThrow();
+    await expect(addToCart("ada", design.id, "tote-corner-black-one-size")).rejects.toThrow();
   });
 
   it("counts the same piece and size as one line, and a second size as another", async () => {

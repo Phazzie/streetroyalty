@@ -68,7 +68,6 @@ export type AopTemplate = {
   /** Catalog type, such as Hoodie or Joggers. */
   kind: string;
   /** The other all-over template this piece pairs with. */
-  partnerId: string | null;
   viewBox: string;
   viewWidth: number;
   viewHeight: number;

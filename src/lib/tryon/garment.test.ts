@@ -14,7 +14,6 @@ async function sandboxBlanks(): Promise<CatalogProduct[]> {
 const NOUN: Record<string, string> = {
   "tee-heavy": "t-shirt",
   "hoodie-pullover": "pullover hoodie",
-  "hat-dad": "cap",
   "crew-sweat": "crewneck sweatshirt",
   "longsleeve-block": "long-sleeve top",
   "jogger-court": "joggers",
@@ -27,7 +26,7 @@ const NOUN: Record<string, string> = {
 describe("every sandbox blank", () => {
   it("is named for what it is, and only a tee is called a t-shirt", async () => {
     const blanks = await sandboxBlanks();
-    expect(blanks.length).toBeGreaterThanOrEqual(10);
+    expect(blanks.length).toBeGreaterThanOrEqual(9);
     for (const blank of blanks) {
       const expected = NOUN[blank.id];
       expect(expected, `${blank.id} has no expected name`).toBeDefined();
@@ -59,11 +58,10 @@ describe("every sandbox blank", () => {
     expect(spot("tee-heavy", "back")).toBe("across the back");
     expect(spot("tee-heavy", "sleeve_left")).toBe("on the left sleeve");
     expect(spot("longsleeve-block", "sleeve_right")).toBe("down the right sleeve");
-    expect(spot("jogger-court", "front")).toBe("on the front of the upper thigh");
-    expect(spot("jogger-court", "back")).toBe("across the back, just under the waistband");
+    expect(spot("jogger-court", "leg_front_left")).toBe("down the front of the left leg");
+    expect(spot("jogger-court", "leg_back_right")).toBe("down the back of the right leg");
     expect(spot("tote-corner", "front")).toBe("on the front of the bag");
     expect(spot("tote-corner", "back")).toBe("on the back of the bag");
-    expect(spot("hat-dad", "front")).toBe("on the front panel");
   });
 });
 

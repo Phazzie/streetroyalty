@@ -43,7 +43,8 @@ export async function startCheckout(
   // An all-over line gets one print file per placement, rendered from a snapshot of the piece.
   const lines = await Promise.all(
     priced.map(async (line) => {
-      if (!line.aop) return { ...line, files: undefined };
+      // A regular line already carries one file per spot when it prints more than one.
+      if (!line.aop) return line;
       const recipe = await saveAopRecipe(userId, {
         templateId: line.templateId,
         garment: line.aop.garment,

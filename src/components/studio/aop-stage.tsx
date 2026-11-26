@@ -87,12 +87,10 @@ export function AopStage({
   garment,
   label,
   onChange,
-  onPreviewSet,
 }: {
   garment: GarmentDesign;
   label?: string;
   onChange: (next: GarmentDesign) => void;
-  onPreviewSet: () => void;
 }) {
   const template = getTemplate(garment.templateId);
   const [face, setFace] = useState<"front" | "back">("front");
@@ -308,12 +306,8 @@ export function AopStage({
         </div>
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button type="button" onClick={onPreviewSet}>
-          See the set
-        </Button>
         <Button
           type="button"
-          variant="ghost"
           aria-expanded={showSheets}
           onClick={() => setShowSheets((now) => !now)}
         >

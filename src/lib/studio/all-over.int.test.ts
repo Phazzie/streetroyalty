@@ -18,7 +18,6 @@ import {
   setPanelFill,
   type GarmentDesign,
 } from "./garments.ts";
-import { createMatchedSet } from "./garments.server.ts";
 import { startCheckout } from "./orders.server.ts";
 import { seenTo } from "../../test/msw/server.ts";
 import { truncateAll } from "../../test/db.ts";
@@ -277,29 +276,5 @@ describe("ordering an all-over piece", () => {
     const again = await publishDesign("ada", piece.id);
     expect(again.status).toBe("published");
     expect(seenTo("api.printful.com")).toEqual([]);
-  });
-});
-
-describe("making a matched set", () => {
-  async function designCount(userId: string): Promise<number> {
-    const sql = await getSql();
-    const rows = await sql<{
-      count: number;
-    }>`select count(*)::int as count from designs where user_id = ${userId}`;
-    return Number(rows[0]?.count ?? 0);
-  }
-
-  it("refuses a one-letter set name before it saves the partner, however often it is tried", async () => {
-    const piece = await saveDesign("ada", { ...hoodie(blackGoldChecker()), title: "Night track" });
-    const before = await designCount("ada");
-    await expect(createMatchedSet("ada", piece.id, "x")).rejects.toThrow(/Name the set/);
-    await expect(createMatchedSet("ada", piece.id, " y ")).rejects.toThrow(/Name the set/);
-    expect(await designCount("ada")).toBe(before);
-    const sql = await getSql();
-    expect(await sql`select id from garment_sets where user_id = 'ada'`).toHaveLength(0);
-
-    const set = await createMatchedSet("ada", piece.id, "Night track set");
-    expect(set.pieces).toHaveLength(2);
-    expect(await designCount("ada")).toBe(before + 1);
   });
 });

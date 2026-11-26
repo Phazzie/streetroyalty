@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { getSql } from "../db.ts";
 import * as repo from "./repo.server.ts";
 import { truncateAll } from "../../test/db.ts";
+import { pngDataUrl } from "../../test/png.ts";
 import { RECIPIENT, TEE, seedDesign, seedUser } from "../../test/seed.ts";
 
 /**
@@ -38,6 +39,8 @@ const guarded: Record<string, Door> = {
     expect: "refused",
   },
   publishDesign: { attempt: (ids) => repo.publishDesign(BO, ids.designId), expect: "refused" },
+  // Keeps a file under Bo's own name. Ada's spots cannot name it (spots.int.test.ts).
+  storePrintFile: { attempt: () => repo.storePrintFile(BO, pngDataUrl(40, 40)), expect: "ignored" },
   listDesigns: { attempt: () => repo.listDesigns(BO), expect: "empty" },
   listCollections: { attempt: () => repo.listCollections(BO), expect: "empty" },
   createCollection: { attempt: () => repo.createCollection(BO, "Bo's own"), expect: "ignored" },

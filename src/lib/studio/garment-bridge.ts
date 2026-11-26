@@ -46,7 +46,7 @@ export function resolveTemplateId(id: string): string | null {
   const sandbox = templateForProduct("sandbox", id);
   if (sandbox && (getTemplate(sandbox) || isSandboxPlacementProduct(sandbox))) return sandbox;
   const live = templateForProduct("printful", id);
-  if (live && getTemplate(live)) return live;
+  if (live && (getTemplate(live) || isSandboxPlacementProduct(live))) return live;
   return null;
 }
 

@@ -2,13 +2,6 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { getSql } from "../db.ts";
 import { addToCart, listCart } from "./cart.server.ts";
 import { getDesign, getShopDesign, publishDesign, saveDesign } from "./designs.server.ts";
-import {
-  createMatchedSet,
-  getOwnedSet,
-  getSetBySlug,
-  publishSet,
-  saveSetColorways,
-} from "./garments.server.ts";
 import { defaultGarment } from "./garments.ts";
 import { startCheckout } from "./orders.server.ts";
 import { truncateAll } from "../../test/db.ts";
@@ -37,7 +30,7 @@ beforeEach(async () => {
   await seedUser("bo");
 });
 
-describe("all-over pieces and sets", () => {
+describe("all-over pieces", () => {
   it("stores colorways on an all-over piece and ignores them on a tee", async () => {
     const saved = await saveDesign("ada", piece("Lilac set"));
     expect(saved.garment?.colorways.map((item) => item.name)).toEqual([
@@ -65,88 +58,18 @@ describe("all-over pieces and sets", () => {
       garment: undefined,
     });
     expect(kept.garment?.activeColorwayId).toBe("lilac-cream");
-    const namedByDefault = await createMatchedSet("ada", bare.id);
-    expect(namedByDefault.title).toMatch(/Bare hoodie set/);
-    const sql = await getSql();
-    const partner = namedByDefault.pieces.find((item) => item.productId === "aop-joggers");
-    await sql`update designs set garment_json = null where id = ${partner?.id ?? ""}`;
-    const reread = await getOwnedSet("ada", namedByDefault.id);
-    expect(reread.pieces.find((item) => item.id === partner?.id)?.garment.templateId).toBe(
-      "aop-joggers",
-    );
     await expect(
       saveDesign("ada", { ...piece("Bad"), garment: { templateId: "nope" } }),
     ).rejects.toThrow(/template/);
   });
 
-  it("pairs a hoodie and joggers from one maker and sells the chosen colorway", async () => {
+  it("sells the chosen colorway of a published all-over piece", async () => {
     const hoodie = await saveDesign("ada", piece("Night track"));
-    await expect(createMatchedSet("ada", hoodie.id, "x")).rejects.toThrow(/Name the set/);
-    await expect(
-      createMatchedSet(
-        "ada",
-        (
-          await saveDesign("ada", {
-            title: "Plain tee",
-            productId: "tee-heavy",
-            variantId: "tee-heavy-black-m",
-            placement: "front",
-            layers: [{ id: "t", type: "text", text: "SR", x: 0.5, y: 0.4, scale: 1, rotation: 0 }],
-            printFile: pngDataUrl(1800, 2400),
-            mockupUrl: MOCK,
-          })
-        ).id,
-      ),
-    ).rejects.toThrow(/all-over/);
-
-    const set = await createMatchedSet("ada", hoodie.id, "Night track set");
-    expect(set.provider).toBe("sandbox");
-    expect(set.pieces.map((item) => item.productId).sort()).toEqual(["aop-hoodie", "aop-joggers"]);
-    expect(await createMatchedSet("ada", hoodie.id)).toMatchObject({ id: set.id });
-    await expect(getOwnedSet("bo", set.id)).rejects.toThrow(/not yours/);
-    await expect(publishSet("ada", set.id)).rejects.toThrow(/print file/);
-
-    const joggers = set.pieces.find((item) => item.productId === "aop-joggers");
-    expect(joggers).toBeTruthy();
-    await saveDesign("ada", {
-      id: joggers?.id,
-      title: joggers?.title ?? "Joggers",
-      productId: "aop-joggers",
-      variantId: "aop-joggers-printed-m",
-      placement: "front",
-      layers: [{ id: "t", type: "text", text: "SR", x: 0.5, y: 0.4, scale: 1, rotation: 0 }],
-      printFile: PRINT,
-      garment: joggers?.garment,
-    });
-    await expect(publishSet("ada", set.id)).rejects.toThrow(/mockup/);
-    await saveDesign("ada", {
-      id: joggers?.id,
-      title: joggers?.title ?? "Joggers",
-      productId: "aop-joggers",
-      variantId: "aop-joggers-printed-m",
-      placement: "front",
-      layers: [{ id: "t", type: "text", text: "SR", x: 0.5, y: 0.4, scale: 1, rotation: 0 }],
-      printFile: PRINT,
-      mockupUrl: MOCK,
-      garment: joggers?.garment,
-    });
-
-    expect(await getSetBySlug(set.slug)).toBeNull();
-    const published = await publishSet("ada", set.id);
-    expect(published.status).toBe("published");
-    expect((await publishSet("ada", set.id)).status).toBe("published");
+    await publishDesign("ada", hoodie.id);
     const shop = await getShopDesign(hoodie.slug);
     expect(shop.construction).toBe("aop");
     expect(shop.materialNote).toMatch(/not sewn cotton/);
     expect(shop.colorways).toHaveLength(3);
-    expect(shop.set?.pieces).toHaveLength(2);
-    expect(shop.set?.provider).toBe("sandbox");
-
-    const shifted = await saveSetColorways("ada", set.id, published.colorways, "black-gold");
-    expect(shifted.activeColorwayId).toBe("black-gold");
-    expect((await getDesign("ada", hoodie.id)).garment?.activeColorwayId).toBe("black-gold");
-    expect(await getSetBySlug(published.slug)).toMatchObject({ id: set.id });
-
     await expect(addToCart("ada", hoodie.id, "aop-hoodie-printed-m", "nope")).rejects.toThrow(
       /colorway/,
     );
@@ -207,7 +130,7 @@ describe("all-over pieces and sets", () => {
     expect(orders).toEqual([]);
   });
 
-  it("loads designs, sets and cart lines stored the way migrations 0005 and 0013 wrote them", async () => {
+  it("loads designs and cart lines stored the way migrations 0005 and 0013 wrote them", async () => {
     const garment = defaultGarment("aop-hoodie");
     const sql = await getSql();
     const layers = JSON.stringify([
@@ -250,15 +173,6 @@ describe("all-over pieces and sets", () => {
       )
     `;
     await sql`
-      insert into garment_sets (
-        id, user_id, title, slug, status, provider, colorways_json, piece_ids_json
-      ) values (
-        'legacy-set', 'ada', 'Legacy set', 'legacy-set', 'draft', 'sandbox',
-        ${JSON.stringify({ colorways: garment.colorways, activeColorwayId: garment.activeColorwayId })},
-        ${JSON.stringify(["legacy-hoodie", "catalog-hoodie", "bare-joggers"])}
-      )
-    `;
-    await sql`
       insert into cart_items (
         id, user_id, design_id, variant_id, variant_label, quantity, colorway_id
       ) values (
@@ -277,37 +191,9 @@ describe("all-over pieces and sets", () => {
     expect(fromCatalog.productId).toBe("388");
     expect(fromCatalog.garment?.templateId).toBe("aop-hoodie");
 
-    const set = await getOwnedSet("ada", "legacy-set");
-    expect(set.pieces.map((item) => item.productId).sort()).toEqual([
-      "388",
-      "aop-hoodie",
-      "aop-joggers",
-    ]);
-    expect(set.pieces.every((item) => item.garment.templateId.length > 0)).toBe(true);
-    expect(set.pieces.find((item) => item.productId === "388")?.garment.templateId).toBe(
-      "aop-hoodie",
-    );
-    expect(set.pieces.find((item) => item.productId === "aop-joggers")?.garment.templateId).toBe(
-      "aop-joggers",
-    );
-    expect(set.colorways[0]?.id).toBe("lilac-cream");
-
     const cart = await listCart("ada");
     expect(cart.map((line) => line.variantId)).toEqual(["aop-hoodie-printed-m"]);
     expect(cart[0]?.designId).toBe("legacy-hoodie");
-  });
-
-  it("pairs a piece again when its set id points at a set that was never written", async () => {
-    const hoodie = await saveDesign("ada", piece("Stuck hoodie"));
-    const sql = await getSql();
-    const dead = crypto.randomUUID();
-    await sql`update designs set set_id = ${dead} where id = ${hoodie.id} and user_id = 'ada'`;
-    const set = await createMatchedSet("ada", hoodie.id);
-    expect(set.pieces).toHaveLength(2);
-    expect(set.id).not.toBe(dead);
-    expect((await getDesign("ada", hoodie.id)).setId).toBe(set.id);
-    const rows = await sql<{ id: string }>`select id from garment_sets where id = ${dead}`;
-    expect(rows).toEqual([]);
   });
 
   it("stops a cart that holds a catalog id saved before any panel design existed", async () => {
@@ -344,17 +230,5 @@ describe("all-over pieces and sets", () => {
     await expect(
       startCheckout("bo", { recipient: RECIPIENT, shippingMethod: "STANDARD" }),
     ).rejects.toThrow(/missing a print file|lost its panels/);
-  });
-
-  it("does not pair a sandbox piece with a live Printful partner", async () => {
-    const hoodie = await saveDesign("ada", piece("Live partner"));
-    process.env.POD_MODE = "live";
-    process.env.PRINTFUL_API_KEY = "pf_test_key";
-    await expect(createMatchedSet("ada", hoodie.id)).rejects.toThrow(/different printer/);
-    const sql = await getSql();
-    const extra = await sql<{ id: string }>`
-      select id from designs where user_id = 'ada' and id <> ${hoodie.id}
-    `;
-    expect(extra).toEqual([]);
   });
 });

@@ -54,7 +54,8 @@ describe("fitting onto the sandbox catalog", () => {
     const products = await catalog();
     expect(pickProduct("tee", products)?.id).toBe("tee-heavy");
     expect(pickProduct("hoodie", products)?.id).toBe("hoodie-pullover");
-    expect(pickProduct("hat", products)?.id).toBe("hat-dad");
+    // No hat: Printful only embroiders hats, and the studio prints.
+    expect(pickProduct("hat", products)).toBeNull();
     expect(pickProduct("crewneck", products)?.id).toBe("crew-sweat");
     expect(pickProduct("hat", [])).toBeNull();
   });
@@ -86,22 +87,23 @@ describe("fitting onto the sandbox catalog", () => {
   it("says so when the blank does not come in that colour", async () => {
     const intent = intentFor("a white tee that says free world in blue");
     const fit = fitIntent(intent, pickProduct("tee", await catalog()) as CatalogProduct);
-    expect(fit.colorName).toBe("Bone");
-    expect(fit.variantId).toBe("tee-heavy-bone-m");
-    expect(fit.notes).toEqual(["Closest this blank comes in: Bone."]);
+    // The tee comes in white now, so nothing needs explaining.
+    expect(fit.colorName).toBe("White");
+    expect(fit.variantId).toBe("tee-heavy-white-m");
+    expect(fit.notes).toEqual([]);
   });
 
-  it("says where a hat prints when asked for the back", async () => {
-    const intent = intentFor("hat with my name Dre on it", "on the back");
-    const fit = fitIntent(intent, pickProduct("hat", await catalog()) as CatalogProduct);
+  it("says where a tote prints when asked for the sleeve", async () => {
+    const intent = intentFor("a tee with my name Dre on it", "on the sleeve");
+    const tote = (await catalog()).find((product) => product.id === "tote-corner");
+    const fit = fitIntent(intent, tote as CatalogProduct);
     expect(fit.placement).toBe("front");
-    expect(fit.variantId).toBe("hat-dad-black-one-size");
-    expect(fit.notes[0]).toBe(
-      "This blank does not print on the back. It prints on the front, so it went on the front.",
-    );
+    expect(fit.variantId).toBe("tote-corner-black-one-size");
+    expect(fit.notes[0]).toContain("does not print on the sleeve");
+    expect(fit.notes[0]).toContain("front or back");
   });
 
-  it("puts a sleeve print on a sleeve the tee has, and moves it on a hoodie", async () => {
+  it("puts a sleeve print on a sleeve, on the tee and on the hoodie", async () => {
     const products = await catalog();
     const tee = fitIntent(
       intentFor("a tee that says hi", "on the sleeve"),
@@ -113,9 +115,8 @@ describe("fitting onto the sandbox catalog", () => {
       intentFor("a hoodie that says hi", "on the sleeve"),
       pickProduct("hoodie", products) as CatalogProduct,
     );
-    expect(hoodie.placement).toBe("front");
-    expect(hoodie.notes[0]).toContain("does not print on the sleeve");
-    expect(hoodie.notes[0]).toContain("front or back");
+    expect(hoodie.placement).toBe("sleeve_left");
+    expect(hoodie.notes).toEqual([]);
   });
 
   it("every fit is something the studio will accept", async () => {
@@ -123,7 +124,7 @@ describe("fitting onto the sandbox catalog", () => {
     const sentences = [
       "put DO BETTER on the back of a black hoodie in pink, big",
       "a white tee that says free world in blue across the chest",
-      "hat with my name Dre on it",
+      "a black hoodie with my name Dre on the sleeve",
       "a lilac crewneck that says no encore, huge, tilt it",
     ];
     for (const sentence of sentences) {

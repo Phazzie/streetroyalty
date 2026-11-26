@@ -79,7 +79,17 @@ export const savePiece = createServerFn({ method: "POST" })
       printFile: data.printFile,
       mockupUrl: data.mockupUrl ? String(data.mockupUrl) : null,
       garment: data.garment,
+      spots: data.spots,
     });
+  });
+
+/** Keeps the print file for one extra spot. The save then names it by id. */
+export const keepSpotFile = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { printFile?: unknown }) => ({ printFile: input?.printFile }))
+  .handler(async ({ data, context }) => {
+    const { storePrintFile } = await import("./repo.server.ts");
+    return { id: await storePrintFile(context.userId, data.printFile) };
   });
 
 export const publishPiece = createServerFn({ method: "POST" })
@@ -124,45 +134,6 @@ export const shopList = createServerFn({ method: "GET" }).handler(async () => {
   const { listShop } = await import("./repo.server.ts");
   return listShop();
 });
-
-export const buildSet = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .validator((input: { designId?: string; title?: string }) => ({
-    designId: String(input?.designId ?? ""),
-    title: input?.title ? String(input.title) : undefined,
-  }))
-  .handler(async ({ data, context }) => {
-    const { createMatchedSet } = await import("./garments.server.ts");
-    return createMatchedSet(context.userId, data.designId, data.title);
-  });
-
-export const readSet = createServerFn({ method: "GET" })
-  .middleware([authMiddleware])
-  .validator((input: { setId?: string }) => ({ setId: String(input?.setId ?? "") }))
-  .handler(async ({ data, context }) => {
-    const { getOwnedSet } = await import("./garments.server.ts");
-    return getOwnedSet(context.userId, data.setId);
-  });
-
-export const saveSetColors = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .validator((input: { setId?: string; colorways?: unknown; activeColorwayId?: string }) => ({
-    setId: String(input?.setId ?? ""),
-    colorways: input?.colorways,
-    activeColorwayId: String(input?.activeColorwayId ?? ""),
-  }))
-  .handler(async ({ data, context }) => {
-    const { saveSetColorways } = await import("./garments.server.ts");
-    return saveSetColorways(context.userId, data.setId, data.colorways, data.activeColorwayId);
-  });
-
-export const publishSetPiece = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .validator((input: { setId?: string }) => ({ setId: String(input?.setId ?? "") }))
-  .handler(async ({ data, context }) => {
-    const { publishSet } = await import("./garments.server.ts");
-    return publishSet(context.userId, data.setId);
-  });
 
 export const shopPiece = createServerFn({ method: "GET" })
   .validator((input: { slug?: string }) => ({ slug: String(input?.slug ?? "") }))

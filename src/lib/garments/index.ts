@@ -16,10 +16,8 @@ export { COLOR_ROLES, HEX, LABEL_MAX, MAX_ART_SRC, MAX_GARMENT_JSON } from "./ty
 export { parseFill, resolvePaint, safeArt } from "./fill.ts";
 export {
   AOP_TEMPLATES,
-  SET_PARTNER,
   defaultPanels,
   getTemplate,
-  setPartner,
   visiblePanels,
 } from "./panels.ts";
 export {
@@ -34,9 +32,7 @@ export {
   setPanelFill,
   setRoleColor,
   updateColorway,
-  withSharedColorways,
 } from "./colorways.ts";
-export { assessSet, colorwaySignature, type SetPiece } from "./sets.ts";
 export {
   STUDIO_PROOF_LONG_EDGE,
   labelAnchor,

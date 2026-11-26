@@ -14,6 +14,7 @@ import {
   saveDesign,
 } from "./designs.server.ts";
 import { authorizePrintFile } from "./shared.server.ts";
+import { catalogIdFor } from "./garments.ts";
 import { truncateAll } from "../../test/db.ts";
 import { pngDataUrl } from "../../test/png.ts";
 import { TEE, seedDesign, seedUser } from "../../test/seed.ts";
@@ -39,7 +40,7 @@ describe("saving a design", () => {
     expect(saved).toMatchObject({
       title: "Crown Tee",
       status: "draft",
-      retailCents: 3069,
+      retailCents: 3432,
       warnings: [],
     });
     expect(saved.slug).toMatch(/^crown-tee-[0-9a-f]{8}$/);
@@ -63,7 +64,11 @@ describe("saving a design", () => {
     ],
     [
       "a placement the product does not have",
-      { placement: "sleeve_left", productId: "hat-dad", variantId: "hat-dad-black-one-size" },
+      {
+        placement: "sleeve_left",
+        productId: "tote-corner",
+        variantId: "tote-corner-black-one-size",
+      },
       /does not print there/,
     ],
     [
@@ -160,7 +165,7 @@ describe("publishing", () => {
     expect(published.status).toBe("published");
     expect((await listShop()).map((design) => design.id)).toEqual([draft.id]);
     const page = await getShopDesign(draft.slug);
-    expect(page.sizes.map((size) => size.label)).toEqual(["S", "M", "L", "XL", "2XL"]);
+    expect(page.sizes.map((size) => size.label)).toEqual(["S", "M", "L", "XL", "2XL", "3XL", "4XL"]);
     expect(page.sizes.every((size) => size.variantId.startsWith("tee-heavy-black-"))).toBe(true);
   });
 
@@ -170,21 +175,19 @@ describe("publishing", () => {
     expect(await listShop()).toEqual([]);
   });
 
-  it("refuses to publish a sandbox blank once printing is live and that blank is not bound", async () => {
+  it("binds every sandbox blank to its real Printful product, so going live keeps the piece", async () => {
     const draft = await seedDesign("ada");
-    process.env.POD_MODE = "live";
-    process.env.PRINTFUL_API_KEY = "pf_test";
-    process.env.APP_PUBLIC_URL = "https://streetroyalty.com";
-    await expect(publishDesign("ada", draft.id)).rejects.toThrow(/not bound to this printer/);
+    expect(catalogIdFor("printful", draft.productId)).toBe("586");
+    expect(catalogIdFor("printful", "hoodie-pullover")).toBe("380");
   });
 
-  it("leaves the draft unpublished when live printing has no binding for the blank", async () => {
+  it("leaves the draft unpublished when Printful could not fetch the print file", async () => {
     const draft = await seedDesign("ada");
     process.env.POD_MODE = "live";
     process.env.PRINTFUL_API_KEY = "pf_test";
     process.env.PRINT_FILE_SIGNING_SECRET = "a-long-secret";
     process.env.APP_PUBLIC_URL = "http://10.0.0.5:8080";
-    await expect(publishDesign("ada", draft.id)).rejects.toThrow(/not bound to this printer/);
+    await expect(publishDesign("ada", draft.id)).rejects.toThrow(/APP_PUBLIC_URL/);
     expect((await getDesign("ada", draft.id)).status).toBe("draft");
   });
 });

@@ -3,10 +3,11 @@
  * speak template ids (`aop-hoodie`). Sandbox product ids stay equal to those
  * template ids so designs, sets and cart lines saved under migrations 0005
  * and 0013 still load. Printful product ids are the catalog numbers (388,
- * 400, 801). Variant ids stay null on the Printful side until the catalog
- * variants are filled in.
+ * 400, 801). The regular pieces bind to the real Printful products listed in
+ * `house-blanks.ts`.
  */
 import { PRINTFUL_AOP, type AopPrintfulProduct } from "./aop-printful.ts";
+import { HOUSE_BLANKS, HOUSE_BLANK_IDS, houseVariantIds } from "./house-blanks.ts";
 
 export type PrinterId = "sandbox" | "printful";
 
@@ -23,16 +24,8 @@ export type GarmentBinding = {
   variantIds: readonly string[] | null;
 };
 
-/** Placement blanks the sandbox sells. Not all-over garments. */
-export const SANDBOX_PLACEMENT_PRODUCT_IDS = [
-  "tee-heavy",
-  "hoodie-pullover",
-  "hat-dad",
-  "crew-sweat",
-  "longsleeve-block",
-  "jogger-court",
-  "tote-corner",
-] as const;
+/** Placement blanks the sandbox sells. Not all-over garments. Each is a real Printful product. */
+export const SANDBOX_PLACEMENT_PRODUCT_IDS: readonly string[] = HOUSE_BLANK_IDS;
 
 const TEMPLATE_ORDER = ["aop-hoodie", "aop-joggers", "aop-track-jacket"] as const;
 
@@ -62,21 +55,19 @@ function printfulBinding(templateId: (typeof TEMPLATE_ORDER)[number]): GarmentBi
 }
 
 function placementBindings(): GarmentBinding[] {
-  return SANDBOX_PLACEMENT_PRODUCT_IDS.flatMap((templateId) => [
+  return HOUSE_BLANKS.flatMap((blank) => [
     {
-      templateId,
+      templateId: blank.id,
       provider: "sandbox" as const,
-      productId: templateId,
+      productId: blank.id,
       // Sandbox variants are `${productId}-{colorCode}-{sizeCode}`.
       variantIds: null,
     },
     {
-      templateId,
+      templateId: blank.id,
       provider: "printful" as const,
-      // No Printful catalog id is verified for these blanks. docs/printful-aop-data.md
-      // and docs/studio-spec.md cover 388/400/801 only. Leave the id null.
-      productId: null,
-      variantIds: null,
+      productId: String(blank.printfulId),
+      variantIds: normalizeVariantIds(houseVariantIds(blank)),
     },
   ]);
 }
@@ -158,7 +149,7 @@ export function printfulFactsForTemplate(templateId: string): AopPrintfulProduct
 }
 
 export function isSandboxPlacementProduct(productId: string): boolean {
-  return (SANDBOX_PLACEMENT_PRODUCT_IDS as readonly string[]).includes(productId);
+  return SANDBOX_PLACEMENT_PRODUCT_IDS.includes(productId);
 }
 
 /** Chest and sleeve prints. Not an all-over technique. */
@@ -179,7 +170,8 @@ export function isPrintfulPlacementProduct(
   productId: string,
   techniques: readonly string[],
 ): boolean {
-  if (templateForProduct("printful", productId)) return false;
+  const bound = templateForProduct("printful", productId);
+  if (bound) return isSandboxPlacementProduct(bound);
   const keys = techniques.map(techniqueKey).filter(Boolean);
   if (keys.length === 0) return false;
   if (keys.some((key) => ALLOVER_TECHNIQUES.has(key))) return false;

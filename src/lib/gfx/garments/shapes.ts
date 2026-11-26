@@ -772,7 +772,7 @@ function shift(s: Seg, dx: number, dy: number): Seg {
 
 /* ---------------------------------------------------------------- jogger */
 
-function jogger(view: GarmentView): Drawing {
+function jogger(view: GarmentView, rightLeg = false): Drawing {
   const back = view === "back";
   const sil = sym(
     [CX, 116],
@@ -954,7 +954,9 @@ function jogger(view: GarmentView): Drawing {
     ),
   ];
   // Wearer's left thigh. From the back that leg is on the viewer's left.
-  const window = back ? win(160, 256, 58, 76) : win(264, 232, 58, 76);
+  const left = back ? win(160, 256, 58, 76) : win(264, 232, 58, 76);
+  // The wearer's right leg is the mirror image across the centre line.
+  const window = rightLeg ? win(2 * CX - left.x - left.w, left.y, left.w, left.h) : left;
   return {
     sil,
     silBands: [],
@@ -1313,9 +1315,9 @@ export function resolveView(shape: GarmentShape, placement: string): GarmentView
   return "front";
 }
 
-export function drawGarment(shape: GarmentShape, view: GarmentView): Drawing {
+export function drawGarment(shape: GarmentShape, view: GarmentView, placement = ""): Drawing {
   if (shape === "hat") return hat(view);
   if (shape === "tote") return tote(view);
-  if (shape === "jogger") return jogger(view);
+  if (shape === "jogger") return jogger(view, /right/i.test(placement));
   return top(shape, view);
 }

@@ -51,7 +51,6 @@ describe("the sandbox catalog", () => {
     expect(all.products.map((product) => product.id)).toEqual([
       "tee-heavy",
       "hoodie-pullover",
-      "hat-dad",
       "crew-sweat",
       "longsleeve-block",
       "jogger-court",
@@ -61,8 +60,8 @@ describe("the sandbox catalog", () => {
       "aop-track-jacket",
     ]);
     const page = await provider.listProducts({ offset: 1, limit: 2 });
-    expect(page).toMatchObject({ total: 10, offset: 1, limit: 2 });
-    expect(page.products.map((product) => product.id)).toEqual(["hoodie-pullover", "hat-dad"]);
+    expect(page).toMatchObject({ total: 9, offset: 1, limit: 2 });
+    expect(page.products.map((product) => product.id)).toEqual(["hoodie-pullover", "crew-sweat"]);
   });
 
   it("prices every variant from its wholesale cost and the markup", async () => {
@@ -87,10 +86,10 @@ describe("the sandbox catalog", () => {
     expect(sandboxVariantId("tee-heavy", "black", "m")).toBe("tee-heavy-black-m");
     expect(sandboxVariantId("tee-heavy", "black", "m")).not.toBe(sandboxVariantId("tee-heavy", "ink", "m"));
     const tee = await provider.getProduct("tee-heavy");
-    const hot = tee.variants.find((variant) => variant.colorCode === "hot-pink" && variant.sizeCode === "m");
-    expect(hot?.color).toBe("Hot Pink");
-    expect(hot?.id).toBe("tee-heavy-hot-pink-m");
-    expect(hot?.id).not.toContain("Hot");
+    const mint = tee.variants.find((variant) => variant.colorCode === "chalky-mint" && variant.sizeCode === "m");
+    expect(mint?.color).toBe("Chalky Mint");
+    expect(mint?.id).toBe("tee-heavy-chalky-mint-m");
+    expect(mint?.id).not.toContain("Chalky");
     const renamed = tee.variants.map((variant) =>
       variant.colorCode === "black" ? { ...variant, color: "Ink" } : variant,
     );
@@ -165,17 +164,17 @@ describe("sandbox mockups", () => {
 
   it("refuses a placement the blank does not have, and a variant it does not carry", async () => {
     const request = {
-      productId: "hat-dad",
-      variantId: "hat-dad-black-one-size",
-      placement: "back",
-      technique: "embroidery",
+      productId: "tote-corner",
+      variantId: "tote-corner-black-one-size",
+      placement: "sleeve_left",
+      technique: "dtg",
       colorHex: "#000000",
-      productType: "Hat",
+      productType: "Tote",
       layers: [WORD],
     };
     await expect(provider.createMockup(request)).rejects.toMatchObject({ status: 400 });
     await expect(
-      provider.createMockup({ ...request, placement: "front", variantId: "hat-dad-gold-xl" }),
+      provider.createMockup({ ...request, placement: "front", variantId: "tote-corner-gold-xl" }),
     ).rejects.toThrow();
   });
 

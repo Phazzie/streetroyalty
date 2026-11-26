@@ -9,7 +9,6 @@ import {
   printfulCard,
   canOrderProduct,
   addColorway,
-  assessSet,
   defaultGarment,
   parseGarment,
   parseStoredGarment,
@@ -19,7 +18,6 @@ import {
   setPanelFill,
   setRoleColor,
   studioProofPixels,
-  withSharedColorways,
 } from "./garments.ts";
 
 const decode = (url: string) => decodeURIComponent(url.slice(url.indexOf(",") + 1));
@@ -142,28 +140,7 @@ describe("all-over garments", () => {
     assert.deepEqual(studioProofPixels(10, 20), { widthPx: 450, heightPx: 900 });
   });
 
-  it("builds a set only when the pieces share a maker and the same colorways", () => {
-    const hoodie = defaultGarment("aop-hoodie");
-    const joggers = defaultGarment("aop-joggers");
-    const good = assessSet([
-      { provider: "printful", templateId: "aop-hoodie", colorways: hoodie.colorways },
-      { provider: "printful", templateId: "aop-joggers", colorways: joggers.colorways },
-    ]);
-    assert.equal(good.ok, true);
-    if (good.ok) assert.equal(good.provider, "printful");
-    const mixed = assessSet([
-      { provider: "printful", templateId: "aop-hoodie", colorways: hoodie.colorways },
-      { provider: "sandbox", templateId: "aop-joggers", colorways: joggers.colorways },
-    ]);
-    assert.equal(mixed.ok, false);
-    const drifted = withSharedColorways(joggers, joggers.colorways, joggers.activeColorwayId);
-    drifted.colorways[0] = setRoleColor(drifted.colorways[0]!, "body", "#000000");
-    const clash = assessSet([
-      { provider: "sandbox", templateId: "aop-hoodie", colorways: hoodie.colorways },
-      { provider: "sandbox", templateId: "aop-joggers", colorways: drifted.colorways },
-    ]);
-    assert.equal(clash.ok, false);
-    if (!clash.ok) assert.match(clash.reason, /same colorways/);
+  it("names the fabric only for all-over pieces", () => {
     assert.match(materialLine("aop-hoodie"), /sublimation/);
     assert.equal(materialLine("tee-heavy"), "");
   });

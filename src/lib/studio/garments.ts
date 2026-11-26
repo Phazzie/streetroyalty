@@ -1,5 +1,5 @@
 /**
- * Thin re-export. The garment domain (types, panel geometry, colorways, sets,
+ * Thin re-export. The garment domain (types, panel geometry, colorways,
  * rendering) lives in `src/lib/garments` and does not know about a printer.
  * Printful facts and the template ↔ catalog mapping live in `src/lib/pod`.
  * `garment-bridge.ts` is the only studio module that joins the two.
@@ -15,12 +15,9 @@ export {
   LABEL_MAX,
   MAX_ART_SRC,
   MAX_GARMENT_JSON,
-  SET_PARTNER,
   STUDIO_PROOF_LONG_EDGE,
   activeColorway,
   addColorway,
-  assessSet,
-  colorwaySignature,
   defaultGarment,
   defaultPanels,
   getTemplate,
@@ -33,12 +30,10 @@ export {
   resolveGarment,
   resolvePaint,
   setPanelFill,
-  setPartner,
   setRoleColor,
   studioProofPixels,
   updateColorway,
   visiblePanels,
-  withSharedColorways,
   coverageProblems,
   printPlacements,
   renderPrintSheet,
@@ -54,7 +49,6 @@ export type {
   PanelDesign,
   PanelFace,
   PanelFill,
-  SetPiece,
   PrintSheet,
 } from "../garments/index.ts";
 export {

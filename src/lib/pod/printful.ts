@@ -1,4 +1,5 @@
-import { AOP_DPI } from "./aop-printful.ts";
+import { AOP_DPI, PRINTFUL_AOP } from "./aop-printful.ts";
+import { HOUSE_BLANKS, houseBlankByPrintfulId, houseVariantIds } from "./house-blanks.ts";
 import { aopFieldsFor, isPrintfulPlacementProduct } from "./garment-map.ts";
 import { applyMarkup, centsToDecimal, moneyToCents } from "./money.ts";
 import { PodError, type CatalogPage, type CatalogProduct, type CatalogVariant, type DraftOrderRequest, type FileUpload, type MockupRequest, type MockupResult, type PodProvider, type PrintArea, type ProviderOrder, type Recipient, type ShippingItem, type ShippingRate, type SyncProductInput, type SyncedProduct, type UploadedFile, type WebhookRegistration } from "./types.ts";
@@ -13,7 +14,18 @@ export type PrintfulClientOptions = {
   /** Poll budget for mockup tasks. Tests pass a zero delay. */
   mockupPoll?: { attempts: number; delayMs: number };
   markup?: number;
+  /**
+   * Catalog product ids the studio lists, in order. Defaults to the house
+   * pieces and the all-over pieces: the products the studio knows how to make.
+   */
+  catalog?: readonly string[];
 };
+
+/** The products the studio sells on Printful: the regular pieces, then the all-over ones. */
+export const STUDIO_CATALOG: readonly string[] = [
+  ...HOUSE_BLANKS.map((blank) => String(blank.printfulId)),
+  ...Object.values(PRINTFUL_AOP).map((product) => String(product.catalogProductId)),
+];
 
 const DEFAULT_POLL = { attempts: 4, delayMs: 1200 };
 
@@ -47,6 +59,7 @@ export function createPrintfulProvider(options: PrintfulClientOptions): PodProvi
   const fetchImpl = options.fetchImpl ?? fetch;
   const markup = options.markup ?? 2.2;
   const poll = options.mockupPoll ?? DEFAULT_POLL;
+  const catalog = options.catalog ?? STUDIO_CATALOG;
 
   async function request(path: string, init?: { method?: string; body?: unknown }): Promise<Envelope> {
     const headers: Record<string, string> = {
@@ -176,6 +189,22 @@ export function createPrintfulProvider(options: PrintfulClientOptions): PodProvi
       };
     });
     const id = text(raw.id);
+    // A house piece offers only the DTG spots the studio can print, with the
+    // surcharge Printful adds for each one.
+    const house = houseBlankByPrintfulId(id);
+    const offered = house
+      ? house.placements.map((spot) => ({
+          placement: spot.placement,
+          technique: house.technique,
+          title: spot.title,
+          ...(spot.extraCents > 0
+            ? {
+                extraRetailCents: applyMarkup(spot.extraCents, markup),
+                extraWholesaleCents: spot.extraCents,
+              }
+            : {}),
+        }))
+      : placements;
     const linked = aopFieldsFor("printful", id);
     const techniqueKeys = techniques.map((item) => item.key);
     const placement =
@@ -189,7 +218,7 @@ export function createPrintfulProvider(options: PrintfulClientOptions): PodProvi
       imageUrl: text(raw.image) || undefined,
       discontinued: raw.is_discontinued === true,
       techniques,
-      placements,
+      placements: offered,
       colors: asArray(raw.colors).map((entry) => {
         const color = asRecord(entry);
         return { name: text(color?.name, "Color"), hex: text(color?.value ?? color?.color_code, "#111111") };
@@ -242,7 +271,11 @@ export function createPrintfulProvider(options: PrintfulClientOptions): PodProvi
         ? item.files.map((file) => ({
             placement: file.placement,
             technique: item.technique,
-            layers: [{ type: "file", url: file.url }],
+            layers: [
+              file.area
+                ? { type: "file", url: file.url, position: layerPosition(file.area) }
+                : { type: "file", url: file.url },
+            ],
           }))
         : [
             {
@@ -298,21 +331,21 @@ export function createPrintfulProvider(options: PrintfulClientOptions): PodProvi
   return {
     id: "printful",
     async listProducts(input) {
+      // Only the pieces the studio can make. The full Printful catalog holds
+      // hundreds of products the studio has no print files or panels for.
       const limit = input?.limit ?? 24;
       const offset = input?.offset ?? 0;
-      const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
-      const envelope = await request(`/v2/catalog-products?${params.toString()}`);
-      const products = asArray(payloadOf(envelope))
-        .map((entry) => asRecord(entry))
+      const ids = catalog.slice(offset, offset + limit);
+      const records = await Promise.all(
+        ids.map(async (id) =>
+          asRecord(payloadOf(await request(`/v2/catalog-products/${encodeURIComponent(id)}`))),
+        ),
+      );
+      const products = records
         .filter((entry): entry is Record<string, unknown> => entry !== null)
         .map((entry) => mapProduct(entry))
         .filter((product) => !product.discontinued);
-      return {
-        products,
-        total: envelope.paging?.total ?? products.length,
-        offset: envelope.paging?.offset ?? offset,
-        limit: envelope.paging?.limit ?? limit,
-      } satisfies CatalogPage;
+      return { products, total: catalog.length, offset, limit } satisfies CatalogPage;
     },
     async getProduct(productId) {
       const envelope = await request(`/v2/catalog-products/${encodeURIComponent(productId)}`);
@@ -321,7 +354,11 @@ export function createPrintfulProvider(options: PrintfulClientOptions): PodProvi
       const product = mapProduct(raw);
       const technique = product.techniques.find((item) => item.isDefault)?.key ?? product.techniques[0]?.key;
       const loaded = await loadVariants(productId, technique);
-      return { ...product, variants: loaded.variants };
+      // A house piece keeps to the colours the studio shows in sandbox too.
+      const house = houseBlankByPrintfulId(productId);
+      const keep = house ? new Set(houseVariantIds(house)) : null;
+      const variants = keep ? loaded.variants.filter((item) => keep.has(item.id)) : loaded.variants;
+      return { ...product, variants };
     },
     async uploadFile(file: FileUpload): Promise<UploadedFile> {
       const envelope = await request("/v2/files", {
