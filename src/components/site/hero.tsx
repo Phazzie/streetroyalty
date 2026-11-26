@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { garmentMockupSvg } from "@/lib/gfx/garments";
-import { HOUSE_BLANKS, type HouseBlank } from "@/lib/pod/house-blanks";
+import { HOUSE_BLANKS, blankDrawShape, type HouseBlank } from "@/lib/pod/house-blanks";
 import type { DesignLayer } from "@/lib/pod/types";
 
 /** How long each blank holds a colour before it moves to the next real one. */
@@ -61,7 +61,7 @@ function Piece({ blank, step }: { blank: HouseBlank; step: number }) {
   const art = useMemo(
     () =>
       garmentMockupSvg({
-        shape: blank.shape,
+        shape: blankDrawShape(blank),
         colorHex: hex,
         placement: frontSpot(blank),
         layers: mark(MARK[blank.shape], hex),

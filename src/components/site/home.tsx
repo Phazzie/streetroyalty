@@ -4,7 +4,7 @@ import { Hero } from "@/components/site/hero";
 import { Reveal } from "@/components/site/reveal";
 import { SiteShell } from "@/components/site/shell";
 import { garmentMockupSvg } from "@/lib/gfx/garments";
-import { houseBlank } from "@/lib/pod/house-blanks";
+import { blankDrawShape, houseBlank } from "@/lib/pod/house-blanks";
 
 function labPiece(id: string, colorCode: string, text: string, ink: string) {
   const blank = houseBlank(id);
@@ -12,7 +12,7 @@ function labPiece(id: string, colorCode: string, text: string, ink: string) {
   return {
     alt: `${blank?.name ?? "Blank"} in ${color?.name ?? "black"}, with ${text} printed on the front`,
     src: garmentMockupSvg({
-      shape: blank?.shape ?? "hoodie",
+      shape: blank ? blankDrawShape(blank) : "hoodie",
       colorHex: color?.hex ?? "#111111",
       placement: "front",
       layers: [

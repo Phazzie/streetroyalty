@@ -244,6 +244,14 @@ export const HOUSE_BLANKS: readonly HouseBlank[] = [
 /** Sandbox ids of the regular pieces, in studio order. */
 export const HOUSE_BLANK_IDS = HOUSE_BLANKS.map((blank) => blank.id);
 
+/**
+ * The drawing to use for a blank. The long-sleeve prints like a tee but has to
+ * be drawn with long sleeves, the same way the sandbox mockups resolve it.
+ */
+export function blankDrawShape(blank: Pick<HouseBlank, "shape" | "type">): string {
+  return /long/i.test(blank.type) ? "longsleeve" : blank.shape;
+}
+
 export function houseBlank(id: string): HouseBlank | null {
   return HOUSE_BLANKS.find((blank) => blank.id === id) ?? null;
 }

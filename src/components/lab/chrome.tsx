@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy";
 import { garmentFlatSvg } from "@/lib/gfx/garments";
-import { houseBlank } from "@/lib/pod/house-blanks";
+import { blankDrawShape, houseBlank } from "@/lib/pod/house-blanks";
 
 /** Four of the real blanks, in colours Printful really stocks, so the first screen shows only pieces you can order. */
 const OPENERS = [
@@ -21,7 +21,7 @@ function openerArt({ id, color }: (typeof OPENERS)[number]) {
   return {
     key: id,
     alt: `${blank?.name ?? "Blank"} in ${pick?.name ?? "black"}`,
-    src: garmentFlatSvg(blank?.shape ?? "hoodie", pick?.hex ?? "#111111"),
+    src: garmentFlatSvg(blank ? blankDrawShape(blank) : "hoodie", pick?.hex ?? "#111111"),
   };
 }
 

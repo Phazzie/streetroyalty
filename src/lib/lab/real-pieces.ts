@@ -3,7 +3,7 @@
  * person says ("black hoodie") into one of the studio's real blanks in a colour
  * Printful really stocks, or null when the shop does not make it. Pure.
  */
-import { HOUSE_BLANKS, type HouseBlank, type HouseColor } from "../pod/house-blanks.ts";
+import { HOUSE_BLANKS, blankDrawShape, type HouseBlank, type HouseColor } from "../pod/house-blanks.ts";
 import { findColors, nearestColor } from "../say/colors.ts";
 import type { Category } from "../types.ts";
 
@@ -13,6 +13,8 @@ export type RealPiece = {
   colorName: string;
   hex: string;
   shape: HouseBlank["shape"];
+  /** What to draw: the long-sleeve draws with long sleeves. */
+  drawShape: string;
   category: Category;
   /** How the lab names it on the board and in the look prompt. */
   label: string;
@@ -61,6 +63,7 @@ export function matchRealPiece(spoken: string): RealPiece | null {
     colorName: color.name,
     hex: color.hex,
     shape: blank.shape,
+    drawShape: blankDrawShape(blank),
     category: word.category,
     label: `${color.name} ${blank.name}`,
   };

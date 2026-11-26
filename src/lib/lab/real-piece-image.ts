@@ -8,7 +8,7 @@ import type { RealPiece } from "./real-pieces.ts";
  */
 export async function realPieceImage(piece: RealPiece, size = 768): Promise<string> {
   const svg = garmentMockupSvg({
-    shape: piece.shape,
+    shape: piece.drawShape,
     colorHex: piece.hex,
     placement: piece.shape === "joggers" ? "leg_front_left" : "front",
     layers: [],

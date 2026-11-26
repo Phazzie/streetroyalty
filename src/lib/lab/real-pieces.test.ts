@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { interpret } from "../split-pieces.ts";
 import { matchRealPiece } from "./real-pieces.ts";
 
 describe("matching what someone says to a real blank", () => {
@@ -40,5 +41,41 @@ describe("matching what someone says to a real blank", () => {
     ]) {
       expect(matchRealPiece(spoken), spoken).toBeNull();
     }
+  });
+});
+
+describe("what the lab hears, start to finish", () => {
+  const heard = (text: string) => {
+    const intent = interpret(text);
+    expect(intent.type, text).toBe("pieces");
+    if (intent.type !== "pieces") return [];
+    return intent.pieces.map((piece) => matchRealPiece(piece.spoken)?.blankId ?? null);
+  };
+
+  it("hears every blank the lab offers, one at a time", () => {
+    expect(heard("black hoodie")).toEqual(["hoodie-pullover"]);
+    expect(heard("black sweatpants")).toEqual(["jogger-court"]);
+    expect(heard("bone crewneck")).toEqual(["crew-sweat"]);
+    expect(heard("white tee")).toEqual(["tee-heavy"]);
+    expect(heard("black long-sleeve tee")).toEqual(["longsleeve-block"]);
+    expect(heard("black long sleeve")).toEqual(["longsleeve-block"]);
+    expect(heard("oyster tote bag")).toEqual(["tote-corner"]);
+  });
+
+  it("splits a whole outfit into its real pieces", () => {
+    expect(heard("black hoodie and black sweatpants")).toEqual([
+      "hoodie-pullover",
+      "jogger-court",
+    ]);
+    expect(heard("lavender hoodie, carbon grey sweatpants and a black tote")).toEqual([
+      "hoodie-pullover",
+      "jogger-court",
+      "tote-corner",
+    ]);
+  });
+
+  it("draws the long-sleeve with long sleeves", () => {
+    expect(matchRealPiece("black long-sleeve tee")?.drawShape).toBe("longsleeve");
+    expect(matchRealPiece("black hoodie")?.drawShape).toBe("hoodie");
   });
 });
