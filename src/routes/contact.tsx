@@ -18,21 +18,14 @@ function ContactPage() {
       lede="Questions about an order, a piece, or the studio. A real person reads every message."
     >
       <FineSection n={1} title="Write to us">
-        {email ? (
-          <p>
-            <a
-              href={`mailto:${email}`}
-              className="display break-all text-3xl no-underline hover:underline sm:text-4xl"
-            >
-              {email}
-            </a>
-          </p>
-        ) : (
-          <p>
-            Our inbox isn't open yet. For anything about an order, your{" "}
-            <Link to="/orders">orders page</Link> shows where it is and its tracking link.
-          </p>
-        )}
+        <p>
+          <a
+            href={`mailto:${email}`}
+            className="display break-all text-3xl normal-case no-underline hover:underline sm:text-4xl"
+          >
+            {email}
+          </a>
+        </p>
       </FineSection>
       <FineSection n={2} title="About an order">
         <p>
