@@ -4,6 +4,7 @@ import { ActivityFeed, CrownedShelf } from "@/components/activity";
 import { ProfileForm } from "@/components/makers/profile-form";
 import { Button } from "@/components/ui/button";
 import { Note, StudioShell } from "@/components/studio/shell";
+import { UserButton } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { getMyProfile } from "@/lib/social/api";
 import type { MakerProfile } from "@/lib/social/types";
@@ -39,6 +40,22 @@ function MePage() {
     <StudioShell current="/me">
       <p className="tag">Maker</p>
       <h1 className="mt-3 font-display text-4xl leading-none">Your name on the rack</h1>
+      {user ? (
+        <nav aria-label="Your account" className="mt-4 flex flex-wrap items-center gap-2">
+          <Link to="/gallery" className="chip inline-flex min-h-11 items-center">
+            Saved pieces
+          </Link>
+          <Link to="/orders" className="chip inline-flex min-h-11 items-center">
+            Orders
+          </Link>
+          <Link to="/cart" className="chip inline-flex min-h-11 items-center">
+            Cart
+          </Link>
+          <div className="ml-auto">
+            <UserButton />
+          </div>
+        </nav>
+      ) : null}
       {!isPending && !user ? (
         <div className="empty-state mt-6">
           <p>Sign in to pick your name and handle. Every piece you publish carries them.</p>

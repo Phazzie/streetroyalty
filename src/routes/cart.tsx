@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
+import { SignInCall } from "@/components/ai/sign-in-call";
+import { isUnauthorized } from "@/lib/ai/access";
 import { StudioShell } from "@/components/studio/shell";
 import { formatMoney } from "@/lib/pod/money";
 import { cartList, cartNudge } from "@/lib/studio/api";
@@ -11,13 +13,20 @@ export const Route = createFileRoute("/cart")({ component: CartPage });
 function CartPage() {
   const [lines, setLines] = useState<CartLine[] | null>(null);
   const [error, setError] = useState("");
+  const [signedOut, setSignedOut] = useState(false);
   const [pendingId, setPendingId] = useState("");
   const pendingRef = useRef("");
 
   function reload() {
     void cartList()
       .then(setLines)
-      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Sign in to see the cart."));
+      .catch((reason: unknown) => {
+        if (isUnauthorized(reason)) {
+          setSignedOut(true);
+          return;
+        }
+        setError(reason instanceof Error ? reason.message : "Could not load the cart.");
+      });
   }
 
   useEffect(() => {
@@ -42,6 +51,11 @@ function CartPage() {
   return (
     <StudioShell current="/cart">
       <h1 className="mb-4 font-display text-4xl leading-none">Cart</h1>
+      {signedOut ? (
+        <div className="mb-4 max-w-md">
+          <SignInCall next="/cart">The cart lives on your account. Sign in to fill it.</SignInCall>
+        </div>
+      ) : null}
       {error ? <p className="mb-4 border-2 border-pipe p-4">{error}</p> : null}
       {lines && lines.length === 0 ? <p className="empty-state">Nothing in the bag. The shop is open.</p> : null}
       <ul className="flex flex-col gap-3">

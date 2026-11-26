@@ -83,7 +83,7 @@ export async function sendOrderMail(
     const mail = readMail(row);
     if (!mail) return { sent: false, reason: "no_address" };
     const rendered = kind === "placed" ? placedEmail(mail) : shippedEmail(mail);
-    const result = await send({ to: mail.to, ...rendered, replyTo: shopEmail() ?? undefined });
+    const result = await send({ to: mail.to, ...rendered, replyTo: shopEmail() });
     if (!result.sent && result.reason !== "not_configured") {
       console.warn(`[email] ${kind} email for ${orderId} did not send: ${result.reason}`);
     }
