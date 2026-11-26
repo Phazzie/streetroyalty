@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { addToCart, listCart, priceCart } from "./cart.server.ts";
 import { getDesign, publishDesign, saveDesign, storePrintFile } from "./designs.server.ts";
 import { applyMarkup } from "../pod/money.ts";
+import { designSpots, type DesignRow } from "./shared.server.ts";
+import { parseLayers } from "./validate.ts";
 import { truncateAll } from "../../test/db.ts";
 import { pngDataUrl } from "../../test/png.ts";
 import { seedUser } from "../../test/seed.ts";
@@ -89,5 +91,49 @@ describe("a regular piece with art on more than one spot", () => {
       tee([{ placement: "back", layers: word("BACK"), printFileId: null }]),
     );
     await expect(publishDesign("ada", saved.id)).rejects.toThrow(/every spot/);
+  });
+
+  it("reads a damaged spots column as the row's own spot", () => {
+    const layers = JSON.stringify(word("FRONT"));
+    const row = {
+      placement: "front",
+      technique: "dtg",
+      layers_json: layers,
+      print_file_id: "front-file",
+    } as DesignRow;
+    const only = [
+      {
+        placement: "front",
+        technique: "dtg",
+        layers: parseLayers(word("FRONT")),
+        printFileId: "front-file",
+      },
+    ];
+    expect(designSpots({ ...row, spots_json: null })).toEqual(only);
+    expect(designSpots({ ...row, spots_json: "{not json" })).toEqual(only);
+    expect(designSpots({ ...row, spots_json: "{}" })).toEqual(only);
+    expect(designSpots({ ...row, spots_json: "[]" })).toEqual(only);
+    const mixed = JSON.stringify([
+      null,
+      { placement: 7 },
+      { placement: "front", layers: word("OLD") },
+      { placement: "back", layers: word("BACK") },
+      {
+        placement: "sleeve_left",
+        technique: "dtg",
+        layers: parseLayers(word("L")),
+        printFileId: "left-file",
+      },
+    ]);
+    expect(designSpots({ ...row, spots_json: mixed })).toEqual([
+      only[0],
+      { placement: "back", technique: "dtg", layers: parseLayers(word("BACK")), printFileId: null },
+      {
+        placement: "sleeve_left",
+        technique: "dtg",
+        layers: parseLayers(word("L")),
+        printFileId: "left-file",
+      },
+    ]);
   });
 });
