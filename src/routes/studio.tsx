@@ -14,10 +14,13 @@ function StudioPage() {
   const { design } = Route.useSearch();
   return (
     <StudioShell current="/studio">
-      <div className="mb-5">
-        <p className="tag">Design studio</p>
-        <h1 className="mt-3 font-display text-4xl leading-none tracking-tight sm:text-5xl">Build the piece. Then print it.</h1>
-        <p className="mt-3 max-w-xl text-muted">
+      {/* On a phone the heading is one short line, so the piece is on screen straight away. */}
+      <div className="mb-3 sm:mb-5">
+        <div className="max-sm:hidden">
+          <p className="tag">Design studio</p>
+        </div>
+        <h1 className="font-display text-2xl leading-none tracking-tight sm:mt-3 sm:text-5xl">Build the piece. Then print it.</h1>
+        <p className="mt-3 max-w-xl text-muted max-sm:hidden">
           Pick a real blank and put art on every spot it prints. Curve the type, check the print, and save it before it hits the rack.
         </p>
       </div>

@@ -100,6 +100,8 @@ export type DesignLayer =
       outline?: boolean;
       /** Letter spacing as a fraction of the font size. */
       tracking?: number;
+      /** A sticker outline round the letters, in this colour. Absent means none. */
+      stroke?: string;
     };
 
 export type MockupRequest = {

@@ -6,6 +6,8 @@ export type StudioConfig = {
   paymentsMode: "live" | "sandbox";
   markup: number;
   currency: "USD";
+  /** Printful can make real photo mockups: the shop has its key and a public address. */
+  photoMockups?: boolean;
 };
 
 export type DesignSummary = {

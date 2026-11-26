@@ -120,6 +120,10 @@ vi.mock("@/lib/studio/api", () => {
     makeMockup: async () => ({ mockupUrl: "", status: "completed" }),
     cartAdd: async () => undefined,
     addCollection: async () => ({ id: "c", name: "Capsules", count: 0 }),
+    getStudioConfig: async () => ({ podMode: harness.mode, photoMockups: false }),
+    keepSpotFile: async () => ({ id: "file-1" }),
+    photoMockup: async () => ({ taskId: "1", status: "completed", photos: [] }),
+    photoMockupStatus: async () => ({ taskId: "1", status: "completed", photos: [] }),
   };
 });
 

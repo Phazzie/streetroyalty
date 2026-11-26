@@ -5,6 +5,8 @@
  * stays on the old single-line path.
  */
 
+import { studioFont } from "../studio/fonts.ts";
+
 export type TextFx = {
   /** Arc bend in degrees across the whole line. Negative arches, positive smiles. */
   arc: number;
@@ -132,7 +134,7 @@ export function textWidthEm(text: string, font: string): number {
     else if (char >= "0" && char <= "9") ems += 0.66;
     else ems += 0.6;
   }
-  return ems * (font === "Outfit" ? 0.8 : 1);
+  return ems * studioFont(font).width;
 }
 
 /** How far a laid-out line reaches, in ems: from the left edge of its first letter to the right edge of its last. */

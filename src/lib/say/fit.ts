@@ -92,7 +92,7 @@ function pickPlacement(
 }
 
 function font(intent: SayIntent): string {
-  return STUDIO_FONTS.includes(intent.font as (typeof STUDIO_FONTS)[number])
+  return STUDIO_FONTS.includes(String(intent.font))
     ? intent.font
     : "Archivo Black";
 }

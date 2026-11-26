@@ -61,7 +61,7 @@ export function ArtMaker({
           onNote(failText(result.kind));
           return;
         }
-        const pixels = await loadPixels(result.image, 900);
+        const pixels = await loadPixels(result.image, 1600);
         const cut = fitPng(knockout(pixels));
         onArt(cut, cut);
         onNote(
@@ -149,7 +149,7 @@ export function ArtEffects({
   async function run(effect: Effect, hex = ink) {
     setBusy(true);
     try {
-      const pixels = await loadPixels(original, 900);
+      const pixels = await loadPixels(original, 1800);
       const cut: Pixels = knockout(pixels);
       let out = cut;
       if (effect !== "cut") {
