@@ -30,9 +30,9 @@ export function StudioShell({ children }: { current?: string; children: ReactNod
         className="mx-auto w-full min-w-0 max-w-6xl flex-1 overflow-x-clip px-4 py-6"
       >
         {mode === "sandbox" ? (
-          <p className="mb-4 text-xs text-subtle">
-            <span className="tag mr-2 align-middle">Sandbox</span>
-            Test mode. Orders here are not charged or printed.
+          <p className="mb-4 flex items-center gap-3 text-xs text-subtle">
+            <span className="tag shrink-0">Sandbox</span>
+            <span>Test mode. Orders here are not charged or printed.</span>
           </p>
         ) : null}
         {children}
