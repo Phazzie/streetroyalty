@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
-import { AOP_DPI, PRINTFUL_AOP, aopOrderable, printfulAopById } from "./aop-printful.ts";
+import {
+  AOP_DPI,
+  PRINTFUL_AOP,
+  aopOnSale,
+  aopOrderable,
+  printfulAopById,
+  setAopOnSaleForTests,
+} from "./aop-printful.ts";
 
 describe("Printful all-over print facts", () => {
   it("keeps the product ids that the public pages publish", () => {
@@ -27,10 +34,14 @@ describe("Printful all-over print facts", () => {
     }
   });
 
-  it("opens ordering only when the panels cover every cut piece", () => {
+  it("is off sale, and when on sale opens only when the panels cover every cut piece", () => {
+    assert.equal(aopOnSale(), false);
+    assert.equal(aopOrderable(388, []), false);
+    setAopOnSaleForTests(true);
     assert.equal(aopOrderable(388, []), true);
     assert.equal(aopOrderable(388, ["front/body_front has no panel."]), false);
     assert.equal(aopOrderable(1, []), false);
+    setAopOnSaleForTests(false);
   });
 
   it("gives each product its own material line and names no fabric that is not confirmed", () => {

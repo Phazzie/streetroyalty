@@ -3,7 +3,9 @@ import { isUnauthorized } from "@/lib/ai/access";
 import { copy } from "@/lib/copy";
 import { idbGet, idbSet } from "@/lib/idb";
 import { compressDataUrl } from "@/lib/images";
-import { generateLook, generatePiece, pollRunway, startRunway } from "@/lib/lab-api";
+import { generateLook, pollRunway, startRunway } from "@/lib/lab-api";
+import { realPieceImage } from "@/lib/lab/real-piece-image";
+import { matchRealPiece } from "@/lib/lab/real-pieces";
 import { restoreItem, undoStillGood, withoutId } from "@/lib/lab/closet";
 import { settleRetry } from "@/lib/piece-batch";
 import { interpret, isLookChange, paidPlan, type Intent } from "@/lib/split-pieces";
@@ -78,6 +80,9 @@ const CATEGORY_RANK: Record<Category, number> = {
 
 const SLOT_RANK: Slot[] = ["front", "side", "threequarter", "extra"];
 
+/** Off: a tweak by words could put clothes on someone the shop can't make. */
+const LOOK_TWEAKS = false;
+
 let token = 0;
 let hydrated = false;
 let persistQueue: Promise<void> = Promise.resolve();
@@ -123,6 +128,7 @@ function refuseSignIn(error: unknown, my: number): boolean {
 
 function failLine(result: { ok: boolean; kind?: string } | null): string {
   if (result && !result.ok && result.kind === "limit") return copy.limit;
+  if (result && !result.ok && result.kind === "notMade") return copy.notMade;
   return result && !result.ok && result.kind === "unavailable" ? copy.cantBuild : copy.missed;
 }
 
@@ -220,28 +226,21 @@ async function buildPieces(drafts: PieceDraft[], transcript: string, thenWear: b
       continue;
     }
     const ticketId = nextId("GEN");
-    let result: Awaited<ReturnType<typeof generatePiece>> | null = null;
-    try {
-      result = await generatePiece({ data: { spoken: draft.spoken, category: draft.category } });
-    } catch (error) {
-      if (refuseSignIn(error, my)) return;
-      console.error(error);
-      result = null;
-    }
-    if (!alive(my)) return;
-    if (!result || !result.ok) {
-      lastFail = result;
+    // Only a real blank goes on the board. Nothing is drawn by the model here.
+    const real = matchRealPiece(draft.spoken);
+    if (!real) {
+      lastFail = { ok: false, kind: "notMade" };
       missed += 1;
       outcomes.push(null);
       continue;
     }
-    const image = await shrink(result.image);
+    const image = await realPieceImage(real);
     if (!alive(my)) return;
     const id = nextId("piece");
     const piece: Piece = {
       id,
-      category: draft.category,
-      spoken: draft.spoken,
+      category: real.category,
+      spoken: real.label,
       sourceTranscript: transcript,
       image,
       selected: true,
@@ -253,11 +252,11 @@ async function buildPieces(drafts: PieceDraft[], transcript: string, thenWear: b
     rememberTicket({
       id: ticketId,
       type: "Piece",
-      category: draft.category,
+      category: real.category,
       characterRefIds: [],
       pieceRefIds: [],
       spokenDescription: draft.spoken,
-      prompt: result.prompt,
+      prompt: `Real blank: ${real.label}`,
       consistencyLocks: LOCK_LINE,
       output: id,
       status: again ? "Regenerated" : "Generated",
@@ -355,6 +354,12 @@ async function tweakLook(change: string, my = begin(), again = false) {
   const current = useLab.getState().draft;
   if (!current) {
     noteStatus(copy.noLook);
+    finish(my);
+    return;
+  }
+  // Changing a look by words lets the model make up clothes. Pieces change on the board.
+  if (!LOOK_TWEAKS) {
+    noteStatus(copy.swapOnBoard, copy.swapOnBoard);
     finish(my);
     return;
   }
@@ -523,27 +528,18 @@ async function rebuildOne(id: string) {
   const piece = useLab.getState().pieces.find((item) => item.id === id);
   if (!piece) return;
   const my = begin();
-  const line = `Rebuilding ${piece.spoken}.`;
-  noteStatus(line, line);
-  let result: Awaited<ReturnType<typeof generatePiece>> | null = null;
-  try {
-    result = await generatePiece({ data: { spoken: piece.spoken, category: piece.category } });
-  } catch (error) {
-    if (refuseSignIn(error, my)) return;
-    console.error(error);
-    result = null;
-  }
-  if (!alive(my)) return;
-  if (!result || !result.ok) {
-    const missedLine = failLine(result);
-    noteStatus(missedLine, missedLine);
+  const real = matchRealPiece(piece.spoken);
+  if (!real) {
+    noteStatus(copy.notMade, copy.notMade);
     finish(my);
     return;
   }
-  const image = await shrink(result.image);
+  const image = await realPieceImage(real);
   if (!alive(my)) return;
   patch({
-    pieces: useLab.getState().pieces.map((item) => (item.id === id ? { ...item, image, createdAt: Date.now() } : item)),
+    pieces: useLab.getState().pieces.map((item) =>
+      item.id === id ? { ...item, image, spoken: real.label, createdAt: Date.now() } : item,
+    ),
   });
   noteStatus(copy.onBoard, copy.onBoard);
   finish(my);

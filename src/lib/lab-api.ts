@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { authMiddleware } from "@/lib/auth/middleware";
-import { isCategory } from "@/lib/split-pieces";
 import { SCENES, type Reaction, type Scene } from "@/lib/types";
 
 type Fail = { ok: false; kind: "unavailable" | "missed" | "limit" };
@@ -37,20 +36,8 @@ function isReaction(value: unknown): value is Reaction {
   return value === "cheer" || value === "boo" || value === "both";
 }
 
-export const generatePiece = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .validator((input: { spoken?: string; category?: string }) => ({
-    spoken: String(input?.spoken ?? "").trim().slice(0, 800),
-    category: String(input?.category ?? ""),
-  }))
-  .handler(async ({ data, context }) => {
-    // A request that could never produce a picture is turned away before it is counted.
-    if (!data.spoken || !isCategory(data.category)) return MISSED;
-    const refusal = await refuse("image", context.userId);
-    if (refusal) return refusal;
-    const { runPiece } = await import("./imagine.server.ts");
-    return runPiece(data);
-  });
+// There is no endpoint that draws a made-up piece. The lab only puts on real
+// blanks (lib/lab/real-pieces.ts), drawn in the browser.
 
 export const generateLook = createServerFn({ method: "POST" })
   .middleware([authMiddleware])

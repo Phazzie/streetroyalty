@@ -23,7 +23,7 @@ import { listen, micAvailable } from "@/lib/voice";
 const EXAMPLES = [
   "Put DO BETTER on the back of a black hoodie in pink, big",
   "A white tee that says free world in blue across the chest",
-  "Hat with my name Dre on it",
+  "Crewneck with my name Dre on it",
 ] as const;
 
 const KEEP = "sr-say-intent";

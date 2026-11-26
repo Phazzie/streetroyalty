@@ -1,4 +1,4 @@
-import { AOP_DPI, PRINTFUL_AOP } from "./aop-printful.ts";
+import { AOP_DPI, aopOnSale, PRINTFUL_AOP } from "./aop-printful.ts";
 import { HOUSE_BLANKS, houseBlankByPrintfulId, houseVariantIds } from "./house-blanks.ts";
 import { aopFieldsFor, isPrintfulPlacementProduct } from "./garment-map.ts";
 import { applyMarkup, centsToDecimal, moneyToCents } from "./money.ts";
@@ -21,11 +21,15 @@ export type PrintfulClientOptions = {
   catalog?: readonly string[];
 };
 
-/** The products the studio sells on Printful: the regular pieces, then the all-over ones. */
-export const STUDIO_CATALOG: readonly string[] = [
-  ...HOUSE_BLANKS.map((blank) => String(blank.printfulId)),
-  ...Object.values(PRINTFUL_AOP).map((product) => String(product.catalogProductId)),
-];
+/** The products the studio sells on Printful. All-over pieces only while `aopOnSale()`. */
+export function studioCatalog(): readonly string[] {
+  return [
+    ...HOUSE_BLANKS.map((blank) => String(blank.printfulId)),
+    ...(aopOnSale()
+      ? Object.values(PRINTFUL_AOP).map((product) => String(product.catalogProductId))
+      : []),
+  ];
+}
 
 const DEFAULT_POLL = { attempts: 4, delayMs: 1200 };
 
@@ -59,7 +63,6 @@ export function createPrintfulProvider(options: PrintfulClientOptions): PodProvi
   const fetchImpl = options.fetchImpl ?? fetch;
   const markup = options.markup ?? 2.2;
   const poll = options.mockupPoll ?? DEFAULT_POLL;
-  const catalog = options.catalog ?? STUDIO_CATALOG;
 
   async function request(path: string, init?: { method?: string; body?: unknown }): Promise<Envelope> {
     const headers: Record<string, string> = {
@@ -335,6 +338,7 @@ export function createPrintfulProvider(options: PrintfulClientOptions): PodProvi
       // hundreds of products the studio has no print files or panels for.
       const limit = input?.limit ?? 24;
       const offset = input?.offset ?? 0;
+      const catalog = options.catalog ?? studioCatalog();
       const ids = catalog.slice(offset, offset + limit);
       const records = await Promise.all(
         ids.map(async (id) =>

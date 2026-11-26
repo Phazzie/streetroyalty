@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { AOP_ORDER_CLOSED, setAopOnSaleForTests } from "../pod/aop-printful.ts";
 import { getSql } from "../db.ts";
 import { aopOrderable, PRINTFUL_AOP } from "../pod/aop-printful.ts";
 import {
@@ -157,6 +158,10 @@ describe("all-over mockups", () => {
 });
 
 describe("ordering an all-over piece", () => {
+  // Off sale since 2026-11-26. Kept tested for orders paid before that.
+  beforeEach(() => setAopOnSaleForTests(true));
+  afterEach(() => setAopOnSaleForTests(false));
+
   async function publishedHoodie(owner = "ada") {
     const mockup = await generateMockup(hoodie(blackGoldChecker()));
     const saved = await saveDesign(owner, {
@@ -276,5 +281,25 @@ describe("ordering an all-over piece", () => {
     const again = await publishDesign("ada", piece.id);
     expect(again.status).toBe("published");
     expect(seenTo("api.printful.com")).toEqual([]);
+  });
+});
+
+describe("all-over pieces off sale", () => {
+  it("can't be published or bagged, and a piece already on the rack can't be bought", async () => {
+    const mockup = await generateMockup(hoodie(blackGoldChecker()));
+    const saved = await saveDesign("ada", {
+      ...hoodie(blackGoldChecker()),
+      title: "Off sale",
+      mockupUrl: mockup.mockupUrl,
+    });
+    await expect(publishDesign("ada", saved.id)).rejects.toThrow(AOP_ORDER_CLOSED);
+    const sql = await getSql();
+    // A piece published before the switch.
+    await sql`update designs set status = 'published' where id = ${saved.id}`;
+    await seedUser("bo");
+    await expect(addToCart("bo", saved.id, "aop-hoodie-printed-m", "black-gold")).rejects.toThrow(
+      AOP_ORDER_CLOSED,
+    );
+    expect(await listCart("bo")).toEqual([]);
   });
 });

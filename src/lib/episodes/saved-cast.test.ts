@@ -26,7 +26,7 @@ describe("parseSavedCast", () => {
 
   it("round trips a real save", () => {
     let cast = renameActive(defaultCast(), "Rey");
-    cast = togglePiece(cast, { kind: "shop", slug: "lilac-set-hoodie" });
+    cast = togglePiece(cast, { kind: "shop", slug: "hoodie-pullover" });
     cast = addCharacter(cast);
     cast = togglePiece(cast, { kind: "rack", slug: "abc" });
     expect(parseSavedCast(JSON.stringify(cast))).toEqual(cast);
@@ -76,7 +76,7 @@ describe("parseSavedCast", () => {
 
 describe("editing the cast", () => {
   it("puts a piece on and takes it off again", () => {
-    const ref = { kind: "shop", slug: "crown-cap" } as const;
+    const ref = { kind: "shop", slug: "tote-corner" } as const;
     const on = togglePiece(defaultCast(), ref);
     expect(activeCharacter(on).pieces).toEqual([ref]);
     expect(activeCharacter(togglePiece(on, ref)).pieces).toEqual([]);
@@ -126,16 +126,16 @@ describe("taking a cast from an episode", () => {
       {
         name: "Character A",
         pieces: [
-          { kind: "shop", slug: "lilac-set-hoodie" },
-          { kind: "shop", slug: "lilac-set-jogger" },
-          { kind: "shop", slug: "crown-cap" },
+          { kind: "shop", slug: "hoodie-pullover" },
+          { kind: "shop", slug: "jogger-court" },
+          { kind: "shop", slug: "tote-corner" },
         ],
       },
       {
         name: "Character B",
         pieces: [
-          { kind: "shop", slug: "mint-set-hoodie" },
-          { kind: "shop", slug: "mint-set-jogger" },
+          { kind: "shop", slug: "crew-sweat" },
+          { kind: "shop", slug: "jogger-court" },
         ],
       },
     ]);
@@ -163,12 +163,12 @@ describe("taking a cast from an episode", () => {
   it("keeps what a character with the same name already had on, after the episode's pieces", () => {
     let saved = renameActive(defaultCast(), "Character A");
     saved = togglePiece(saved, { kind: "rack", slug: "mine" });
-    saved = togglePiece(saved, { kind: "shop", slug: "lilac-set-hoodie" });
+    saved = togglePiece(saved, { kind: "shop", slug: "hoodie-pullover" });
     const cast = mergeEpisodeCast(saved, TEMPLATE_EPISODE);
     expect(cast.characters[0]?.pieces).toEqual([
-      { kind: "shop", slug: "lilac-set-hoodie" },
-      { kind: "shop", slug: "lilac-set-jogger" },
-      { kind: "shop", slug: "crown-cap" },
+      { kind: "shop", slug: "hoodie-pullover" },
+      { kind: "shop", slug: "jogger-court" },
+      { kind: "shop", slug: "tote-corner" },
       { kind: "rack", slug: "mine" },
     ]);
     // Sending the same cast twice changes nothing.
@@ -182,7 +182,7 @@ describe("taking a cast from an episode", () => {
     }
     const cast = mergeEpisodeCast(saved, TEMPLATE_EPISODE);
     expect(cast.characters[0]?.pieces).toHaveLength(MAX_PIECES);
-    expect(cast.characters[0]?.pieces[0]).toEqual({ kind: "shop", slug: "lilac-set-hoodie" });
+    expect(cast.characters[0]?.pieces[0]).toEqual({ kind: "shop", slug: "hoodie-pullover" });
   });
 
   it("does not grow past the cap, and leaves the save alone when nobody fits", () => {

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { describe, it } from "vitest";
-import { STUDIO_CATALOG, createPrintfulProvider } from "./printful.ts";
+import { createPrintfulProvider, studioCatalog } from "./printful.ts";
 import { PodError } from "./types.ts";
 import { buildMockupSvg, createSandboxProvider } from "./sandbox.ts";
 import { signPrintfulBody, verifyPrintfulSignature } from "./signature.ts";
@@ -46,13 +46,13 @@ describe("printful client", () => {
     const page = await provider.listProducts({ limit: 24, offset: 0 });
     assert.deepEqual(
       calls.map((call) => call.url.replace(/^.*catalog-products\//, "")),
-      [...STUDIO_CATALOG],
+      [...studioCatalog()],
     );
-    assert.deepEqual(page.products.map((item) => item.id), [...STUDIO_CATALOG]);
+    assert.deepEqual(page.products.map((item) => item.id), [...studioCatalog()]);
     assert.equal(page.products[0]?.imageUrl, "https://cdn.example/tee.jpg");
-    assert.equal(page.total, STUDIO_CATALOG.length);
+    assert.equal(page.total, studioCatalog().length);
     const second = await provider.listProducts({ limit: 2, offset: 1 });
-    assert.deepEqual(second.products.map((item) => item.id), STUDIO_CATALOG.slice(1, 3));
+    assert.deepEqual(second.products.map((item) => item.id), studioCatalog().slice(1, 3));
   });
 
   it("offers a house piece only its DTG spots, with Printful's surcharge marked up", async () => {

@@ -1,13 +1,46 @@
-import { useEffect, useRef } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { Hero } from "@/components/site/hero";
 import { Reveal } from "@/components/site/reveal";
 import { SiteShell } from "@/components/site/shell";
+import { garmentMockupSvg } from "@/lib/gfx/garments";
+import { blankDrawShape, houseBlank } from "@/lib/pod/house-blanks";
+
+function labPiece(id: string, colorCode: string, text: string, ink: string) {
+  const blank = houseBlank(id);
+  const color = blank?.colors.find((item) => item.code === colorCode) ?? blank?.colors[0];
+  return {
+    alt: `${blank?.name ?? "Blank"} in ${color?.name ?? "black"}, with ${text} printed on the front`,
+    src: garmentMockupSvg({
+      shape: blank ? blankDrawShape(blank) : "hoodie",
+      colorHex: color?.hex ?? "#111111",
+      placement: "front",
+      layers: [
+        {
+          id: "lab",
+          type: "text",
+          text,
+          font: "Archivo Black",
+          color: ink,
+          x: 0.5,
+          y: 0.32,
+          scale: 1,
+          rotation: 0,
+        },
+      ],
+    }),
+  };
+}
+
+/** Two real pieces a person could put on in the lab and then order. */
+const LAB_PIECES = [
+  labPiece("hoodie-pullover", "lavender", "DO BETTER", "#17101f"),
+  labPiece("jogger-court", "black", "SR", "#d6ff3c"),
+];
 
 const TAPE = [
-  "Two sets",
-  "Lilac and mint",
+  "Six real blanks",
+  "Art on every spot",
   "Made to order",
   "Try it on your own face",
   "Design your own piece",
@@ -21,8 +54,8 @@ const LAB_STEPS = [
   },
   {
     n: "02",
-    title: "Name the pieces",
-    body: "Say it or type it. A hoodie, cargo trousers, a long coat. The lab builds each one.",
+    title: "Pick the pieces",
+    body: "The six blanks or anything on the rack. Only pieces you can really order.",
   },
   {
     n: "03",
@@ -33,22 +66,19 @@ const LAB_STEPS = [
 
 const PROCESS = [
   {
-    image: "/brand/detail-sketch.webp",
-    alt: "Sketchbook with hoodie and jogger drawings beside lilac, mint and cream fabric swatches",
-    title: "Blocked",
-    body: "Each set is one colour held by another. Lilac with cream. Mint with peach.",
+    n: "01",
+    title: "Pick a real blank",
+    body: "A tee, hoodie, crewneck, long-sleeve, sweatpants or tote. Only the colours and sizes Printful really has.",
   },
   {
-    image: "/brand/detail-piping.webp",
-    alt: "Close view of lilac and cream printed as two-tone fleece",
-    title: "Printed",
-    body: "The two-tone is printed on the fabric. Nothing is sewn on as panels or piping.",
+    n: "02",
+    title: "Art on every spot",
+    body: "Front, back, sleeves, down each leg. Each spot holds its own art, and each extra one shows what it adds to the price.",
   },
   {
-    image: "/brand/detail-label.webp",
-    alt: "Black woven neck label with a cream crown inside a mint hoodie",
-    title: "Crowned",
-    body: "No logo on the chest. The crown sits on the neck label, where only you see it.",
+    n: "03",
+    title: "Printed after you pay",
+    body: "Nothing is made until it is bought. Printful prints it straight onto the blank and ships it.",
   },
 ];
 
@@ -56,7 +86,6 @@ const PROCESS = [
 const SIDE_B = [
   { to: "/battles", title: "Battles", line: "Two pieces, one vote. The throne keeps score." },
   { to: "/say", title: "Say it", line: "Say what you want on it. It lays the piece out for you." },
-  { to: "/clash", title: "Clash machine", line: "Pull the lever. Keep the colours that fight." },
   {
     to: "/patterns",
     title: "Pattern lab",
@@ -78,74 +107,6 @@ const SIDE_B = [
     line: "Printing, in plain words. And where the money goes.",
   },
 ] as const;
-
-const SCENES = [
-  {
-    src: "/wild/scene-moon.mp4",
-    poster: "/wild/scene-moon.jpg",
-    label: "The Mint Set on the moon",
-  },
-  {
-    src: "/wild/scene-boat.mp4",
-    poster: "/wild/scene-boat.jpg",
-    label: "The Lilac Set in the boat",
-  },
-  {
-    src: "/wild/scene-beam.mp4",
-    poster: "/wild/scene-beam.jpg",
-    label: "The Lilac Set on the beam",
-  },
-  {
-    src: "/wild/scene-flyer.mp4",
-    poster: "/wild/scene-flyer.jpg",
-    label: "The Lilac Set at the flyer",
-  },
-];
-
-/** A muted loop that only plays while it is on screen, and not at all when motion is reduced. */
-function LoopClip({
-  src,
-  poster,
-  label,
-  className,
-}: {
-  src: string;
-  poster: string;
-  label: string;
-  className?: string;
-}) {
-  const ref = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    const video = ref.current;
-    if (!video) return;
-    video.muted = true;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry?.isIntersecting) void video.play().catch(() => undefined);
-        else video.pause();
-      },
-      { threshold: 0.25 },
-    );
-    observer.observe(video);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <video
-      ref={ref}
-      className={className}
-      src={src}
-      poster={poster}
-      muted
-      playsInline
-      loop
-      preload="none"
-      aria-label={label}
-    />
-  );
-}
 
 function SectionHead({
   eyebrow,
@@ -230,75 +191,38 @@ export function HomePage() {
             </Reveal>
           </div>
           <Reveal className="relative mx-auto grid w-full max-w-md grid-cols-2 gap-3 sm:gap-4 lg:max-w-none">
-            <LoopClip
-              src="/wild/walk-lilac.mp4"
-              poster="/wild/side-lilac.jpg"
-              label="A runway walk in the Lilac Set"
-              className="aspect-2/3 w-full translate-y-8 border-2 border-lilac-soft object-cover"
-            />
-            <LoopClip
-              src="/wild/walk-mint.mp4"
-              poster="/wild/side-mint.jpg"
-              label="A runway walk in the Mint Set"
-              className="aspect-2/3 w-full border-2 border-mint-soft object-cover"
-            />
+            {LAB_PIECES.map((piece, index) => (
+              <img
+                key={piece.alt}
+                src={piece.src}
+                alt={piece.alt}
+                width={400}
+                height={400}
+                loading="lazy"
+                decoding="async"
+                className={`aspect-2/3 w-full border-2 bg-surface object-contain ${index === 0 ? "translate-y-8 border-lilac-soft" : "border-mint-soft"}`}
+              />
+            ))}
           </Reveal>
         </div>
       </section>
 
       <section className="paper">
         <div className="mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
-          <SectionHead eyebrow="How a set is drawn" title="The block" />
-          <ul className="mt-10 grid gap-8 md:grid-cols-3 md:gap-6">
+          <SectionHead eyebrow="How a piece is made" title="No mystery">
+            <Link to="/made" className="font-display text-sm tracking-wider uppercase underline">
+              How it's made, in plain words
+            </Link>
+          </SectionHead>
+          <ol className="mt-10 grid gap-8 md:grid-cols-3 md:gap-6">
             {PROCESS.map((step, index) => (
-              <Reveal as="li" key={step.title} delay={index * 90}>
-                <img
-                  src={step.image}
-                  alt={step.alt}
-                  width={1248}
-                  height={832}
-                  loading="lazy"
-                  decoding="async"
-                  className="aspect-3/2 w-full object-cover"
-                />
-                <h3 className="display mt-5 text-4xl">{step.title}</h3>
+              <Reveal as="li" key={step.n} delay={index * 90} className="border-t-2 border-ink pt-5">
+                <span className="display text-5xl text-subtle">{step.n}</span>
+                <h3 className="display mt-3 text-4xl">{step.title}</h3>
                 <p className="mt-2 max-w-sm text-muted">{step.body}</p>
               </Reveal>
             ))}
-          </ul>
-        </div>
-      </section>
-
-      <section className="night">
-        <div className="mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
-          <SectionHead eyebrow="Unfazed" title="Wear it anywhere">
-            <p className="max-w-sm text-muted">
-              Same set, same coffee. The scene is the only thing that changes.
-            </p>
-          </SectionHead>
-          {/* On a phone this strip scrolls sideways. It takes focus so the arrow keys can scroll it. */}
-          <ul
-            tabIndex={0}
-            aria-label="Scenes"
-            className="no-scrollbar -mx-4 mt-10 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-fg sm:mx-0 sm:grid sm:grid-cols-4 sm:gap-4 sm:overflow-visible sm:px-0"
-          >
-            {SCENES.map((scene, index) => (
-              <Reveal
-                as="li"
-                key={scene.src}
-                delay={index * 70}
-                className="w-[68vw] shrink-0 snap-center sm:w-auto"
-              >
-                <LoopClip
-                  src={scene.src}
-                  poster={scene.poster}
-                  label={scene.label}
-                  className="aspect-2/3 w-full object-cover"
-                />
-                <p className="eyebrow mt-3 text-subtle">{scene.label}</p>
-              </Reveal>
-            ))}
-          </ul>
+          </ol>
         </div>
       </section>
 
@@ -306,7 +230,7 @@ export function HomePage() {
         <div className="mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
           <SectionHead eyebrow="Side B" title="The street decides">
             <p className="max-w-sm text-muted">
-              Seven more doors. Every one works without knowing a thing about design.
+              Six more doors. Every one works without knowing a thing about design.
             </p>
           </SectionHead>
           <ol className="mt-10 border-t-2 border-ink">

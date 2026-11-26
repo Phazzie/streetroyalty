@@ -1,8 +1,9 @@
 import { drawPattern, mixHex, type Ctx2D, type PatternSpec } from "@/lib/gfx/patterns";
 
 /**
- * Three plain garment shapes, each drawn in a 400 by 440 box with the pattern as
- * its cloth. They are sketches for the Pattern Lab, not print files.
+ * Three plain garment shapes, each drawn in a 400 by 440 box. The blank is one
+ * colour and the pattern sits in a print box, the way the studio really prints
+ * it. They are sketches for the Pattern Lab, not print files.
  */
 
 export const GARMENT_BOX = { width: 400, height: 440 } as const;
@@ -12,7 +13,7 @@ export type GarmentId = "tee" | "hoodie" | "joggers";
 export const GARMENTS: { id: GarmentId; name: string }[] = [
   { id: "tee", name: "Tee" },
   { id: "hoodie", name: "Hoodie" },
-  { id: "joggers", name: "Joggers" },
+  { id: "joggers", name: "Sweatpants" },
 ];
 
 type Line = readonly [number, number, number, number];
@@ -20,6 +21,8 @@ type Curve = readonly [number, number, number, number, number, number];
 
 type Shape = {
   outline: (ctx: Ctx2D) => void;
+  /** Where the studio prints on this blank: x, y, width, height in the 400 by 440 box. */
+  print: readonly [number, number, number, number];
   /** Dashed seams. */
   seams: Line[];
   /** Soft dark folds. */
@@ -46,6 +49,8 @@ function band(
 
 const SHAPES: Record<GarmentId, Shape> = {
   tee: {
+    // Front, 12 by 16 inches.
+    print: [140, 96, 120, 160],
     outline(ctx) {
       ctx.beginPath();
       ctx.moveTo(140, 34);
@@ -89,6 +94,8 @@ const SHAPES: Record<GarmentId, Shape> = {
     },
   },
   hoodie: {
+    // Front, 12 by 12 inches, above the pouch.
+    print: [146, 168, 108, 108],
     outline(ctx) {
       ctx.beginPath();
       ctx.moveTo(138, 74);
@@ -180,6 +187,8 @@ const SHAPES: Record<GarmentId, Shape> = {
     },
   },
   joggers: {
+    // Down the front of the left leg.
+    print: [112, 120, 46, 200],
     outline(ctx) {
       ctx.beginPath();
       ctx.moveTo(108, 26);
@@ -251,6 +260,15 @@ const SHAPES: Record<GarmentId, Shape> = {
   },
 };
 
+/** A plain blank that sets the print off: black under light prints, bone under dark ones. */
+function blankColor(spec: PatternSpec): string {
+  const ground = spec.colors[0] ?? "#000000";
+  const hex = ground.replace("#", "");
+  const n = Number.parseInt(hex.length === 3 ? hex.replace(/./g, "$&$&") : hex, 16) || 0;
+  const light = ((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114;
+  return light > 140 ? "#1b1b1c" : "#f5e8ce";
+}
+
 export function drawGarment(
   ctx: Ctx2D,
   spec: PatternSpec,
@@ -264,14 +282,23 @@ export function drawGarment(
   const height = GARMENT_BOX.height * k;
   ctx.clearRect(0, 0, widthPx, height);
 
-  // the cloth, clipped to the garment
+  // the blank, in one colour
+  const body = blankColor(spec);
   ctx.save();
   ctx.scale(k, k);
   shape.outline(ctx);
+  ctx.fillStyle = body;
+  ctx.fill();
   ctx.restore();
+
+  // the pattern, only where it prints
+  const [px, py, pw, ph] = shape.print;
   ctx.save();
+  ctx.beginPath();
+  ctx.rect(px * k, py * k, pw * k, ph * k);
   ctx.clip();
-  drawPattern(ctx, spec, widthPx, height, { unit: widthPx / 3.4, draft });
+  ctx.translate(px * k, py * k);
+  drawPattern(ctx, spec, pw * k, ph * k, { unit: widthPx / 3.4, draft });
   ctx.restore();
 
   ctx.save();
@@ -304,8 +331,8 @@ export function drawGarment(
   }
   ctx.setLineDash([]);
 
-  const rib = spec.colors[1] ?? "#17101f";
-  shape.trim(ctx, rib, mixHex(rib, "#000000", 0.45), mixHex(rib, "#000000", 0.6));
+  // Ribs and cuffs are the blank's own colour: a blank is one dyed fabric.
+  shape.trim(ctx, body, mixHex(body, "#000000", 0.35), mixHex(body, "#000000", 0.6));
 
   ctx.strokeStyle = outline;
   ctx.lineWidth = 4;

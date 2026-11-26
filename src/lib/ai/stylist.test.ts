@@ -1,26 +1,28 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
+import { matchRealPiece } from "../lab/real-pieces.ts";
 import { MAX_PLAN_PIECES, localPlan, parsePlan, planPrompt } from "./stylist.ts";
 
 describe("stylist", () => {
   it("reads a plan out of a chatty answer", () => {
     const plan = parsePlan(
-      'Sure! {"note":"Clean and warm.","pieces":[{"category":"tops","item":"black  wool turtleneck"},{"category":"Bottoms","item":"grey flannel trousers"},{"category":"Shoes","item":"black boots"}]} Enjoy.',
+      'Sure! {"note":"Clean and warm.","pieces":[{"category":"tops","item":"black  hoodie"},{"category":"Bottoms","item":"grey sweatpants"},{"category":"Shoes","item":"black boots"}]} Enjoy.',
     );
     assert.ok(plan);
     assert.equal(plan.note, "Clean and warm.");
-    assert.deepEqual(plan.pieces[0], { category: "Tops", spoken: "black wool turtleneck" });
-    assert.equal(plan.pieces.length, 3);
+    assert.deepEqual(plan.pieces[0], { category: "Tops", spoken: "black hoodie" });
+    // Boots aren't something the shop makes, so they are dropped.
+    assert.equal(plan.pieces.length, 2);
   });
   it("drops unknown categories, repeats, and anything past the limit", () => {
     const pieces = [
       { category: "Socks", item: "red socks" },
       { category: "Tops", item: "white tee" },
       { category: "Tops", item: "White Tee" },
-      { category: "Bottoms", item: "black jeans" },
-      { category: "Shoes", item: "white sneakers" },
-      { category: "Hats", item: "black beanie" },
-      { category: "Outer", item: "denim jacket" },
+      { category: "Bottoms", item: "black sweatpants" },
+      { category: "Tops", item: "black hoodie" },
+      { category: "Tops", item: "bone crewneck" },
+      { category: "Accessories", item: "black tote" },
     ];
     const plan = parsePlan(JSON.stringify({ note: "x", pieces }));
     assert.ok(plan);
@@ -38,21 +40,27 @@ describe("stylist", () => {
     assert.equal(parsePlan('{"pieces":"none"}'), null);
   });
   it("picks a house plan by the occasion and always has one", () => {
-    assert.match(localPlan("my cousin's wedding").pieces[0].spoken, /blazer/);
+    assert.match(localPlan("my cousin's wedding").pieces[0].spoken, /crewneck/);
     assert.match(localPlan("first date, dinner downtown").note, /Dark base/);
-    assert.match(localPlan("a snow day").pieces[0].spoken, /puffer/);
-    assert.equal(localPlan("").pieces.length, 4);
+    assert.match(localPlan("a snow day").pieces[0].spoken, /hoodie/);
+    assert.equal(localPlan("").pieces.length, 2);
     for (const occasion of ["wedding", "gym", "beach", "", "date", "rain"]) {
       const plan = localPlan(occasion);
-      assert.ok(plan.pieces.length >= 3 && plan.pieces.length <= MAX_PLAN_PIECES);
+      assert.ok(plan.pieces.length >= 2 && plan.pieces.length <= MAX_PLAN_PIECES);
+      // Every house piece is a real blank in a real colour.
+      for (const piece of plan.pieces) {
+        const real = matchRealPiece(piece.spoken);
+        assert.ok(real, piece.spoken);
+        assert.ok(piece.spoken.toLowerCase().startsWith(real.colorName.toLowerCase()), piece.spoken);
+      }
     }
   });
   it("tells a courtroom from a basketball court", () => {
     assert.match(localPlan("pickup at the basketball court").note, /ready to move/);
     assert.match(localPlan("Tennis court, Saturday").note, /ready to move/);
-    assert.match(localPlan("court date on Monday").pieces[0].spoken, /blazer/);
-    assert.match(localPlan("I have court tomorrow").pieces[0].spoken, /blazer/);
-    assert.match(localPlan("a day in the courtroom").pieces[0].spoken, /blazer/);
+    assert.match(localPlan("court date on Monday").pieces[0].spoken, /crewneck/);
+    assert.match(localPlan("I have court tomorrow").pieces[0].spoken, /crewneck/);
+    assert.match(localPlan("a day in the courtroom").pieces[0].spoken, /crewneck/);
   });
   it("matches whole words, not letters inside other words", () => {
     assert.match(localPlan("training session").note, /ready to move/);

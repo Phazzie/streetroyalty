@@ -6,7 +6,7 @@ import { UndoBar } from "@/components/lab/undo-bar";
 import { copy } from "@/lib/copy";
 import { useLab } from "@/lib/store";
 
-const EXAMPLES = ["black hoodie", "wool trousers", "leather loafers"] as const;
+const EXAMPLES = ["black hoodie", "lavender hoodie", "black sweatpants"] as const;
 
 type InstallEvent = Event & {
   prompt: () => Promise<void>;

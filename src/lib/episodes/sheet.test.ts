@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { HOUSE_BLANK_IDS } from "../pod/house-blanks.ts";
 import { LABEL_PIECES } from "./label-pieces.ts";
 import {
   buildWardrobeSheet,
@@ -9,10 +10,26 @@ import {
   resolveRefs,
   sheetPieceFromDesign,
   sheetPieceFromProduct,
+  type SheetProduct,
 } from "./sheet.ts";
 
+/** Generic shop pieces for the sheet's wording. The real list is LABEL_PIECES. */
+const FIXTURES: SheetProduct[] = [
+  ["lilac-set-hoodie", "The Lilac Hoodie", "Hoodie", "Lilac", "#b9a3ee"],
+  ["lilac-set-jogger", "The Lilac Jogger", "Jogger", "Lilac", "#b9a3ee"],
+  ["mint-set-jogger", "The Mint Jogger", "Jogger", "Mint", "#a5dccb"],
+  ["crown-tee", "Crown Tee, Cream", "Tee", "Cream", "#f3ead9"],
+].map(([slug, name, kind, color, swatch]) => ({
+  slug: slug!,
+  name: name!,
+  kind: kind!,
+  blurb: `${name}.`,
+  colors: [{ name: color!, swatch }],
+  images: [{ url: `/brand/${slug}.webp` }],
+}));
+
 function product(slug: string) {
-  const found = LABEL_PIECES.find((item) => item.slug === slug);
+  const found = FIXTURES.find((item) => item.slug === slug);
   if (!found) throw new Error(`no ${slug}`);
   return found;
 }
@@ -29,17 +46,24 @@ const RACK = {
 };
 
 describe("a piece from the drop", () => {
-  it("carries the base colour with its hex, and the trims on record for the sets", () => {
+  it("lists only real blanks, each linking to the studio, with no trims claimed", () => {
+    expect(LABEL_PIECES.map((item) => item.slug)).toEqual(HOUSE_BLANK_IDS);
+    for (const item of LABEL_PIECES) {
+      const piece = sheetPieceFromProduct(item);
+      expect(piece).toMatchObject({ source: "shop", href: "/studio", panels: null, piping: null });
+      expect(piece.baseColor?.hex).toMatch(/^#[0-9a-f]{6}$/);
+    }
+  });
+
+  it("carries the base colour with its hex", () => {
     const piece = sheetPieceFromProduct(product("lilac-set-hoodie"));
     expect(piece).toMatchObject({
       source: "shop",
       name: "The Lilac Hoodie",
       garment: "hoodie",
       baseColor: { name: "Lilac", hex: "#b9a3ee" },
-      href: "/rack",
+      href: "/studio",
     });
-    expect(piece.panels).toMatch(/cream panels/i);
-    expect(piece.piping).toMatch(/orange piping/i);
   });
 
   it("does not claim trims for a piece with none on record", () => {
@@ -47,14 +71,6 @@ describe("a piece from the drop", () => {
     expect(piece.panels).toBeNull();
     expect(piece.piping).toBeNull();
     expect(describePiece(piece)).toContain("exactly as in the reference picture");
-  });
-
-  it("drops the trims when a live product reuses the slug in another colour", () => {
-    const other = {
-      ...product("lilac-set-hoodie"),
-      colors: [{ name: "Black", swatch: "#000000" }],
-    };
-    expect(sheetPieceFromProduct(other).panels).toBeNull();
   });
 
   it("leaves out a swatch that is not a hex colour", () => {
@@ -109,7 +125,7 @@ describe("resolveRefs", () => {
         { kind: "rack", slug: RACK.slug },
         { kind: "rack", slug: "gone" },
       ],
-      { products: LABEL_PIECES, rack: [RACK] },
+      { products: FIXTURES, rack: [RACK] },
     );
     expect(out.map(isMissing)).toEqual([false, true, false, true]);
   });

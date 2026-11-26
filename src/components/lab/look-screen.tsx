@@ -13,7 +13,7 @@ import { fallbackName, renderDropCard, shareDropCard } from "@/lib/lab/drop-card
 import { createSingleFlight } from "@/lib/ui/single-flight";
 import { useLab } from "@/lib/store";
 
-const EXAMPLES = ["make it black", "shorter coat"] as const;
+const EXAMPLES = ["walk it", "save this"] as const;
 
 export function LookScreen() {
   const setView = useLab((state) => state.setView);

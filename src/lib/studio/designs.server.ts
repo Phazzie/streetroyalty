@@ -1,6 +1,7 @@
 import { getSql } from "../db.ts";
 import { getPodProvider, readPodMode } from "../pod/index.ts";
 import { centsToDecimal } from "../pod/money.ts";
+import { aopOnSale, AOP_ORDER_CLOSED } from "../pod/aop-printful.ts";
 import type { CatalogProduct } from "../pod/types.ts";
 import {
   imageDimensions,
@@ -369,6 +370,7 @@ export async function publishDesign(userId: string, designId: string): Promise<D
   // An all-over piece goes on the rack in either mode but is not synced to a
   // Printful store product: its orders go straight to the catalog with one
   // print file per placement, rendered at checkout from the colorway bought.
+  if (isAopProduct(templateId) && !aopOnSale()) throw new Error(AOP_ORDER_CLOSED);
   const holdPrinter = isAopProduct(templateId);
   let providerProductId = row.provider_product_id ?? null;
   if (config.podMode === "live" && !holdPrinter) {

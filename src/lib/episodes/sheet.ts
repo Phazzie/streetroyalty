@@ -38,32 +38,10 @@ export type SheetPiece = {
 };
 
 /**
- * What is on record about how the label's two sets are built (PRODUCT.md, Brand
- * Commitments, and the drop's own descriptions). Trim colours have names but no
- * hex on record, so none is given.
+ * Panel and piping notes for a shop piece whose build is on record. The studio's
+ * blanks are one colour with printed art, so none has any.
  */
-const KNOWN_BUILD: Record<string, { color: string; panels: string; piping: string }> = {
-  "lilac-set-hoodie": {
-    color: "lilac",
-    panels: "Cream panels down both sleeves and both sides",
-    piping: "Thin orange piping outlines every panel",
-  },
-  "lilac-set-jogger": {
-    color: "lilac",
-    panels: "A cream stripe down the full outer leg, both legs, into a ribbed cuff",
-    piping: "Thin orange piping runs along each stripe",
-  },
-  "mint-set-hoodie": {
-    color: "mint",
-    panels: "A peach lined hood and a peach stripe down each sleeve",
-    piping: "Thin blue piping edges each stripe",
-  },
-  "mint-set-jogger": {
-    color: "mint",
-    panels: "A peach stripe down the full outer leg, both legs, into a ribbed cuff",
-    piping: "Thin blue piping runs along each stripe",
-  },
-};
+const KNOWN_BUILD: Record<string, { color: string; panels: string; piping: string }> = {};
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
@@ -115,7 +93,7 @@ export function sheetPieceFromProduct(product: SheetProduct): SheetPiece {
     piping: matches && known ? known.piping : null,
     quote: oneLine(product.blurb, MAX_QUOTE) || null,
     imageUrl: product.images[0]?.url ?? null,
-    href: "/rack",
+    href: "/studio",
   };
 }
 
