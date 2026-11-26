@@ -22,16 +22,28 @@ export function clampMarkup(markup: number): number {
   return Math.min(5, Math.max(1, markup));
 }
 
+/**
+ * Wholesale times the markup, rounded up to a whole dollar. A tag reads $35, not $34.32.
+ * Rounding up keeps the shop's cut at or above the markup it set.
+ */
 export function applyMarkup(wholesaleCents: number, markup: number): number {
   const factor = clampMarkup(markup);
-  return Math.max(0, Math.round(wholesaleCents * factor));
+  const raw = Math.max(0, Math.round(wholesaleCents * factor));
+  return Math.ceil(raw / 100) * 100;
 }
 
+/** "$35" for a whole-dollar price, "$40.95" otherwise. */
 export function formatMoney(cents: number, currency = "USD"): string {
-  const value = Number.isFinite(cents) ? cents : 0;
+  const value = Number.isFinite(cents) ? Math.round(cents) : 0;
+  const digits = value % 100 === 0 ? 0 : 2;
   try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(value / 100);
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    }).format(value / 100);
   } catch {
-    return `$${(value / 100).toFixed(2)}`;
+    return `$${(value / 100).toFixed(digits)}`;
   }
 }

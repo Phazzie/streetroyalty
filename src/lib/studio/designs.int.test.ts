@@ -40,7 +40,7 @@ describe("saving a design", () => {
     expect(saved).toMatchObject({
       title: "Crown Tee",
       status: "draft",
-      retailCents: 3432,
+      retailCents: 3500,
       warnings: [],
     });
     expect(saved.slug).toMatch(/^crown-tee-[0-9a-f]{8}$/);

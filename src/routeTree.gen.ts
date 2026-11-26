@@ -14,6 +14,7 @@ import { Route as BattlesRouteImport } from './routes/battles'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as ClashRouteImport } from './routes/clash'
+import { Route as ContactRouteImport } from './routes/contact'
 import { Route as EpisodesRouteImport } from './routes/episodes'
 import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as GoLiveRouteImport } from './routes/go-live'
@@ -24,10 +25,15 @@ import { Route as MathRouteImport } from './routes/math'
 import { Route as MeRouteImport } from './routes/me'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as PatternsRouteImport } from './routes/patterns'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RackRouteImport } from './routes/rack'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as ReturnsRouteImport } from './routes/returns'
 import { Route as SayRouteImport } from './routes/say'
+import { Route as ShippingRouteImport } from './routes/shipping'
+import { Route as SizesRouteImport } from './routes/sizes'
 import { Route as StudioRouteImport } from './routes/studio'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as EpisodesIndexRouteImport } from './routes/episodes.index'
 import { Route as EpisodesSlugRouteImport } from './routes/episodes.$slug'
 import { Route as MHandleRouteImport } from './routes/m.$handle'
@@ -63,6 +69,11 @@ const CheckoutRoute = CheckoutRouteImport.update({
 const ClashRoute = ClashRouteImport.update({
   id: '/clash',
   path: '/clash',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EpisodesRoute = EpisodesRouteImport.update({
@@ -115,6 +126,11 @@ const PatternsRoute = PatternsRouteImport.update({
   path: '/patterns',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RackRoute = RackRouteImport.update({
   id: '/rack',
   path: '/rack',
@@ -125,14 +141,34 @@ const ReportsRoute = ReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReturnsRoute = ReturnsRouteImport.update({
+  id: '/returns',
+  path: '/returns',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SayRoute = SayRouteImport.update({
   id: '/say',
   path: '/say',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShippingRoute = ShippingRouteImport.update({
+  id: '/shipping',
+  path: '/shipping',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SizesRoute = SizesRouteImport.update({
+  id: '/sizes',
+  path: '/sizes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StudioRoute = StudioRouteImport.update({
   id: '/studio',
   path: '/studio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EpisodesIndexRoute = EpisodesIndexRouteImport.update({
@@ -197,6 +233,7 @@ export interface FileRoutesByFullPath {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/clash': typeof ClashRoute
+  '/contact': typeof ContactRoute
   '/episodes': typeof EpisodesRouteWithChildren
   '/gallery': typeof GalleryRoute
   '/go-live': typeof GoLiveRoute
@@ -207,10 +244,15 @@ export interface FileRoutesByFullPath {
   '/me': typeof MeRoute
   '/orders': typeof OrdersRoute
   '/patterns': typeof PatternsRoute
+  '/privacy': typeof PrivacyRoute
   '/rack': typeof RackRouteWithChildren
   '/reports': typeof ReportsRoute
+  '/returns': typeof ReturnsRoute
   '/say': typeof SayRoute
+  '/shipping': typeof ShippingRoute
+  '/sizes': typeof SizesRoute
   '/studio': typeof StudioRoute
+  '/terms': typeof TermsRoute
   '/episodes/$slug': typeof EpisodesSlugRoute
   '/m/$handle': typeof MHandleRoute
   '/rack/$slug': typeof RackSlugRoute
@@ -229,6 +271,7 @@ export interface FileRoutesByTo {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/clash': typeof ClashRoute
+  '/contact': typeof ContactRoute
   '/gallery': typeof GalleryRoute
   '/go-live': typeof GoLiveRoute
   '/lab': typeof LabRoute
@@ -238,9 +281,14 @@ export interface FileRoutesByTo {
   '/me': typeof MeRoute
   '/orders': typeof OrdersRoute
   '/patterns': typeof PatternsRoute
+  '/privacy': typeof PrivacyRoute
   '/reports': typeof ReportsRoute
+  '/returns': typeof ReturnsRoute
   '/say': typeof SayRoute
+  '/shipping': typeof ShippingRoute
+  '/sizes': typeof SizesRoute
   '/studio': typeof StudioRoute
+  '/terms': typeof TermsRoute
   '/episodes/$slug': typeof EpisodesSlugRoute
   '/m/$handle': typeof MHandleRoute
   '/rack/$slug': typeof RackSlugRoute
@@ -260,6 +308,7 @@ export interface FileRoutesById {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/clash': typeof ClashRoute
+  '/contact': typeof ContactRoute
   '/episodes': typeof EpisodesRouteWithChildren
   '/gallery': typeof GalleryRoute
   '/go-live': typeof GoLiveRoute
@@ -270,10 +319,15 @@ export interface FileRoutesById {
   '/me': typeof MeRoute
   '/orders': typeof OrdersRoute
   '/patterns': typeof PatternsRoute
+  '/privacy': typeof PrivacyRoute
   '/rack': typeof RackRouteWithChildren
   '/reports': typeof ReportsRoute
+  '/returns': typeof ReturnsRoute
   '/say': typeof SayRoute
+  '/shipping': typeof ShippingRoute
+  '/sizes': typeof SizesRoute
   '/studio': typeof StudioRoute
+  '/terms': typeof TermsRoute
   '/episodes/$slug': typeof EpisodesSlugRoute
   '/m/$handle': typeof MHandleRoute
   '/rack/$slug': typeof RackSlugRoute
@@ -294,6 +348,7 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/clash'
+    | '/contact'
     | '/episodes'
     | '/gallery'
     | '/go-live'
@@ -304,10 +359,15 @@ export interface FileRouteTypes {
     | '/me'
     | '/orders'
     | '/patterns'
+    | '/privacy'
     | '/rack'
     | '/reports'
+    | '/returns'
     | '/say'
+    | '/shipping'
+    | '/sizes'
     | '/studio'
+    | '/terms'
     | '/episodes/$slug'
     | '/m/$handle'
     | '/rack/$slug'
@@ -326,6 +386,7 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/clash'
+    | '/contact'
     | '/gallery'
     | '/go-live'
     | '/lab'
@@ -335,9 +396,14 @@ export interface FileRouteTypes {
     | '/me'
     | '/orders'
     | '/patterns'
+    | '/privacy'
     | '/reports'
+    | '/returns'
     | '/say'
+    | '/shipping'
+    | '/sizes'
     | '/studio'
+    | '/terms'
     | '/episodes/$slug'
     | '/m/$handle'
     | '/rack/$slug'
@@ -356,6 +422,7 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/clash'
+    | '/contact'
     | '/episodes'
     | '/gallery'
     | '/go-live'
@@ -366,10 +433,15 @@ export interface FileRouteTypes {
     | '/me'
     | '/orders'
     | '/patterns'
+    | '/privacy'
     | '/rack'
     | '/reports'
+    | '/returns'
     | '/say'
+    | '/shipping'
+    | '/sizes'
     | '/studio'
+    | '/terms'
     | '/episodes/$slug'
     | '/m/$handle'
     | '/rack/$slug'
@@ -389,6 +461,7 @@ export interface RootRouteChildren {
   CartRoute: typeof CartRoute
   CheckoutRoute: typeof CheckoutRoute
   ClashRoute: typeof ClashRoute
+  ContactRoute: typeof ContactRoute
   EpisodesRoute: typeof EpisodesRouteWithChildren
   GalleryRoute: typeof GalleryRoute
   GoLiveRoute: typeof GoLiveRoute
@@ -399,10 +472,15 @@ export interface RootRouteChildren {
   MeRoute: typeof MeRoute
   OrdersRoute: typeof OrdersRoute
   PatternsRoute: typeof PatternsRoute
+  PrivacyRoute: typeof PrivacyRoute
   RackRoute: typeof RackRouteWithChildren
   ReportsRoute: typeof ReportsRoute
+  ReturnsRoute: typeof ReturnsRoute
   SayRoute: typeof SayRoute
+  ShippingRoute: typeof ShippingRoute
+  SizesRoute: typeof SizesRoute
   StudioRoute: typeof StudioRoute
+  TermsRoute: typeof TermsRoute
   MHandleRoute: typeof MHandleRoute
   TagSlugRoute: typeof TagSlugRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -447,6 +525,13 @@ declare module '@tanstack/react-router' {
       path: '/clash'
       fullPath: '/clash'
       preLoaderRoute: typeof ClashRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/episodes': {
@@ -519,6 +604,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PatternsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/rack': {
       id: '/rack'
       path: '/rack'
@@ -533,6 +625,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/returns': {
+      id: '/returns'
+      path: '/returns'
+      fullPath: '/returns'
+      preLoaderRoute: typeof ReturnsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/say': {
       id: '/say'
       path: '/say'
@@ -540,11 +639,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SayRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/shipping': {
+      id: '/shipping'
+      path: '/shipping'
+      fullPath: '/shipping'
+      preLoaderRoute: typeof ShippingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sizes': {
+      id: '/sizes'
+      path: '/sizes'
+      fullPath: '/sizes'
+      preLoaderRoute: typeof SizesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/studio': {
       id: '/studio'
       path: '/studio'
       fullPath: '/studio'
       preLoaderRoute: typeof StudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/episodes/': {
@@ -659,6 +779,7 @@ const rootRouteChildren: RootRouteChildren = {
   CartRoute: CartRoute,
   CheckoutRoute: CheckoutRoute,
   ClashRoute: ClashRoute,
+  ContactRoute: ContactRoute,
   EpisodesRoute: EpisodesRouteWithChildren,
   GalleryRoute: GalleryRoute,
   GoLiveRoute: GoLiveRoute,
@@ -669,10 +790,15 @@ const rootRouteChildren: RootRouteChildren = {
   MeRoute: MeRoute,
   OrdersRoute: OrdersRoute,
   PatternsRoute: PatternsRoute,
+  PrivacyRoute: PrivacyRoute,
   RackRoute: RackRouteWithChildren,
   ReportsRoute: ReportsRoute,
+  ReturnsRoute: ReturnsRoute,
   SayRoute: SayRoute,
+  ShippingRoute: ShippingRoute,
+  SizesRoute: SizesRoute,
   StudioRoute: StudioRoute,
+  TermsRoute: TermsRoute,
   MHandleRoute: MHandleRoute,
   TagSlugRoute: TagSlugRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

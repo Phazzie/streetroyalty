@@ -11,7 +11,6 @@ const NAV = [
   { to: "/lab", label: "Outfit Lab", wide: false },
   { to: "/studio", label: "Studio", wide: false },
   { to: "/battles", label: "Battles", wide: true },
-  { to: "/episodes", label: "The Show", wide: true },
 ] as const;
 
 /** Smaller doors, shown under the big ones in the phone menu. */
@@ -227,14 +226,17 @@ export function SiteFooter() {
           links={[
             { to: "/made", label: "How it's made" },
             { to: "/math", label: "Do the math" },
-            { to: "/episodes", label: "The show" },
           ]}
         />
         <FooterColumn
-          title="Account"
+          title="Help"
           links={[
-            { to: "/login", label: "Sign in" },
-            { to: "/me", label: "Your page" },
+            { to: "/shipping", label: "Shipping" },
+            { to: "/returns", label: "Returns" },
+            { to: "/sizes", label: "Size guide" },
+            { to: "/contact", label: "Contact" },
+            { to: "/privacy", label: "Privacy" },
+            { to: "/terms", label: "Terms" },
           ]}
         />
       </div>
@@ -266,8 +268,12 @@ function FooterColumn({
       | "/patterns"
       | "/made"
       | "/math"
-      | "/episodes"
-      | "/me";
+      | "/shipping"
+      | "/returns"
+      | "/sizes"
+      | "/contact"
+      | "/privacy"
+      | "/terms";
     label: string;
   }[];
 }) {

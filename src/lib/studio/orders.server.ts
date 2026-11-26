@@ -1,3 +1,4 @@
+import { sendOrderMail } from "../email/order-mail.server.ts";
 import { getSql, type Sql } from "../db.ts";
 import {
   CLAIMABLE,
@@ -230,6 +231,7 @@ export function dbStore(sql: Sql): OrderStore {
         set status = 'submitted', payment_status = 'paid', failure_reason = null, provider_status = ${providerStatus}, updated_at = now()
         where id = ${id}
       `;
+      await sendOrderMail(sql, id, "placed");
     },
     async markFulfillmentFailed(id, reason) {
       await sql`
@@ -262,6 +264,7 @@ export function dbStore(sql: Sql): OrderStore {
           updated_at = now()
         where id = ${id}
       `;
+      await sendOrderMail(sql, id, "shipped");
     },
     async hasEvent(id) {
       const rows = await sql<{ id: string }>`select id from webhook_events where id = ${id}`;
