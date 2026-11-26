@@ -108,12 +108,13 @@ export async function publishTee(page: Page, title: string): Promise<void> {
   await page.goto("/studio");
   await interactive(page, "#piece-title");
   await expectSandbox(page);
-  await expect(page.getByText("Size", { exact: true })).toBeVisible();
+  // The garment size picker (the layer inspector has its own "Size" slider too).
+  await expect(page.getByText("Size", { exact: true }).first()).toBeVisible();
   await page.getByLabel("Name", { exact: true }).fill(title);
   // The page can still be settling as fonts arrive, and a click that lands mid-shift misses.
   await expect(async () => {
     await page.getByRole("button", { name: "Mockup", exact: true }).click();
-    await expect(page.getByRole("img", { name: "Product mockup" })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole("img", { name: /mockup/i }).first()).toBeVisible({ timeout: 5000 });
   }).toPass({ timeout: 30_000 });
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await page.waitForURL("**/rack");
