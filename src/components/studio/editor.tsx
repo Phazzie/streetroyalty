@@ -63,6 +63,22 @@ import {
 } from "@/lib/studio/preflight";
 import { fontShorthand } from "@/lib/studio/fonts";
 import { MAX_LAYERS } from "@/lib/studio/validate";
+import { DesignChat, type RunResult } from "@/components/studio/design-chat";
+import { generateArt } from "@/lib/ai/art";
+import { knockout } from "@/lib/gfx/effects";
+import { renderStamp } from "@/lib/gfx/stamps";
+import {
+  applyOps,
+  briefLayer,
+  matchGarmentColor,
+  resolveWordRefs,
+  stampKey,
+  stampsNeeded,
+  type Canvas,
+  type ChatContext,
+  type ChatOp,
+  type LocalDesign,
+} from "@/lib/studio/chat";
 
 type CatalogCard = {
   id: string;
@@ -242,7 +258,7 @@ export function Editor({ designId }: { designId: string }) {
 
   /* ------------------------------------------------------------ catalog */
 
-  const chooseProduct = useCallback(async (productId: string, nextVariant?: string) => {
+  const chooseProduct = useCallback(async (productId: string, nextVariant?: string): Promise<CatalogProduct> => {
     const detail = await getCatalogProduct({ data: { productId } });
     setProduct(detail);
     const variant = detail.variants.find((item) => item.id === nextVariant) ?? detail.variants[0];
@@ -252,6 +268,7 @@ export function Editor({ designId }: { designId: string }) {
         ? current
         : (detail.placements[0]?.placement ?? "front"),
     );
+    return detail;
   }, []);
 
   useEffect(() => {
@@ -462,6 +479,152 @@ export function Editor({ designId }: { designId: string }) {
       const grow = 0.96 / Math.max(0.02, reach.x * 2);
       const scale = clamp(active.scale * grow, 0.15, 3);
       patchLayer(active.id, { scale: Math.round(scale * 100) / 100, x: 0.5 });
+    }
+  }
+
+  /* --------------------------------------------------------------- chat */
+
+  // The latest design, for chat edits that finish after an await.
+  const live = useRef({ placement, layers, spotLayers, selected, product, variant });
+  live.current = { placement, layers, spotLayers, selected, product, variant };
+
+  const cheyBlankId = catalog.find((item) => /hoodie/i.test(`${item.type} ${item.name}`) && item.construction !== "aop")?.id ?? null;
+
+  function productColors(detail: CatalogProduct) {
+    return [...new Map(detail.variants.map((item) => [item.color, { name: item.color, hex: item.colorHex }])).values()];
+  }
+
+  function chatCanvas(): Canvas {
+    const now = live.current;
+    return { placement: now.placement, spots: { ...now.spotLayers, [now.placement]: now.layers }, selected: now.selected };
+  }
+
+  function chatContext(): ChatContext | null {
+    const now = live.current;
+    if (!now.product) return null;
+    const canvas = chatCanvas();
+    return {
+      blank: { id: now.product.id, name: now.product.name, type: now.product.type },
+      blanks: catalog.filter((item) => item.construction !== "aop").map((item) => ({ id: item.id, name: item.name, type: item.type })),
+      color: now.variant?.color ?? "",
+      colors: productColors(now.product).map((color) => color.name),
+      placement: canvas.placement,
+      spots: now.product.placements.map((item) => ({ placement: item.placement, title: item.title })),
+      selected: canvas.selected,
+      layers: Object.fromEntries(
+        now.product.placements.map((item) => [item.placement, (canvas.spots[item.placement] ?? []).map(briefLayer)]),
+      ),
+    };
+  }
+
+  function localDesign(): LocalDesign | null {
+    const now = live.current;
+    if (!now.product) return null;
+    return {
+      canvas: chatCanvas(),
+      blank: { id: now.product.id, name: now.product.name, type: now.product.type },
+      blanks: catalog.filter((item) => item.construction !== "aop").map((item) => ({ id: item.id, name: item.name, type: item.type })),
+      colors: productColors(now.product),
+    };
+  }
+
+  /** Puts a chat's edits on the piece: blank and colour first, then the layers, as one undo step. */
+  async function runChat(ops: ChatOp[]): Promise<RunResult> {
+    arm();
+    settle();
+    const skipped: string[] = [];
+    let changed = 0;
+    let detail = live.current.product;
+    let placementNow = live.current.placement;
+    const blankOp = ops.find((op): op is Extract<ChatOp, { op: "set_blank" }> => op.op === "set_blank");
+    if (blankOp && blankOp.blank !== detail?.id) {
+      const wanted = blankOp.blank.toLowerCase();
+      const card =
+        catalog.find((item) => item.id === blankOp.blank) ??
+        catalog.find((item) => `${item.name} ${item.type}`.toLowerCase().includes(wanted));
+      if (!card || card.construction === "aop") skipped.push("That blank isn't one the shop prints on.");
+      else {
+        detail = await chooseProduct(card.id, undefined);
+        placementNow = detail.placements.some((item) => item.placement === placementNow)
+          ? placementNow
+          : (detail.placements[0]?.placement ?? "front");
+        changed++;
+      }
+    }
+    if (!detail) return { changed, skipped: [...skipped, "Pick a blank first."] };
+    const colorOp = [...ops].reverse().find((op): op is Extract<ChatOp, { op: "set_color" }> => op.op === "set_color");
+    if (colorOp) {
+      const match = matchGarmentColor(colorOp.color, productColors(detail));
+      const size = live.current.variant?.size;
+      const pick = match
+        ? (detail.variants.find((item) => item.color === match.name && item.size === size) ??
+          detail.variants.find((item) => item.color === match.name))
+        : null;
+      if (pick) {
+        setVariantId(pick.id);
+        changed++;
+      } else {
+        skipped.push(
+          `The ${detail.name} doesn't come in ${colorOp.color.toLowerCase()}. It comes in ${productColors(detail).map((color) => color.name).join(", ")}.`,
+        );
+      }
+    }
+    const stamps: Record<string, string> = {};
+    for (const need of stampsNeeded(ops)) {
+      try {
+        stamps[stampKey(need.stamp, need.color)] = await renderStamp(need.stamp, need.color);
+      } catch {
+        skipped.push("The stamp didn't draw. Try again.");
+      }
+    }
+    const start = { ...chatCanvas(), placement: placementNow };
+    const applied = applyOps(start, resolveWordRefs(ops, start), {
+      placements: detail.placements.map((item) => item.placement),
+      stamps,
+      newId,
+    });
+    const { canvas } = applied;
+    const { [canvas.placement]: onScreen, ...rest } = canvas.spots;
+    setSpotLayers(Object.fromEntries(Object.entries(rest).filter(([, list]) => list.length > 0)));
+    setLayers(onScreen ?? []);
+    setPlacement(canvas.placement);
+    setSelected(canvas.selected);
+    setTab("design");
+    return { changed: changed + applied.changed, skipped: [...skipped, ...applied.skipped] };
+  }
+
+  /** Paid art, only after the shopper said yes. Null when it landed, else what went wrong. */
+  async function drawChatArt(ask: Extract<ChatOp, { op: "make_art" }>): Promise<string | null> {
+    try {
+      const result = await generateArt({ data: { idea: ask.idea, style: ask.style } });
+      if (!result.ok) {
+        if (result.kind === "limit") return "That's today's AI pictures used up. They come back tomorrow.";
+        if (result.kind === "unavailable") return "AI art isn't switched on yet. Upload a picture instead.";
+        return "That picture didn't come out. Try describing it another way.";
+      }
+      const cut = fitPng(knockout(await loadPixels(result.image, 1600)));
+      const spot = ask.spot ?? live.current.placement;
+      arm();
+      const id = newId("img");
+      originals.current.set(id, cut);
+      const layer: DesignLayer = { id, type: "image", src: cut, x: ask.x ?? 0.5, y: ask.y ?? 0.45, scale: ask.scale ?? 1, rotation: 0 };
+      const now = live.current;
+      const known = now.product?.placements.some((item) => item.placement === spot);
+      const target = known ? spot : now.placement;
+      if (target === now.placement) {
+        if (now.layers.length >= MAX_LAYERS) return "Eight layers is the limit. Drop one first.";
+        setLayers((current) => [...current, layer]);
+      } else {
+        const list = now.spotLayers[target] ?? [];
+        if (list.length >= MAX_LAYERS) return "Eight layers is the limit on that spot.";
+        switchSpot(target);
+        setLayers([...list, layer]);
+      }
+      setSelected(id);
+      return null;
+    } catch (error) {
+      if (isUnauthorized(error)) return "Sign in to draw. It uses the studio's daily allowance.";
+      return error instanceof Error ? error.message : "That picture didn't come out.";
     }
   }
 
@@ -1379,6 +1542,18 @@ export function Editor({ designId }: { designId: string }) {
       <div className="contents lg:block">{stagePanel}</div>
 
       <div className="contents lg:flex lg:flex-col lg:gap-4">
+        {product && !aop ? (
+          <div className="order-2 lg:order-none">
+            <DesignChat
+              ready={Boolean(product && variant)}
+              context={chatContext}
+              local={localDesign}
+              run={runChat}
+              drawArt={drawChatArt}
+              cheyBlankId={cheyBlankId}
+            />
+          </div>
+        ) : null}
         <div className="order-2 lg:order-none">{layersPanel}</div>
 
         <div className="order-5 lg:order-none">
