@@ -28,6 +28,7 @@ export const FONTS: readonly StudioFont[] = [
   { name: "Black Ops One", vibe: "Stencil", weight: 400, width: 0.96 },
   { name: "Monoton", vibe: "Neon", weight: 400, width: 1.07 },
   { name: "Shrikhand", vibe: "Script", weight: 400, width: 0.96 },
+  { name: "Big Shoulders Display", vibe: "Chicago", weight: 900, width: 0.65 },
   { name: "Outfit", vibe: "Plain", weight: 400, width: 0.8 },
 ];
 

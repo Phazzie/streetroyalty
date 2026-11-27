@@ -147,3 +147,17 @@ export async function admit(kind: AiKind, userId?: string): Promise<Admission> {
   if (!process.env.XAI_API_KEY?.trim()) return "unavailable";
   return (await spend(kind, userId)).ok ? "ok" : "limit";
 }
+
+/** How many of a kind this visitor has left today. Reads only; spends nothing. */
+export async function remaining(kind: AiKind, userId?: string): Promise<number> {
+  const cap = readLimits(process.env)[kind];
+  const day = usageDay(new Date());
+  const bucket = accountId(userId) ? visitorBucket(day, userId) : visitorBucket(day);
+  let used = 0;
+  try {
+    used = await readCount(day, bucket, kind);
+  } catch {
+    used = memory(day).counts.get(`${bucket}|${kind}`) ?? 0;
+  }
+  return Math.max(0, cap.visitor - used);
+}

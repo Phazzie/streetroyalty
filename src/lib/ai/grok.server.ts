@@ -38,3 +38,37 @@ export async function guardedText(
   if (!(await spend("text", userId)).ok) return null;
   return completeText(prompt, maxTokens);
 }
+
+export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
+
+/** A short conversation for the design chat. Asks for JSON back. Null when the key is missing or the call fails. */
+export async function completeChat(messages: ChatMessage[], maxTokens = 700): Promise<string | null> {
+  const apiKey = process.env.XAI_API_KEY?.trim();
+  if (!apiKey) return null;
+  try {
+    const res = await fetch("https://api.x.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "grok-4.5",
+        max_tokens: maxTokens,
+        temperature: 0.3,
+        response_format: { type: "json_object" },
+        messages: messages.map((message) => ({ ...message, content: message.content.slice(0, 12_000) })),
+      }),
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!res.ok) {
+      console.error("xai design chat", res.status);
+      return null;
+    }
+    const body = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    return body.choices?.[0]?.message?.content?.trim() || null;
+  } catch (error) {
+    console.error("xai design chat", error);
+    return null;
+  }
+}
