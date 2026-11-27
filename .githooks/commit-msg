@@ -1,0 +1,3 @@
+#!/bin/sh
+# Seam kit: the tests/contracts/kit lock. Needs the commit message, so it runs here.
+exec node "$(git rev-parse --show-toplevel)/scripts/seam/run.mjs" commit-msg "$1"

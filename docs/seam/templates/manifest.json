@@ -1,0 +1,72 @@
+{
+  "_readme": "The seam map, read by the hooks. Every code file in src/, contracts/, and mocks/ must be listed under exactly one seam. buildOrder: config, auth, state first, then dependency-free seams, working outward. Status: blueprint/contract/tests are true|false; mockGreen/realGreen are a date (YYYY-MM-DD) or null. A seam with no mock has nothing to flip.",
+  "app": "my-app",
+  "buildOrder": ["config", "auth", "state", "storage", "example-feature"],
+  "seams": [
+    {
+      "name": "config",
+      "description": "All settings and secrets, read and validated in one place (src/config/).",
+      "dependsOn": [],
+      "files": ["src/config/index.ts"],
+      "contract": null,
+      "mock": null,
+      "fixtures": [],
+      "tests": ["tests/config.test.ts"],
+      "realTests": [],
+      "failureScreens": ["Missing setting: app refuses to start and names the setting"],
+      "status": { "blueprint": false, "contract": false, "tests": false, "mockGreen": null, "realGreen": null }
+    },
+    {
+      "name": "auth",
+      "description": "Who the user is: sign in, sign out, session expiry.",
+      "dependsOn": ["config"],
+      "files": ["src/auth/session.ts"],
+      "contract": "contracts/auth.ts",
+      "mock": "mocks/auth.mock.ts",
+      "fixtures": ["probes/fixtures/auth.session.json"],
+      "tests": ["tests/auth.test.ts"],
+      "realTests": ["tests/real/auth.real.test.ts"],
+      "failureScreens": ["auth-expired", "timeout"],
+      "status": { "blueprint": false, "contract": false, "tests": false, "mockGreen": null, "realGreen": null }
+    },
+    {
+      "name": "state",
+      "description": "Shared app state every screen reads (current user, current project, etc.).",
+      "dependsOn": ["config", "auth"],
+      "files": ["src/state/store.ts"],
+      "contract": "contracts/state.ts",
+      "mock": null,
+      "fixtures": [],
+      "tests": ["tests/state.test.ts"],
+      "realTests": [],
+      "failureScreens": ["empty"],
+      "status": { "blueprint": false, "contract": false, "tests": false, "mockGreen": null, "realGreen": null }
+    },
+    {
+      "name": "storage",
+      "description": "Saving and loading user data and files (database + file storage). See plan/MIGRATION.md.",
+      "dependsOn": ["config", "auth"],
+      "files": ["src/storage/db.ts", "src/storage/files.ts"],
+      "contract": "contracts/storage.ts",
+      "mock": "mocks/storage.mock.ts",
+      "fixtures": ["probes/fixtures/storage.read.json"],
+      "tests": ["tests/storage.test.ts"],
+      "realTests": ["tests/real/storage.real.test.ts"],
+      "failureScreens": ["upload-failed", "timeout", "rate-limited", "empty"],
+      "status": { "blueprint": false, "contract": false, "tests": false, "mockGreen": null, "realGreen": null }
+    },
+    {
+      "name": "example-feature",
+      "description": "Replace with a real feature seam (e.g. image generation, catalog, closet screens).",
+      "dependsOn": ["state", "storage"],
+      "files": ["src/example-feature/index.ts"],
+      "contract": "contracts/example-feature.ts",
+      "mock": null,
+      "fixtures": [],
+      "tests": ["tests/example-feature.test.ts"],
+      "realTests": [],
+      "failureScreens": ["timeout", "empty"],
+      "status": { "blueprint": false, "contract": false, "tests": false, "mockGreen": null, "realGreen": null }
+    }
+  ]
+}

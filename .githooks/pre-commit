@@ -1,0 +1,3 @@
+#!/bin/sh
+# Seam kit: checks the exact snapshot being committed. Phase rules live in scripts/seam/run.mjs.
+exec node "$(git rev-parse --show-toplevel)/scripts/seam/run.mjs" pre-commit

@@ -1,0 +1,23 @@
+{
+  "scripts": {
+    "seam:install": "node scripts/seam/install.mjs",
+    "seam:check": "node scripts/seam/run.mjs check",
+    "seam:report": "node scripts/seam/run.mjs report",
+    "seam:phase": "node scripts/seam/run.mjs phase",
+    "seam:unlock": "node scripts/seam/run.mjs unlock",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/seam/run.mjs test mock",
+    "test:real": "node scripts/seam/run.mjs test real",
+    "probe": "tsx probes/run-all.ts",
+    "prepare": "node scripts/seam/install.mjs --hooks-only"
+  },
+  "dependencies": {
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "tsx": "^4.20.0",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.0"
+  }
+}
