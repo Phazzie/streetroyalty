@@ -158,6 +158,12 @@ describe("starting checkout", () => {
       sandbox: true,
     });
     expect(seenTo("api.printful.com")).toEqual([]);
+    // A retry, such as coming back from a canceled Stripe page, gets the same Stripe page.
+    expect(await startCheckout("ada", STANDARD)).toMatchObject({
+      mode: "stripe",
+      orderId: started.orderId,
+      url: "https://checkout.stripe.com/c/pay/cs_test_1",
+    });
 
     const paid = stripeEvent({
       id: "evt_t1",

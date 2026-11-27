@@ -52,15 +52,16 @@ export async function readReplay(userId: string, orderId: string): Promise<Check
     total_cents: number;
     checkout_url: string | null;
     status: string;
-    sandbox: boolean;
+    payment_provider: string;
   }>`
-    select id, total_cents, checkout_url, status, sandbox
+    select id, total_cents, checkout_url, status, payment_provider
     from orders where id = ${orderId} and user_id = ${userId}
   `;
   const row = rows[0];
   if (!row || row.status !== "awaiting_payment") return null;
   const totalCents = Number(row.total_cents);
-  if (row.sandbox) return { mode: "sandbox", orderId: row.id, totalCents };
+  // Payment, not printing, decides the replay: Stripe test cards print in sandbox but pay on Stripe.
+  if (row.payment_provider === "sandbox") return { mode: "sandbox", orderId: row.id, totalCents };
   if (!row.checkout_url) return null;
   return { mode: "stripe", orderId: row.id, totalCents, url: row.checkout_url };
 }

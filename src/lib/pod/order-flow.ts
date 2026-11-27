@@ -393,6 +393,11 @@ export async function processStripeWebhook(args: {
   // A test-mode event must never confirm a real print order, and a real payment must
   // never land in a practice shop. Events that say which they are get checked.
   if (event.livemode !== undefined && event.livemode !== (args.paymentsMode === "live")) {
+    // Holding marks the order paid, so only an event that actually took money is held.
+    if (!event.paid) {
+      await args.store.recordEvent(event.id, "stripe", event.type);
+      return { status: 200, body: { ok: false, reason: "mode_mismatch" } };
+    }
     await args.store.markNeedsReview(
       event.orderId,
       event.livemode

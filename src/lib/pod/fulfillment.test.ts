@@ -380,6 +380,29 @@ describe("the Stripe webhook", () => {
     expect(printer.asked).toEqual([]);
   });
 
+  it("leaves an unpaid session from the other mode alone, without marking it paid", async () => {
+    const { store, printer, now } = setup();
+    const signed = stripeEvent({
+      id: "evt_1",
+      orderId: "ord-1",
+      amountCents: TOTAL,
+      paymentStatus: "unpaid",
+      livemode: false,
+    });
+    const answer = await processStripeWebhook({
+      rawBody: signed.raw,
+      signature: signed.signature,
+      secret: STRIPE_WEBHOOK_SECRET,
+      store,
+      provider: printer,
+      podMode: "live",
+      paymentsMode: "live",
+    });
+    expect(answer.body).toEqual({ ok: false, reason: "mode_mismatch" });
+    expect(now()).toMatchObject({ status: "awaiting_payment", paymentStatus: "unpaid" });
+    expect(printer.asked).toEqual([]);
+  });
+
   it("prints a test-mode payment when payments are on test cards", async () => {
     const { store, printer, now } = setup();
     const signed = stripeEvent({
