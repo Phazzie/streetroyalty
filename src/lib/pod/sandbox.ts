@@ -358,8 +358,10 @@ function nextIdFor(orders: Map<string, SandboxOrder>): () => string {
   const shared = sandboxGlobal.__srSandboxOrders;
   if (shared && orders === shared) {
     return () => {
+      // Each server copy starts its counter at a random point, so two copies (on Vercel)
+      // do not hand out the same draft id and confirm each other's orders.
       if (sandboxGlobal.__srSandboxSeq == null) {
-        let max = 1000;
+        let max = 1000 + Math.floor(Math.random() * 1e9) * 1000;
         for (const key of shared.keys()) {
           const match = /^sb-(\d+)$/.exec(key);
           if (match) max = Math.max(max, Number(match[1]));
@@ -470,6 +472,15 @@ export function createSandboxProvider(
     },
     async confirmOrder(orderId) {
       const order = orders.get(orderId);
+      if (!order && orders === sandboxGlobal.__srSandboxOrders && /^sb-\d+$/.test(orderId)) {
+        // The shared practice printer lives in one server's memory. On a host that runs
+        // several copies (Vercel), a Stripe test payment can come back to a copy that never
+        // saw the draft. Nothing real is printed either way, so it is taken as confirmed
+        // instead of holding a paid practice order for review.
+        const revived: SandboxOrder = { id: orderId, status: "pending", confirmed: true };
+        orders.set(orderId, revived);
+        return { ...revived };
+      }
       if (!order) throw new PodError(`Sandbox order ${orderId} was not found`, 404);
       if (order.confirmed) throw new PodError("Order is already confirmed", 409);
       if (order.status === "canceled")

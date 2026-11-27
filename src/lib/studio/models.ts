@@ -3,7 +3,7 @@ import type { Colorway, GarmentDesign } from "./garments.ts";
 
 export type StudioConfig = {
   podMode: "live" | "sandbox";
-  paymentsMode: "live" | "sandbox";
+  paymentsMode: "live" | "test" | "sandbox";
   markup: number;
   currency: "USD";
   /** Printful can make real photo mockups: the shop has its key and a public address. */

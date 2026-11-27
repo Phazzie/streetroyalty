@@ -49,7 +49,7 @@ describe("the studio checkout cap", () => {
     process.env.POD_MODE = "live";
     process.env.PAYMENTS_MODE = "live";
     process.env.PRINTFUL_API_KEY = "pf_test";
-    process.env.STRIPE_SECRET_KEY = "sk_test";
+    process.env.STRIPE_SECRET_KEY = "sk_live_x";
     await expect(
       startCheckout("ada", { recipient: { ...RECIPIENT, name: "" }, shippingMethod: "STANDARD" }),
     ).rejects.toThrow(/name/);

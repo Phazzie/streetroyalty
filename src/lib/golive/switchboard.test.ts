@@ -157,7 +157,9 @@ describe("switchboard", () => {
     expect(service(held, "printing").lamp).toBe("off");
     expect(service(held, "printing").notes.join(" ")).toMatch(/POD_MODE is set to sandbox/);
     expect(service(held, "payments").lamp).toBe("off");
-    expect(service(held, "payments").notes.join(" ")).toMatch(/PAYMENTS_MODE is not live/);
+    expect(service(held, "payments").notes.join(" ")).toMatch(
+      /PAYMENTS_MODE is not set to test or live/,
+    );
     expect(held.canPay).toBe(false);
 
     const forced = switchboard({ POD_MODE: "live", PAYMENTS_MODE: "live" });
@@ -166,6 +168,42 @@ describe("switchboard", () => {
     expect(service(forced, "payments").lamp).toBe("partly");
     expect(service(forced, "payments").now).toMatch(/no Stripe key/);
     expect(forced.canPay).toBe(false);
+  });
+
+  it("reads Stripe test cards as partly, never as able to pay", () => {
+    const testing = {
+      ...SECRETS,
+      POD_MODE: "sandbox",
+      PAYMENTS_MODE: "test",
+      STRIPE_SECRET_KEY: "sk_test_Qz8Xv",
+    };
+    const board = switchboard(testing);
+    expect(board.paymentsMode).toBe("test");
+    expect(service(board, "payments").lamp).toBe("partly");
+    expect(service(board, "payments").now).toMatch(/test cards/);
+    expect(board.canPay).toBe(false);
+
+    const noHook = switchboard({ ...testing, STRIPE_WEBHOOK_SECRET: "" });
+    expect(service(noHook, "payments").now).toMatch(/webhook secret/);
+
+    const livePrint = switchboard({ ...testing, POD_MODE: "live" });
+    expect(service(livePrint, "payments").now).toMatch(/must never order a real garment/);
+
+    const noPrintMode = switchboard({ ...testing, POD_MODE: "" });
+    expect(service(noPrintMode, "payments").now).toMatch(/POD_MODE is not set/);
+
+    const noDatabase = switchboard({ ...testing, DATABASE_URL: "" });
+    expect(service(noDatabase, "payments").now).toMatch(/only held in the server's memory/);
+
+    const wrongKey = switchboard({ ...testing, STRIPE_SECRET_KEY: "sk_live_Qz8Xv" });
+    expect(service(wrongKey, "payments").now).toMatch(/wrong kind/);
+  });
+
+  it("will not call live payments ready with a Stripe test key", () => {
+    const board = switchboard({ ...SECRETS, STRIPE_SECRET_KEY: "sk_test_Qz8Xv" });
+    expect(service(board, "payments").lamp).toBe("partly");
+    expect(service(board, "payments").notes.join(" ")).toMatch(/cannot take real money/);
+    expect(board.canPay).toBe(false);
   });
 
   it("walks printing from partly to on as each piece arrives", () => {

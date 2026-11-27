@@ -14,6 +14,8 @@ export type StripeCheckoutEvent = {
   orderId?: string;
   paid: boolean;
   amountCents?: number;
+  /** Stripe's own flag: true for real money, false for test mode. */
+  livemode?: boolean;
 };
 
 export type CheckoutLine = {
@@ -129,6 +131,7 @@ export function parseStripeEvent(rawBody: string): StripeCheckoutEvent {
   const body = JSON.parse(rawBody) as {
     id?: unknown;
     type?: unknown;
+    livemode?: unknown;
     data?: {
       object?: {
         payment_status?: unknown;
@@ -148,5 +151,6 @@ export function parseStripeEvent(rawBody: string): StripeCheckoutEvent {
     orderId: orderFromMeta != null && orderFromMeta !== "" ? String(orderFromMeta) : object.client_reference_id ? String(object.client_reference_id) : undefined,
     paid,
     amountCents: typeof object.amount_total === "number" ? object.amount_total : undefined,
+    livemode: typeof body.livemode === "boolean" ? body.livemode : undefined,
   };
 }

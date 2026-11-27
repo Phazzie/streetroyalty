@@ -13,10 +13,12 @@ export function stripeEvent(input: {
   orderId?: string;
   amountCents?: number;
   paymentStatus?: string;
+  livemode?: boolean;
 }): SignedWebhook {
   const raw = JSON.stringify({
     id: input.id,
     type: input.type ?? "checkout.session.completed",
+    ...(input.livemode === undefined ? {} : { livemode: input.livemode }),
     data: {
       object: {
         payment_status: input.paymentStatus ?? "paid",

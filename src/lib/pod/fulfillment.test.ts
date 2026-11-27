@@ -136,8 +136,21 @@ describe("sending a paid order to print", () => {
     const { store, printer, paid } = setup();
     await expect(
       fulfillPaidOrder(store, printer, { ...paid, podMode: "live", paymentsMode: "sandbox" }),
-    ).rejects.toThrow(/Sandbox payment/);
+    ).rejects.toThrow(/Practice payment/);
+    await expect(
+      fulfillPaidOrder(store, printer, { ...paid, podMode: "live", paymentsMode: "test" }),
+    ).rejects.toThrow(/Stripe test card/);
     expect(printer.asked).toEqual([]);
+  });
+
+  it("prints a Stripe test-card order on the practice printer", async () => {
+    const { store, printer, paid, now } = setup();
+    expect(await fulfillPaidOrder(store, printer, { ...paid, paymentsMode: "test" })).toEqual({
+      ok: true,
+      action: "confirmed",
+    });
+    expect(printer.asked).toEqual(["pf-1"]);
+    expect(now()).toMatchObject({ status: "submitted", paymentStatus: "paid" });
   });
 });
 
@@ -346,6 +359,91 @@ describe("the Stripe webhook", () => {
       expect(printer.asked).toEqual([]);
     },
   );
+
+  it.each([
+    ["a test payment while payments are live", false, "live" as const, "live" as const],
+    ["a real payment while payments are on test cards", true, "test" as const, "sandbox" as const],
+    ["a real payment while payments are in sandbox", true, "sandbox" as const, "sandbox" as const],
+    ["a test payment while payments are in sandbox", false, "sandbox" as const, "sandbox" as const],
+  ])("holds %s, and prints nothing", async (_what, livemode, paymentsMode, podMode) => {
+    const { store, printer, now } = setup();
+    const signed = stripeEvent({ id: "evt_1", orderId: "ord-1", amountCents: TOTAL, livemode });
+    const answer = await processStripeWebhook({
+      rawBody: signed.raw,
+      signature: signed.signature,
+      secret: STRIPE_WEBHOOK_SECRET,
+      store,
+      provider: printer,
+      podMode,
+      paymentsMode,
+    });
+    expect(answer.body).toEqual({ ok: false, reason: "mode_mismatch" });
+    expect(now()?.status).toBe("needs_review");
+    expect(printer.asked).toEqual([]);
+  });
+
+  it("leaves an unpaid session from the other mode alone, without marking it paid", async () => {
+    const { store, printer, now } = setup();
+    const signed = stripeEvent({
+      id: "evt_1",
+      orderId: "ord-1",
+      amountCents: TOTAL,
+      paymentStatus: "unpaid",
+      livemode: false,
+    });
+    const answer = await processStripeWebhook({
+      rawBody: signed.raw,
+      signature: signed.signature,
+      secret: STRIPE_WEBHOOK_SECRET,
+      store,
+      provider: printer,
+      podMode: "live",
+      paymentsMode: "live",
+    });
+    expect(answer.body).toEqual({ ok: false, reason: "mode_mismatch" });
+    expect(now()).toMatchObject({ status: "awaiting_payment", paymentStatus: "unpaid" });
+    expect(printer.asked).toEqual([]);
+  });
+
+  it("holds a test-card payment that lands after printing went live, and records it", async () => {
+    const { store, printer, now } = setup();
+    const signed = stripeEvent({ id: "evt_1", orderId: "ord-1", amountCents: TOTAL, livemode: false });
+    const answer = await processStripeWebhook({
+      rawBody: signed.raw,
+      signature: signed.signature,
+      secret: STRIPE_WEBHOOK_SECRET,
+      store,
+      provider: printer,
+      podMode: "live",
+      paymentsMode: "test",
+    });
+    expect(answer).toEqual({ status: 200, body: { ok: false, reason: "practice_payment_live_print" } });
+    expect(now()?.status).toBe("needs_review");
+    expect(printer.asked).toEqual([]);
+    expect(await store.hasEvent("evt_1")).toBe(true);
+  });
+
+  it("prints a test-mode payment when payments are on test cards", async () => {
+    const { store, printer, now } = setup();
+    const signed = stripeEvent({
+      id: "evt_1",
+      orderId: "ord-1",
+      amountCents: TOTAL,
+      livemode: false,
+    });
+    const answer = await processStripeWebhook({
+      rawBody: signed.raw,
+      signature: signed.signature,
+      secret: STRIPE_WEBHOOK_SECRET,
+      store,
+      provider: printer,
+      podMode: "sandbox",
+      paymentsMode: "test",
+    });
+    expect(answer.status).toBe(200);
+    expect(now()).toMatchObject({ status: "submitted", paymentStatus: "paid" });
+    expect(printer.asked).toEqual(["pf-1"]);
+  });
 
   it("empties the cart only when the order went to print", async () => {
     const { store, stripe } = setup();

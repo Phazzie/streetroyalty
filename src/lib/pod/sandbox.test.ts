@@ -1,7 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { getPodProvider, readMarkup, readPaymentsMode, readPodMode } from "./index.ts";
+import {
+  getPodProvider,
+  readMarkup,
+  readPaymentsMode,
+  readPodMode,
+  readStripeSecret,
+  stripeKeyMismatch,
+} from "./index.ts";
 import { applyMarkup, centsToDecimal, clampMarkup, formatMoney, moneyToCents } from "./money.ts";
-import { buildMockupSvg, createSandboxProvider, sandboxVariantId } from "./sandbox.ts";
+import {
+  buildMockupSvg,
+  createSandboxProvider,
+  sandboxVariantId,
+  sharedSandboxOrders,
+} from "./sandbox.ts";
 import type { DesignLayer } from "./types.ts";
 import { defaultGarment } from "../garments/index.ts";
 
@@ -266,6 +278,20 @@ describe("sandbox mockups", () => {
 });
 
 describe("sandbox orders", () => {
+  it("confirms a draft the shared practice printer lost to a restart, but only there", async () => {
+    await expect(createSandboxProvider().confirmOrder("sb-4242")).rejects.toMatchObject({
+      status: 404,
+    });
+    const shared = createSandboxProvider(sharedSandboxOrders());
+    expect(await shared.confirmOrder("sb-4242")).toMatchObject({
+      status: "pending",
+      confirmed: true,
+    });
+    await expect(shared.confirmOrder("sb-4242")).rejects.toMatchObject({ status: 409 });
+    await expect(shared.confirmOrder("pf-1")).rejects.toMatchObject({ status: 404 });
+    sharedSandboxOrders().delete("sb-4242");
+  });
+
   it("keeps a draft unconfirmed until told, then refuses a second confirm", async () => {
     const provider = createSandboxProvider();
     const draft = await provider.createDraftOrder(DRAFT);
@@ -355,6 +381,22 @@ describe("which mode the shop runs in", () => {
     expect(readPaymentsMode({ PAYMENTS_MODE: "live" })).toBe("live");
     expect(readPaymentsMode({ STRIPE_SECRET_KEY: "sk", PAYMENTS_MODE: "live" })).toBe("live");
     expect(readPaymentsMode({ PAYMENTS_MODE: "banana" })).toBe("sandbox");
+    expect(readPaymentsMode({ PAYMENTS_MODE: " Test " })).toBe("test");
+  });
+
+  it("matches the Stripe key to the card mode, so a test card never meets real money", () => {
+    expect(stripeKeyMismatch("sandbox", "sk_live_x")).toBeNull();
+    expect(stripeKeyMismatch("test", "sk_test_x")).toBeNull();
+    expect(stripeKeyMismatch("test", "rk_test_x")).toBeNull();
+    expect(stripeKeyMismatch("test", "sk_live_x")).toMatch(/refuses a live key/);
+    expect(stripeKeyMismatch("live", "sk_live_x")).toBeNull();
+    expect(stripeKeyMismatch("live", "sk_test_x")).toMatch(/cannot take real money/);
+    expect(stripeKeyMismatch("live", "nonsense")).toMatch(/needs a Stripe live key/);
+    expect(readStripeSecret("test", { STRIPE_SECRET_KEY: " sk_test_x " })).toBe("sk_test_x");
+    expect(() => readStripeSecret("test", {})).toThrow(
+      /STRIPE_SECRET_KEY is required when PAYMENTS_MODE=test/,
+    );
+    expect(() => readStripeSecret("live", { STRIPE_SECRET_KEY: "sk_test_x" })).toThrow(/test key/);
   });
 
   it("keeps the markup between one and five", () => {

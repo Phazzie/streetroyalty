@@ -17,7 +17,7 @@ import {
   type OrderStatus,
   type OrderStore,
 } from "../pod/order-flow.ts";
-import { getPodProvider } from "../pod/index.ts";
+import { getPodProvider, readStripeSecret } from "../pod/index.ts";
 import type { Recipient } from "../pod/types.ts";
 import { PodError } from "../pod/types.ts";
 import { createCheckoutSession, retrieveCheckoutSession } from "../payments/stripe.ts";
@@ -40,6 +40,8 @@ export async function startCheckout(
   assertLivePaymentHasPrinter(config.podMode, config.paymentsMode);
   // A live draft bills the print wallet once it is confirmed. Sandbox payment must not open one.
   assertFulfillmentAllowed(config.podMode, config.paymentsMode);
+  // A missing or wrong-kind Stripe key fails before any draft or order row exists.
+  if (config.paymentsMode !== "sandbox") readStripeSecret(config.paymentsMode);
   const { provider, lines: priced } = await priceCart(userId);
   // An all-over line gets one print file per placement, rendered from a snapshot of the piece.
   const lines = await Promise.all(
@@ -141,15 +143,14 @@ export async function startCheckout(
       ) values (
         ${orderId}, ${userId}, 'awaiting_payment', 'USD', ${subtotalCents}, ${rate.rateCents}, ${totalCents}, ${rate.id},
         ${JSON.stringify(recipient)}, ${itemsJson}, ${provider.id}, ${draft.id}, 'draft',
-        ${config.paymentsMode === "live" ? "stripe" : "sandbox"}, 'unpaid', ${config.podMode === "sandbox"},
+        ${config.paymentsMode === "sandbox" ? "sandbox" : "stripe"}, 'unpaid', ${config.podMode === "sandbox"},
         ${idempotencyKey}
       )
     `;
     if (config.paymentsMode === "sandbox") {
       return { mode: "sandbox" as const, orderId, totalCents };
     }
-    const secret = process.env.STRIPE_SECRET_KEY?.trim();
-    if (!secret) throw new Error("STRIPE_SECRET_KEY is required when PAYMENTS_MODE=live.");
+    const secret = readStripeSecret(config.paymentsMode);
     const base = origin();
     const session = await createCheckoutSession(
       {
@@ -321,8 +322,8 @@ export async function completeSandboxPayment(userId: string, orderId: string) {
 
 export async function syncStripeReturn(userId: string, sessionId: string) {
   const config = readStudioConfig();
-  const secret = process.env.STRIPE_SECRET_KEY?.trim();
-  if (config.paymentsMode !== "live" || !secret) throw new Error("Stripe is not configured.");
+  if (config.paymentsMode === "sandbox") throw new Error("Stripe is not configured.");
+  const secret = readStripeSecret(config.paymentsMode);
   const session = await retrieveCheckoutSession(sessionId, { secretKey: secret });
   if (!session.orderId) throw new Error("That payment is not tied to an order.");
   const sql = await getSql();

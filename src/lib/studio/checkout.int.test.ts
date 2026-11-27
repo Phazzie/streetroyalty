@@ -1,3 +1,4 @@
+import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getSql } from "../db.ts";
 import { sharedSandboxOrders } from "../pod/sandbox.ts";
@@ -14,7 +15,7 @@ import {
   syncStripeReturn,
 } from "./orders.server.ts";
 import { truncateAll } from "../../test/db.ts";
-import { seenTo } from "../../test/msw/server.ts";
+import { seenTo, server } from "../../test/msw/server.ts";
 import { RECIPIENT, TEE, seedCart, seedDesign, seedUser } from "../../test/seed.ts";
 import {
   PRINTFUL_WEBHOOK_SECRET,
@@ -110,7 +111,7 @@ describe("starting checkout", () => {
     process.env.POD_MODE = "live";
     process.env.PRINTFUL_API_KEY = "pf_test_x";
     process.env.PAYMENTS_MODE = "sandbox";
-    await expect(startCheckout("ada", STANDARD)).rejects.toThrow(/Sandbox payment/);
+    await expect(startCheckout("ada", STANDARD)).rejects.toThrow(/Practice payment/);
     expect(await orderCount()).toBe(0);
     expect(seenTo("api.printful.com")).toEqual([]);
     expect(seenTo("api.stripe.com")).toEqual([]);
@@ -120,7 +121,7 @@ describe("starting checkout", () => {
     await seedCart("ada");
     process.env.POD_MODE = "live";
     process.env.PRINTFUL_API_KEY = "pf_test_x";
-    await expect(startCheckout("ada", STANDARD)).rejects.toThrow(/Sandbox payment/);
+    await expect(startCheckout("ada", STANDARD)).rejects.toThrow(/Practice payment/);
     expect(await orderCount()).toBe(0);
     expect(seenTo("api.printful.com")).toEqual([]);
   });
@@ -128,10 +129,75 @@ describe("starting checkout", () => {
   it("refuses to take live payments while printing is sandboxed, before creating anything", async () => {
     await seedCart("ada");
     process.env.PAYMENTS_MODE = "live";
-    process.env.STRIPE_SECRET_KEY = "sk_test_x";
+    process.env.STRIPE_SECRET_KEY = "sk_live_x";
     await expect(startCheckout("ada", STANDARD)).rejects.toThrow(/sandboxed/);
     expect(await orderCount()).toBe(0);
     expect(seenTo("api.stripe.com")).toEqual([]);
+  });
+
+  it("opens Stripe with a test key while printing stays in sandbox, and a test-mode event prints it", async () => {
+    await seedCart("ada");
+    process.env.PAYMENTS_MODE = "test";
+    process.env.STRIPE_SECRET_KEY = "sk_test_x";
+    process.env.STRIPE_WEBHOOK_SECRET = STRIPE_WEBHOOK_SECRET;
+    server.use(
+      http.post("https://api.stripe.com/v1/checkout/sessions", () =>
+        HttpResponse.json({ id: "cs_test_1", url: "https://checkout.stripe.com/c/pay/cs_test_1" }),
+      ),
+    );
+    const started = await startCheckout("ada", STANDARD);
+    expect(started).toMatchObject({
+      mode: "stripe",
+      url: "https://checkout.stripe.com/c/pay/cs_test_1",
+    });
+    const sent = seenTo("api.stripe.com");
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.headers.get("authorization")).toBe("Bearer sk_test_x");
+    expect(await orderRow(started.orderId)).toMatchObject({
+      payment_provider: "stripe",
+      sandbox: true,
+    });
+    expect(seenTo("api.printful.com")).toEqual([]);
+    // A retry, such as coming back from a canceled Stripe page, gets the same Stripe page.
+    expect(await startCheckout("ada", STANDARD)).toMatchObject({
+      mode: "stripe",
+      orderId: started.orderId,
+      url: "https://checkout.stripe.com/c/pay/cs_test_1",
+    });
+
+    const paid = stripeEvent({
+      id: "evt_t1",
+      orderId: started.orderId,
+      amountCents: started.totalCents,
+      livemode: false,
+    });
+    expect((await receiveStripeWebhook(paid.raw, paid.signature)).body).toEqual({
+      ok: true,
+      action: "confirmed",
+    });
+    const row = await orderRow(started.orderId);
+    expect(row?.status).toBe("submitted");
+    expect(sharedSandboxOrders().get(String(row?.provider_order_id))?.confirmed).toBe(true);
+  });
+
+  it("refuses a live Stripe key on test cards, before creating anything", async () => {
+    await seedCart("ada");
+    process.env.PAYMENTS_MODE = "test";
+    process.env.STRIPE_SECRET_KEY = "sk_live_x";
+    await expect(startCheckout("ada", STANDARD)).rejects.toThrow(/refuses a live key/);
+    expect(await orderCount()).toBe(0);
+    expect(seenTo("api.stripe.com")).toEqual([]);
+  });
+
+  it("refuses test cards while printing is live, before creating anything", async () => {
+    await seedCart("ada");
+    process.env.POD_MODE = "live";
+    process.env.PRINTFUL_API_KEY = "pf_test_x";
+    process.env.PAYMENTS_MODE = "test";
+    process.env.STRIPE_SECRET_KEY = "sk_test_x";
+    await expect(startCheckout("ada", STANDARD)).rejects.toThrow(/Stripe test card/);
+    expect(await orderCount()).toBe(0);
+    expect(seenTo("api.printful.com")).toEqual([]);
   });
 
   it("stores what was bought, so the right cart lines can be cleared later", async () => {

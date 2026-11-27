@@ -12,7 +12,7 @@ describe("readBoard", () => {
 
   it("gives a visitor the two modes the studio already shows, and nothing else", async () => {
     process.env.STUDIO_ADMIN_EMAILS = "ada@example.com";
-    process.env.STRIPE_SECRET_KEY = "Hh7Qz51Nq0aXwVb";
+    process.env.STRIPE_SECRET_KEY = "sk_live_Hh7Qz";
     expect(await readBoard(null)).toEqual(VISITOR);
     process.env.PAYMENTS_MODE = "live";
     expect(await readBoard(null)).toEqual({ ...VISITOR, paymentsMode: "live" });
@@ -65,7 +65,7 @@ describe("readBoard", () => {
     await seedUser("ada");
     const secrets = {
       STUDIO_ADMIN_EMAILS: "ada@example.com",
-      STRIPE_SECRET_KEY: "Hh7Qz51Nq0aXwVb",
+      STRIPE_SECRET_KEY: "sk_live_Hh7Qz",
       STRIPE_WEBHOOK_SECRET: "Jj2Xq8842KzWvQp",
       PRINTFUL_API_KEY: "Pf8Zk93bd7eQxJw",
       PRINT_FILE_SIGNING_SECRET: "Sg6Xq5d5d0b2fZwK",
