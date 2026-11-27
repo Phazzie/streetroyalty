@@ -392,7 +392,11 @@ export async function processStripeWebhook(args: {
   }
   // A test-mode event must never confirm a real print order, and a real payment must
   // never land in a practice shop. Events that say which they are get checked.
-  if (event.livemode !== undefined && event.livemode !== (args.paymentsMode === "live")) {
+  // Real Stripe events always say which mode they came from. Live takes only live events,
+  // test only test events, and the no-card sandbox takes neither.
+  const expectedLivemode =
+    args.paymentsMode === "live" ? true : args.paymentsMode === "test" ? false : null;
+  if (event.livemode !== undefined && event.livemode !== expectedLivemode) {
     // Holding marks the order paid, so only an event that actually took money is held.
     if (!event.paid) {
       await args.store.recordEvent(event.id, "stripe", event.type);
@@ -402,7 +406,7 @@ export async function processStripeWebhook(args: {
       event.orderId,
       event.livemode
         ? "A real Stripe payment arrived while payments are in practice. No garment was sent. Refund the charge in Stripe."
-        : "A Stripe test payment arrived while payments are live. No garment was sent.",
+        : "A Stripe test payment arrived while payments are not on test cards. No garment was sent.",
     );
     await args.store.recordEvent(event.id, "stripe", event.type);
     return { status: 200, body: { ok: false, reason: "mode_mismatch" } };
@@ -416,6 +420,16 @@ export async function processStripeWebhook(args: {
     );
     await args.store.recordEvent(event.id, "stripe", event.type);
     return { status: 200, body: { ok: false, reason: "sandbox_print" } };
+  }
+  // A test checkout that was still open when printing went live must not print for real,
+  // and must not loop on Stripe's retries either. It is held instead.
+  if (event.paid && args.paymentsMode !== "live" && args.podMode === "live") {
+    await args.store.markNeedsReview(
+      event.orderId,
+      "A practice payment arrived after printing went live. No garment was sent.",
+    );
+    await args.store.recordEvent(event.id, "stripe", event.type);
+    return { status: 200, body: { ok: false, reason: "practice_payment_live_print" } };
   }
   try {
     const result = await settleCardPayment(args.store, args.provider, {

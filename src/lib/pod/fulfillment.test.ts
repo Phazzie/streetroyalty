@@ -149,6 +149,7 @@ describe("sending a paid order to print", () => {
       ok: true,
       action: "confirmed",
     });
+    expect(printer.asked).toEqual(["pf-1"]);
     expect(now()).toMatchObject({ status: "submitted", paymentStatus: "paid" });
   });
 });
@@ -363,6 +364,7 @@ describe("the Stripe webhook", () => {
     ["a test payment while payments are live", false, "live" as const, "live" as const],
     ["a real payment while payments are on test cards", true, "test" as const, "sandbox" as const],
     ["a real payment while payments are in sandbox", true, "sandbox" as const, "sandbox" as const],
+    ["a test payment while payments are in sandbox", false, "sandbox" as const, "sandbox" as const],
   ])("holds %s, and prints nothing", async (_what, livemode, paymentsMode, podMode) => {
     const { store, printer, now } = setup();
     const signed = stripeEvent({ id: "evt_1", orderId: "ord-1", amountCents: TOTAL, livemode });
@@ -401,6 +403,24 @@ describe("the Stripe webhook", () => {
     expect(answer.body).toEqual({ ok: false, reason: "mode_mismatch" });
     expect(now()).toMatchObject({ status: "awaiting_payment", paymentStatus: "unpaid" });
     expect(printer.asked).toEqual([]);
+  });
+
+  it("holds a test-card payment that lands after printing went live, and records it", async () => {
+    const { store, printer, now } = setup();
+    const signed = stripeEvent({ id: "evt_1", orderId: "ord-1", amountCents: TOTAL, livemode: false });
+    const answer = await processStripeWebhook({
+      rawBody: signed.raw,
+      signature: signed.signature,
+      secret: STRIPE_WEBHOOK_SECRET,
+      store,
+      provider: printer,
+      podMode: "live",
+      paymentsMode: "test",
+    });
+    expect(answer).toEqual({ status: 200, body: { ok: false, reason: "practice_payment_live_print" } });
+    expect(now()?.status).toBe("needs_review");
+    expect(printer.asked).toEqual([]);
+    expect(await store.hasEvent("evt_1")).toBe(true);
   });
 
   it("prints a test-mode payment when payments are on test cards", async () => {

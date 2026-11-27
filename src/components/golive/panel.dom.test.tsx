@@ -67,7 +67,7 @@ describe("the go-live panel", () => {
       STUDIO_ADMIN_EMAILS: "ada@example.com",
       BETTER_AUTH_URL: "https://shop.example",
       PAYMENTS_MODE: "live",
-      STRIPE_SECRET_KEY: "sk_live_Hh7Qz51Nq0aXwVb",
+      STRIPE_SECRET_KEY: "sk_live_Hh7Qz",
     });
     const { container } = render(<GoLivePanel view={{ view: "admin", board }} />);
     expect(faces(container)).toEqual([

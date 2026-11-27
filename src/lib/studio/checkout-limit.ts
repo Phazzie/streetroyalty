@@ -10,12 +10,12 @@ export const CHECKOUT_START_CAP = { visitor: 40, global: 5000 };
 
 export const CHECKOUT_LIMIT_MESSAGE = "Too many checkouts started today. Try again tomorrow.";
 
-/** Only a live printer and a live card together open a Printful draft. */
+/** Live checkouts open a Printful draft, test checkouts open a Stripe session: both are capped. */
 export function metersLiveCheckout(
   podMode: "live" | "sandbox",
   paymentsMode: "live" | "test" | "sandbox",
 ): boolean {
-  return podMode === "live" && paymentsMode === "live";
+  return paymentsMode === "test" || (podMode === "live" && paymentsMode === "live");
 }
 
 export async function assertCheckoutStartAllowed(

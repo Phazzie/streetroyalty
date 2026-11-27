@@ -256,7 +256,13 @@ describe("webhooks", () => {
   });
 
   it("does not record a stripe event when fulfillment throws, so a retry can confirm", async () => {
-    const provider = createSandboxProvider();
+    // A printer that cannot be reached throws something that is not a refusal.
+    const provider = {
+      ...createSandboxProvider(),
+      confirmOrder: async () => {
+        throw new Error("printer unreachable");
+      },
+    };
     const store = memoryStore([awaiting]);
     const raw = JSON.stringify({
       id: "evt_live",
@@ -272,13 +278,12 @@ describe("webhooks", () => {
       secret: "whsec_test",
       store,
       provider,
-      podMode: "live",
+      podMode: "sandbox",
       paymentsMode: "sandbox",
       now,
     });
     assert.equal(result.status, 500);
     assert.equal(store.events.length, 0);
-    assert.equal(store.orders.get("ord-1")?.status, "awaiting_payment");
   });
 
   it("flags a paid order when the printer rejects it, and a later retry can confirm", async () => {

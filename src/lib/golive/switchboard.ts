@@ -240,11 +240,26 @@ function readPayments(env: Env, databaseOn: boolean): Reading {
     };
   }
   if (mode === "test") {
-    if (readPodModeOrUnset(env) === "live") {
+    const printing = readPodModeOrUnset(env);
+    if (printing === "unset") {
+      return {
+        lamp: "partly",
+        now: "Stripe test cards are on, but POD_MODE is not set, so checkout fails for everyone.",
+        notes: ["Set POD_MODE to sandbox while testing."],
+      };
+    }
+    if (printing === "live") {
       return {
         lamp: "partly",
         now: "Stripe test cards are on, but printing is live, so checkout refuses: a test card must never order a real garment.",
         notes: ["Set POD_MODE to sandbox while testing, or PAYMENTS_MODE to live with a live key."],
+      };
+    }
+    if (!databaseOn) {
+      return {
+        lamp: "partly",
+        now: "Checkout opens Stripe with test cards, but orders are only held in the server's memory and are lost when it restarts.",
+        waitsOn: ["database"],
       };
     }
     if (!has(env, "STRIPE_WEBHOOK_SECRET")) {

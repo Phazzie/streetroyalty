@@ -358,8 +358,10 @@ function nextIdFor(orders: Map<string, SandboxOrder>): () => string {
   const shared = sandboxGlobal.__srSandboxOrders;
   if (shared && orders === shared) {
     return () => {
+      // Each server copy starts its counter at a random point, so two copies (on Vercel)
+      // do not hand out the same draft id and confirm each other's orders.
       if (sandboxGlobal.__srSandboxSeq == null) {
-        let max = 1000;
+        let max = 1000 + Math.floor(Math.random() * 1e9) * 1000;
         for (const key of shared.keys()) {
           const match = /^sb-(\d+)$/.exec(key);
           if (match) max = Math.max(max, Number(match[1]));

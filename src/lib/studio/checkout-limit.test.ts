@@ -17,6 +17,7 @@ describe("studio checkout metering", () => {
     expect(metersLiveCheckout("live", "sandbox")).toBe(false);
     expect(metersLiveCheckout("sandbox", "live")).toBe(false);
     expect(metersLiveCheckout("sandbox", "sandbox")).toBe(false);
+    expect(metersLiveCheckout("sandbox", "test")).toBe(true);
   });
 
   it("counts a studio start on its own kind, after one price and before the printer", () => {

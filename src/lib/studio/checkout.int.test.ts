@@ -175,7 +175,9 @@ describe("starting checkout", () => {
       ok: true,
       action: "confirmed",
     });
-    expect((await orderRow(started.orderId))?.status).toBe("submitted");
+    const row = await orderRow(started.orderId);
+    expect(row?.status).toBe("submitted");
+    expect(sharedSandboxOrders().get(String(row?.provider_order_id))?.confirmed).toBe(true);
   });
 
   it("refuses a live Stripe key on test cards, before creating anything", async () => {

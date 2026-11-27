@@ -189,6 +189,12 @@ describe("switchboard", () => {
     const livePrint = switchboard({ ...testing, POD_MODE: "live" });
     expect(service(livePrint, "payments").now).toMatch(/must never order a real garment/);
 
+    const noPrintMode = switchboard({ ...testing, POD_MODE: "" });
+    expect(service(noPrintMode, "payments").now).toMatch(/POD_MODE is not set/);
+
+    const noDatabase = switchboard({ ...testing, DATABASE_URL: "" });
+    expect(service(noDatabase, "payments").now).toMatch(/only held in the server's memory/);
+
     const wrongKey = switchboard({ ...testing, STRIPE_SECRET_KEY: "sk_live_Qz8Xv" });
     expect(service(wrongKey, "payments").now).toMatch(/wrong kind/);
   });
