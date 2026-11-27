@@ -71,7 +71,7 @@ beforeEach(async () => {
   process.env.PRINTFUL_API_KEY = "pf_test_key";
   process.env.PRINTFUL_STORE_ID = "1";
   process.env.PAYMENTS_MODE = "live";
-  process.env.STRIPE_SECRET_KEY = "sk_test_key";
+  process.env.STRIPE_SECRET_KEY = "sk_live_key";
   process.env.STRIPE_WEBHOOK_SECRET = STRIPE_WEBHOOK_SECRET;
   process.env.PRINT_FILE_SIGNING_SECRET = "a-long-print-secret";
   process.env.APP_PUBLIC_URL = "https://streetroyalty.com";
@@ -110,7 +110,7 @@ describe("live checkout", () => {
     expect(sent.get("success_url")).toBe(
       "https://streetroyalty.com/orders?session_id={CHECKOUT_SESSION_ID}",
     );
-    expect(seenTo("api.stripe.com")[0]?.headers.get("authorization")).toBe("Bearer sk_test_key");
+    expect(seenTo("api.stripe.com")[0]?.headers.get("authorization")).toBe("Bearer sk_live_key");
   });
 
   it("hands Printful a signed https link to the print file, at the public address", async () => {
@@ -158,11 +158,19 @@ describe("live checkout", () => {
     expect(seenTo("api.stripe.com")).toEqual([]);
   });
 
-  it("refuses to check out when the Stripe key is missing, and cleans up the draft", async () => {
+  it("refuses to check out when the Stripe key is missing, before opening a draft", async () => {
     await cartWithTee();
     delete process.env.STRIPE_SECRET_KEY;
     await expect(startCheckout("ada", STANDARD)).rejects.toThrow(/STRIPE_SECRET_KEY/);
-    expect([...printful.orders.values()].map((draft) => draft.status)).toEqual(["canceled"]);
+    expect([...printful.orders.values()]).toEqual([]);
+  });
+
+  it("refuses a Stripe test key while payments are live, before opening a draft", async () => {
+    await cartWithTee();
+    process.env.STRIPE_SECRET_KEY = "sk_test_key";
+    await expect(startCheckout("ada", STANDARD)).rejects.toThrow(/cannot take real money/);
+    expect([...printful.orders.values()]).toEqual([]);
+    expect(seenTo("api.stripe.com")).toEqual([]);
   });
 
   it("opens one Printful draft and one Stripe session when two tabs start together", async () => {

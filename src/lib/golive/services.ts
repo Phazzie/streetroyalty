@@ -131,7 +131,7 @@ export const SERVICES: ServiceSpec[] = [
       {
         name: "PAYMENTS_MODE",
         need: "optional",
-        what: "Set it to live to take real cards. Left out, checkout stays in practice even if a Stripe key is present.",
+        what: "Set it to test to run Stripe checkout with test cards (needs a sk_test_ key, printing stays in sandbox), or live to take real cards (needs a sk_live_ key). Left out, checkout stays in practice even if a Stripe key is present.",
       },
     ],
     steps: [

@@ -13,14 +13,14 @@ export const CHECKOUT_LIMIT_MESSAGE = "Too many checkouts started today. Try aga
 /** Only a live printer and a live card together open a Printful draft. */
 export function metersLiveCheckout(
   podMode: "live" | "sandbox",
-  paymentsMode: "live" | "sandbox",
+  paymentsMode: "live" | "test" | "sandbox",
 ): boolean {
   return podMode === "live" && paymentsMode === "live";
 }
 
 export async function assertCheckoutStartAllowed(
   podMode: "live" | "sandbox",
-  paymentsMode: "live" | "sandbox",
+  paymentsMode: "live" | "test" | "sandbox",
   userId: string,
 ): Promise<void> {
   if (!metersLiveCheckout(podMode, paymentsMode)) return;

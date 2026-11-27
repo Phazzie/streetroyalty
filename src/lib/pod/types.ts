@@ -3,6 +3,13 @@ import type { GarmentDesign } from "../garments/types.ts";
 
 export type PodMode = "live" | "sandbox";
 
+/**
+ * sandbox: no card at all, a button stands in for paying.
+ * test: real Stripe Checkout with a test key and test cards, printing must stay sandboxed.
+ * live: real cards, real printing.
+ */
+export type PaymentsMode = "live" | "test" | "sandbox";
+
 export type PlacementId = "front" | "back" | "sleeve_left" | "sleeve_right" | string;
 
 export type CatalogColor = {

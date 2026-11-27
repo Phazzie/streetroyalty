@@ -48,7 +48,7 @@ describe("payment fulfillment", () => {
   });
 
   it("blocks sandbox payment from confirming a live print order", () => {
-    assert.throws(() => assertFulfillmentAllowed("live", "sandbox"), /Sandbox payment/);
+    assert.throws(() => assertFulfillmentAllowed("live", "sandbox"), /Practice payment/);
     assert.doesNotThrow(() => assertFulfillmentAllowed("sandbox", "sandbox"));
     assert.doesNotThrow(() => assertFulfillmentAllowed("live", "live"));
   });

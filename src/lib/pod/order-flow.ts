@@ -1,4 +1,4 @@
-import type { PodProvider } from "./types.ts";
+import type { PaymentsMode, PodProvider } from "./types.ts";
 import { verifyPrintfulSignature } from "./signature.ts";
 import { parseStripeEvent, verifyStripeSignature } from "../payments/stripe.ts";
 
@@ -120,17 +120,19 @@ export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
  */
 export function assertFulfillmentAllowed(
   podMode: "live" | "sandbox",
-  paymentsMode: "live" | "sandbox",
+  paymentsMode: PaymentsMode,
 ): void {
   if (podMode === "live" && paymentsMode !== "live") {
-    throw new Error("Sandbox payment cannot confirm a live print order.");
+    throw new Error(
+      "Practice payment (sandbox or a Stripe test card) cannot confirm a live print order.",
+    );
   }
 }
 
 /** A card charge with no printer would take money and confirm an in-memory draft. */
 export function assertLivePaymentHasPrinter(
   podMode: "live" | "sandbox",
-  paymentsMode: "live" | "sandbox",
+  paymentsMode: PaymentsMode,
 ): void {
   if (paymentsMode === "live" && podMode !== "live") {
     throw new Error("Live payment cannot checkout while printing is sandboxed.");
@@ -206,7 +208,7 @@ export async function fulfillPaidOrder(
     paid: boolean;
     amountCents?: number;
     podMode: "live" | "sandbox";
-    paymentsMode: "live" | "sandbox";
+    paymentsMode: PaymentsMode;
   },
 ): Promise<FulfillmentResult> {
   const order = await store.getOrder(input.orderId);
@@ -366,7 +368,7 @@ export async function processStripeWebhook(args: {
   store: OrderStore;
   provider: PodProvider;
   podMode: "live" | "sandbox";
-  paymentsMode: "live" | "sandbox";
+  paymentsMode: PaymentsMode;
   now?: number;
 }): Promise<{ status: number; body: Record<string, unknown> }> {
   if (!args.secret) return { status: 503, body: { error: "webhook secret is not configured" } };
@@ -387,6 +389,18 @@ export async function processStripeWebhook(args: {
   if (!relevant || !event.orderId) {
     await args.store.recordEvent(event.id, "stripe", event.type);
     return { status: 200, body: { ignored: true } };
+  }
+  // A test-mode event must never confirm a real print order, and a real payment must
+  // never land in a practice shop. Events that say which they are get checked.
+  if (event.livemode !== undefined && event.livemode !== (args.paymentsMode === "live")) {
+    await args.store.markNeedsReview(
+      event.orderId,
+      event.livemode
+        ? "A real Stripe payment arrived while payments are in practice. No garment was sent. Refund the charge in Stripe."
+        : "A Stripe test payment arrived while payments are live. No garment was sent.",
+    );
+    await args.store.recordEvent(event.id, "stripe", event.type);
+    return { status: 200, body: { ok: false, reason: "mode_mismatch" } };
   }
   // Only once money was actually taken. A completed session whose payment has not
   // cleared goes down the normal path, which answers "unpaid" and changes nothing.

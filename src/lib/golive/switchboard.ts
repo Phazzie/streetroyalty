@@ -1,8 +1,8 @@
 import { readLimits, type AiKind, type AiLimits } from "../ai/limits.ts";
 import { assertLivePaymentHasPrinter } from "../pod/order-flow.ts";
-import { readPaymentsMode, readPodMode } from "../pod/index.ts";
+import { readPaymentsMode, readPodMode, stripeKeyMismatch } from "../pod/index.ts";
 import { printSigningSecret } from "../pod/print-access.ts";
-import type { PodMode } from "../pod/types.ts";
+import type { PaymentsMode, PodMode } from "../pod/types.ts";
 import { SERVICES, serviceSpec, type ServiceId } from "./services.ts";
 
 /**
@@ -56,7 +56,7 @@ export type Switchboard = {
   /** True when an order outlives a server restart. A paid order that does not is a lost order. */
   ordersKept: boolean;
   podMode: PodMode | "unset";
-  paymentsMode: PodMode;
+  paymentsMode: PaymentsMode;
   caps: AiLimits;
 };
 
@@ -201,6 +201,14 @@ function readPrinting(env: Env): Reading {
   return { lamp: "on", now: "Paid orders go to Printful to be made and shipped." };
 }
 
+function readPodModeOrUnset(env: Env): PodMode | "unset" {
+  try {
+    return readPodMode(env);
+  } catch {
+    return "unset";
+  }
+}
+
 function readPayments(env: Env, databaseOn: boolean): Reading {
   const mode = readPaymentsMode(env);
   if (mode === "sandbox") {
@@ -209,7 +217,7 @@ function readPayments(env: Env, databaseOn: boolean): Reading {
       now: serviceSpec("payments").without,
       notes: has(env, "STRIPE_SECRET_KEY")
         ? [
-            "PAYMENTS_MODE is not live, so the Stripe key is ignored. Set PAYMENTS_MODE to live to take real cards.",
+            "PAYMENTS_MODE is not set to test or live, so the Stripe key is ignored. Set it to test to try Stripe with test cards, or live to take real cards.",
           ]
         : [],
     };
@@ -217,10 +225,39 @@ function readPayments(env: Env, databaseOn: boolean): Reading {
   if (!has(env, "STRIPE_SECRET_KEY")) {
     return {
       lamp: "partly",
-      now: "Checkout is switched to live with no Stripe key, so it fails for everyone.",
+      now: `Checkout is switched to ${mode} with no Stripe key, so it fails for everyone.`,
       notes: [
-        "PAYMENTS_MODE is set to live. Add the key, or set PAYMENTS_MODE to sandbox to practice.",
+        `PAYMENTS_MODE is set to ${mode}. Add the key, or set PAYMENTS_MODE to sandbox to practice.`,
       ],
+    };
+  }
+  const mismatch = stripeKeyMismatch(mode, env.STRIPE_SECRET_KEY);
+  if (mismatch) {
+    return {
+      lamp: "partly",
+      now: "Checkout refuses to start because the Stripe key is the wrong kind.",
+      notes: [mismatch],
+    };
+  }
+  if (mode === "test") {
+    if (readPodModeOrUnset(env) === "live") {
+      return {
+        lamp: "partly",
+        now: "Stripe test cards are on, but printing is live, so checkout refuses: a test card must never order a real garment.",
+        notes: ["Set POD_MODE to sandbox while testing, or PAYMENTS_MODE to live with a live key."],
+      };
+    }
+    if (!has(env, "STRIPE_WEBHOOK_SECRET")) {
+      return {
+        lamp: "partly",
+        now: "Checkout opens Stripe with test cards. No real money moves. Add the webhook secret so a closed tab still records the order.",
+        notes: ["Test mode. Switch PAYMENTS_MODE to live with a live key to take real cards."],
+      };
+    }
+    return {
+      lamp: "partly",
+      now: "Checkout runs through Stripe with test cards (4242 4242 4242 4242). No real money moves and nothing is printed.",
+      notes: ["Test mode. Switch PAYMENTS_MODE to live with a live key to take real cards."],
     };
   }
   if (throws(() => assertLivePaymentHasPrinter(readPodMode(env), mode))) {
@@ -271,12 +308,7 @@ function readPictures(env: Env, caps: AiLimits): Reading {
 
 export function switchboard(env: Env): Switchboard {
   const caps = readLimits(env);
-  let podMode: PodMode | "unset" = "unset";
-  try {
-    podMode = readPodMode(env);
-  } catch {
-    podMode = "unset";
-  }
+  const podMode = readPodModeOrUnset(env);
   const paymentsMode = readPaymentsMode(env);
   const database = readDatabase(env);
   const readings: Record<ServiceId, Reading> = {
@@ -292,6 +324,7 @@ export function switchboard(env: Env): Switchboard {
     paymentsMode === "live" &&
     podMode === "live" &&
     has(env, "STRIPE_SECRET_KEY") &&
+    stripeKeyMismatch("live", env.STRIPE_SECRET_KEY) === null &&
     has(env, "PRINTFUL_API_KEY");
   return {
     services,

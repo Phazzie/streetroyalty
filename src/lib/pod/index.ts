@@ -1,6 +1,6 @@
 import { createPrintfulProvider } from "./printful.ts";
 import { createSandboxProvider, sharedSandboxOrders } from "./sandbox.ts";
-import type { PodMode, PodProvider } from "./types.ts";
+import type { PaymentsMode, PodMode, PodProvider } from "./types.ts";
 import { PodError } from "./types.ts";
 
 export type StudioEnv = {
@@ -52,13 +52,36 @@ export function assertLivePodEnv(env: StudioEnv): {
   };
 }
 
-export function readPaymentsMode(env: StudioEnv): PodMode {
+export function readPaymentsMode(env: StudioEnv): PaymentsMode {
   const explicit = env.PAYMENTS_MODE?.trim().toLowerCase();
   if (explicit === "live") return "live";
+  if (explicit === "test") return "test";
   // Unset, sandbox, or anything else stays in practice. A Stripe key does not
   // turn live payments on, so a host that has not set PAYMENTS_MODE cannot
   // charge a card by accident.
   return "sandbox";
+}
+
+/** Which Stripe key a card mode needs. Test mode never touches a live key, live mode never a test one. */
+export function stripeKeyMismatch(mode: PaymentsMode, key: string | undefined): string | null {
+  const trimmed = key?.trim() ?? "";
+  if (mode === "sandbox" || !trimmed) return null;
+  const isTest = /^(sk|rk)_test_/.test(trimmed);
+  const isLive = /^(sk|rk)_live_/.test(trimmed);
+  if (mode === "test" && !isTest)
+    return "PAYMENTS_MODE=test needs a Stripe test key (sk_test_). It refuses a live key.";
+  if (mode === "live" && !isLive)
+    return "PAYMENTS_MODE=live needs a Stripe live key (sk_live_). A test key cannot take real money.";
+  return null;
+}
+
+/** The Stripe secret key for a card mode, or a plain error saying what is wrong. */
+export function readStripeSecret(mode: PaymentsMode, env: StudioEnv = process.env): string {
+  const key = env.STRIPE_SECRET_KEY?.trim();
+  if (!key) throw new Error(`STRIPE_SECRET_KEY is required when PAYMENTS_MODE=${mode}.`);
+  const mismatch = stripeKeyMismatch(mode, key);
+  if (mismatch) throw new Error(mismatch);
+  return key;
 }
 
 export function getPodProvider(env: StudioEnv = process.env): PodProvider {

@@ -1,4 +1,4 @@
-import type { PodMode } from "../pod/types.ts";
+import type { PaymentsMode, PodMode } from "../pod/types.ts";
 import { readStudioAccess } from "../studio/orders.server.ts";
 import { readStudioConfig } from "../studio/shared.server.ts";
 import { switchboard, type Switchboard } from "./switchboard.ts";
@@ -12,7 +12,7 @@ import { switchboard, type Switchboard } from "./switchboard.ts";
  */
 export type BoardView =
   | { view: "admin"; board: Switchboard }
-  | { view: "public"; signedIn: boolean; podMode: PodMode; paymentsMode: PodMode };
+  | { view: "public"; signedIn: boolean; podMode: PodMode; paymentsMode: PaymentsMode };
 
 export async function readBoard(userId: string | null): Promise<BoardView> {
   if (userId) {

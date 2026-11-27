@@ -579,6 +579,12 @@ function Breaker({
   );
 }
 
+function paymentsWords(mode: "live" | "test" | "sandbox"): string {
+  if (mode === "live") return "live";
+  if (mode === "test") return "on Stripe test cards";
+  return "in sandbox";
+}
+
 function lowerFirst(text: string): string {
   return text.charAt(0).toLowerCase() + text.slice(1);
 }
@@ -636,7 +642,7 @@ export function GoLivePanel({ view }: { view: PanelView }) {
                 <p className="mt-3 max-w-prose text-muted">
                   {onCount} of {SERVICES.length} switches fully on. Printing is{" "}
                   {board.podMode === "live" ? "live" : "in sandbox"}. Payments are{" "}
-                  {board.paymentsMode === "live" ? "live" : "in sandbox"}.
+                  {paymentsWords(board.paymentsMode)}.
                   {nextId ? null : " Place a test order to prove it."}
                 </p>
                 <p className="mt-4">
@@ -652,7 +658,7 @@ export function GoLivePanel({ view }: { view: PanelView }) {
                   {visitor.podMode && visitor.paymentsMode
                     ? ` What every visitor can already see: printing is ${
                         visitor.podMode === "live" ? "live" : "in sandbox"
-                      } and payments are ${visitor.paymentsMode === "live" ? "live" : "in sandbox"}.`
+                      } and payments are ${paymentsWords(visitor.paymentsMode)}.`
                     : ""}
                 </p>
                 <p className="mt-3 max-w-prose">
