@@ -92,7 +92,7 @@ export function MoneySplit({
             </dt>
             <dd>
               The price of {formatMoney(split.retailCents, config.currency)} minus the two parts
-              above. Shipping and tax are added at checkout and are not in this bar.
+              above. Shipping is added at checkout and is not in this bar.
             </dd>
           </div>
         </dl>

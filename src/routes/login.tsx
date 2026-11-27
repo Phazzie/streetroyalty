@@ -7,10 +7,16 @@ import { accountInputError } from "@/lib/auth/account-input";
 import { authClient, authEnabled, signIn } from "@/lib/auth/client";
 import { useOAuthProviders } from "@/lib/auth/oauth-buttons";
 import { createSingleFlight } from "@/lib/ui/single-flight";
+import { safeNext } from "@/lib/auth/next-path";
 
-export const Route = createFileRoute("/login")({ component: LoginPage });
+export const Route = createFileRoute("/login")({
+  validateSearch: (search: Record<string, unknown>): { next?: string } =>
+    typeof search.next === "string" ? { next: search.next } : {},
+  component: LoginPage,
+});
 
 function LoginPage() {
+  const next = safeNext(Route.useSearch().next);
   const [mode, setMode] = useState<"in" | "up">("up");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -55,14 +61,14 @@ function LoginPage() {
                             email: email.trim(),
                             password,
                             name: name.trim() || email.trim().split("@")[0] || "Designer",
-                            callbackURL: "/studio",
+                            callbackURL: next,
                           })
-                        : await authClient.signIn.email({ email: email.trim(), password, callbackURL: "/studio" });
+                        : await authClient.signIn.email({ email: email.trim(), password, callbackURL: next });
                     if (result.error) {
                       setError(result.error.message ?? "Could not sign in.");
                       return;
                     }
-                    window.location.href = "/studio";
+                    window.location.href = next;
                   } catch (reason: unknown) {
                     setError(reason instanceof Error ? reason.message : "Could not sign in.");
                   } finally {
@@ -84,7 +90,7 @@ function LoginPage() {
             {oauthProviders.length > 0 ? (
               <div className="mt-6 flex flex-col gap-2">
                 {oauthProviders.map((provider) => (
-                  <Button key={provider.providerId} variant="ghost" onClick={() => void signIn(provider.providerId, { callbackURL: "/studio" })}>
+                  <Button key={provider.providerId} variant="ghost" onClick={() => void signIn(provider.providerId, { callbackURL: next })}>
                     Continue with {provider.label}
                   </Button>
                 ))}

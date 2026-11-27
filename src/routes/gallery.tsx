@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { StudioShell } from "@/components/studio/shell";
+import { SignInCall } from "@/components/ai/sign-in-call";
+import { isUnauthorized } from "@/lib/ai/access";
 import { formatMoney } from "@/lib/pod/money";
 import { myCollections, myDesigns } from "@/lib/studio/api";
 import type { CollectionRecord, DesignSummary } from "@/lib/studio/models";
@@ -11,6 +13,7 @@ function GalleryPage() {
   const [designs, setDesigns] = useState<DesignSummary[] | null>(null);
   const [collections, setCollections] = useState<CollectionRecord[]>([]);
   const [error, setError] = useState("");
+  const [signedOut, setSignedOut] = useState(false);
 
   useEffect(() => {
     void Promise.all([myDesigns(), myCollections()])
@@ -18,7 +21,13 @@ function GalleryPage() {
         setDesigns(pieces);
         setCollections(racks);
       })
-      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Sign in to see your rack."));
+      .catch((reason: unknown) => {
+        if (isUnauthorized(reason)) {
+          setSignedOut(true);
+          return;
+        }
+        setError(reason instanceof Error ? reason.message : "Could not load your pieces.");
+      });
   }, []);
 
   const groups = collections.length
@@ -29,7 +38,12 @@ function GalleryPage() {
     <StudioShell current="/gallery">
       <h1 className="font-display text-4xl leading-none">Your rack</h1>
       <p className="mt-2 mb-6 text-muted">Saved pieces stay with your account.</p>
-      {error ? <p className="border-2 border-pipe p-4">{error}. <Link to="/login" className="underline">Sign in</Link></p> : null}
+      {signedOut ? (
+        <div className="max-w-md">
+          <SignInCall next="/gallery">Sign in to see the pieces you saved.</SignInCall>
+        </div>
+      ) : null}
+      {error ? <p className="border-2 border-pipe p-4">{error}</p> : null}
       {designs && designs.length === 0 ? (
         <p className="empty-state">Nothing saved yet. The studio is open.</p>
       ) : null}

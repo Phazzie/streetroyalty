@@ -441,6 +441,8 @@ export async function getShopDesign(slug: string): Promise<ShopPiece> {
   const sizes = (product?.variants ?? [])
     .filter((variant) => {
       if (variant.retailCents == null) return false;
+      // Printful can't make it right now, so it isn't offered. The cart refuses it too.
+      if (!variant.inStock) return false;
       if (chosen?.colorCode && variant.colorCode) return variant.colorCode === chosen.colorCode;
       return variant.id === row.variant_id;
     })
@@ -449,7 +451,7 @@ export async function getShopDesign(slug: string): Promise<ShopPiece> {
       label: variant.size,
       retailCents: variant.retailCents == null ? Number(row.retail_cents) : variant.retailCents + extra,
     }));
-  if (!sizes.some((size) => size.variantId === row.variant_id)) {
+  if (chosen?.inStock !== false && !sizes.some((size) => size.variantId === row.variant_id)) {
     sizes.push({
       variantId: row.variant_id,
       label: row.size_label,
@@ -461,6 +463,7 @@ export async function getShopDesign(slug: string): Promise<ShopPiece> {
   const activeColorwayId = garment?.activeColorwayId ?? null;
   return {
     ...summary(row),
+    placements: designSpots(row).map((spot) => spot.placement),
     sizes,
     colorways,
     activeColorwayId,

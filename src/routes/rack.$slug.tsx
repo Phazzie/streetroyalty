@@ -19,6 +19,7 @@ import { formatMoney } from "@/lib/pod/money";
 import { houseBlank, houseBlankByPrintfulId } from "@/lib/pod/house-blanks";
 import { SignInCall } from "@/components/ai/sign-in-call";
 import { useAiPrompt } from "@/components/ai/use-paid-ai";
+import { isUnauthorized } from "@/lib/ai/access";
 import { printNote } from "@/lib/ai/api";
 import { localPrintNote } from "@/lib/ai/local";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -43,6 +44,7 @@ function ProductPage() {
   const [colorwayId, setColorwayId] = useState("");
   const [error, setError] = useState("");
   const [adding, setAdding] = useState(false);
+  const [cartError, setCartError] = useState("");
   const [advice, setAdvice] = useState("");
   const flight = useRef(createSingleFlight());
   const viewerId = user?.id ?? "";
@@ -55,7 +57,12 @@ function ProductPage() {
       .then((next) => {
         if (!live) return;
         setPiece(next);
-        setVariantId(next.variantId);
+        // The saved size can sell out at Printful. Start on one that is still made.
+        setVariantId(
+          next.sizes.some((item) => item.variantId === next.variantId)
+            ? next.variantId
+            : (next.sizes[0]?.variantId ?? ""),
+        );
         setColorwayId(next.activeColorwayId ?? next.colorways[0]?.id ?? "");
         if (!next.maker.handle) return;
         // The maker's follow state and their other pieces. The page works without it.
@@ -202,6 +209,7 @@ function ProductPage() {
                   onClick={() => {
                     void flight.current(async () => {
                       setAdding(true);
+                      setCartError("");
                       try {
                         await cartAdd({
                           data: {
@@ -212,7 +220,14 @@ function ProductPage() {
                         });
                         void navigate({ to: "/cart" });
                       } catch (reason: unknown) {
-                        setError(reason instanceof Error ? reason.message : "Sign in to add it.");
+                        // The cart lives on your account. Sign in, then land back on this piece.
+                        if (isUnauthorized(reason)) {
+                          void navigate({ to: "/login", search: { next: `/rack/${slug}` } });
+                          return;
+                        }
+                        setCartError(
+                          reason instanceof Error ? reason.message : "Could not add it. Try again.",
+                        );
                       } finally {
                         setAdding(false);
                       }
@@ -224,6 +239,14 @@ function ProductPage() {
               ) : (
                 <p className="mt-6 border-2 border-ink p-3 text-sm">{AOP_ORDER_CLOSED}</p>
               )}
+              {cartError ? (
+                <p role="alert" className="mt-3 border-2 border-pipe p-3 text-sm">
+                  {cartError}
+                </p>
+              ) : null}
+              {!user && !isPending ? (
+                <p className="mt-2 text-sm text-muted">You'll sign in first. The cart stays on your account.</p>
+              ) : null}
               <div className="mt-4 grid gap-4 empty:hidden">
                 <RemixButton designId={piece.id} slug={piece.slug} />
                 <MoneySplit

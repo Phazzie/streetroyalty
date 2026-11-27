@@ -1,4 +1,16 @@
+import { houseBlank, houseBlankByPrintfulId } from "@/lib/pod/house-blanks";
 import type { ShopPiece } from "@/lib/studio/models";
+
+/** "leg_front_left" reads "left leg, front", the way the studio names the spot. */
+function spotTitles(piece: ShopPiece): string {
+  const blank = houseBlank(piece.templateId) ?? houseBlankByPrintfulId(piece.productId);
+  const spots = piece.placements?.length ? piece.placements : [piece.placement];
+  const titles = spots.map((key) =>
+    (blank?.placements.find((spot) => spot.placement === key)?.title ?? key.replaceAll("_", " ")).toLowerCase(),
+  );
+  if (titles.length === 1) return `${titles[0]} print`;
+  return `printed on ${titles.slice(0, -1).join(", ")} and ${titles[titles.length - 1]}`;
+}
 
 /**
  * Colorway picker and fabric line for a rack piece.
@@ -21,7 +33,7 @@ export function PieceOptions({
         {piece.productName}
         {piece.construction === "aop"
           ? " · all-over print"
-          : ` · ${piece.colorName} · ${piece.placement} print`}
+          : ` · ${piece.colorName} · ${spotTitles(piece)}`}
       </p>
       {piece.colorways.length > 0 ? (
         <div className="mt-4">

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
+import { SignInCall } from "@/components/ai/sign-in-call";
+import { isUnauthorized } from "@/lib/ai/access";
 import { Note, StudioShell } from "@/components/studio/shell";
 import { formatMoney } from "@/lib/pod/money";
 import {
@@ -27,13 +29,18 @@ function OrdersPage() {
   const [note, setNote] = useState("");
   const [secret, setSecret] = useState("");
   const [admin, setAdmin] = useState(false);
+  const [signedOut, setSignedOut] = useState(false);
 
   function reload() {
     void myOrders()
       .then(setOrders)
-      .catch((reason: unknown) =>
-        setNote(reason instanceof Error ? reason.message : "Sign in to see orders."),
-      );
+      .catch((reason: unknown) => {
+        if (isUnauthorized(reason)) {
+          setSignedOut(true);
+          return;
+        }
+        setNote(reason instanceof Error ? reason.message : "Could not load your orders.");
+      });
   }
 
   useEffect(() => {
@@ -83,6 +90,11 @@ function OrdersPage() {
           </Button>
         ) : null}
       </div>
+      {signedOut ? (
+        <div className="mb-4 max-w-md">
+          <SignInCall next="/orders">Sign in to see your orders.</SignInCall>
+        </div>
+      ) : null}
       {note ? (
         <div className="mb-4">
           <Note>{note}</Note>
