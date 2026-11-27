@@ -91,6 +91,7 @@ export async function addToCart(
   ) {
     throw new Error("Pick a size in this color.");
   }
+  if (!variant.inStock) throw new Error("That size is out of stock right now. Pick another.");
   const colorway = colorwayId
     ? parseStoredGarment(design.garment_json)?.colorways.find((item) => item.id === colorwayId)
     : undefined;

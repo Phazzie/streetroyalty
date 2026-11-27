@@ -37,6 +37,8 @@ export type DesignSummary = {
 };
 
 export type ShopPiece = DesignSummary & {
+  /** Every spot that carries art, front first. The price already counts each one. */
+  placements: string[];
   sizes: { variantId: string; label: string; retailCents: number }[];
   colorways: Colorway[];
   activeColorwayId: string | null;
